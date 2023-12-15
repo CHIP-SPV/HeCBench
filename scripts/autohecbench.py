@@ -75,6 +75,7 @@ class Benchmark:
             print(proc.stdout)
 
     def run(self, vtune_root_prefix = None, vtune_root_suffix = None,  numactl_args = None, extra_env = None):
+        time.sleep(4) # thermals
         cmd = []
         if numactl_args:
             cmd.append("numactl")
@@ -251,6 +252,7 @@ def main():
 
             print(b.name + "," + str(res_min)  + "," + str(res_avg)  + "," + str(res_stddev) +
                   "," + str(res_coefvar), file=outfile, flush=True)
+
         except Exception as err:
             print("Error running: {}".format(b.name), flush=True)
             print(err, flush=True)
