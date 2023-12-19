@@ -8,7 +8,7 @@
 
 template <typename FP, int dim>
 FP cost (FP *A, FP *B, FP *scale_A, FP *scale_B, int m, int n) {
-  double sum = 0;
+  FP sum = 0;
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++) {
       FP dist = 0;
@@ -85,12 +85,12 @@ void test(const int size, const int repeat) {
   printf("Average kernel execution time %f (s)\n", (time * 1e-9f) / repeat);
 
   hipMemcpy(&output, d_output, sizeof(FP), hipMemcpyDeviceToHost);
-  printf("    device result: %lf\n", (double)output);
+  printf("    device result: %f\n", (float)output);
 
   output = cost<FP, 2>(A, B, scaleA, scaleB, size, size);
-  printf("      host result: %lf\n", (double)output);
+  printf("      host result: %f\n", (float)output);
 
-  printf("analytical result: %lf\n\n", size * size * exp(-1.0));
+  printf("analytical result: %f\n\n", size * size * expf(-1.0f));
 
   hipFree(d_A);
   hipFree(d_B);
@@ -116,9 +116,9 @@ int main(int argc, char* argv[]) {
 
   printf("Test single precision\n");
   test<float>(size, repeat);
-
+/*
   printf("Test double precision\n");
   test<double>(size, repeat);
-
+*/
   return 0;
 }

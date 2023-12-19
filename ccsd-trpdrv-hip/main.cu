@@ -11,24 +11,24 @@
 #define MAX(x,y) (x>y ? x : y)
 
 void ccsd_trpdrv(
-    double * __restrict__ f1n, double * __restrict__ f1t,
-    double * __restrict__ f2n, double * __restrict__ f2t,
-    double * __restrict__ f3n, double * __restrict__ f3t,
-    double * __restrict__ f4n, double * __restrict__ f4t,
-    double * __restrict__ eorb,
+    float * __restrict__ f1n, float * __restrict__ f1t,
+    float * __restrict__ f2n, float * __restrict__ f2t,
+    float * __restrict__ f3n, float * __restrict__ f3t,
+    float * __restrict__ f4n, float * __restrict__ f4t,
+    float * __restrict__ eorb,
     int    * __restrict__ ncor_, int * __restrict__ nocc_, int * __restrict__ nvir_,
-    double * __restrict__ emp4_, double * __restrict__ emp5_,
+    float * __restrict__ emp4_, float * __restrict__ emp5_,
     int    * __restrict__ a_, int * __restrict__ i_, int * __restrict__ j_, int * __restrict__ k_, int * __restrict__ klo_,
-    double * __restrict__ tij, double * __restrict__ tkj, double * __restrict__ tia, double * __restrict__ tka,
-    double * __restrict__ xia, double * __restrict__ xka, double * __restrict__ jia, double * __restrict__ jka,
-    double * __restrict__ kia, double * __restrict__ kka, double * __restrict__ jij, double * __restrict__ jkj,
-    double * __restrict__ kij, double * __restrict__ kkj,
-    double * __restrict__ dintc1, double * __restrict__ dintx1, double * __restrict__ t1v1,
-    double * __restrict__ dintc2, double * __restrict__ dintx2, double * __restrict__ t1v2);
+    float * __restrict__ tij, float * __restrict__ tkj, float * __restrict__ tia, float * __restrict__ tka,
+    float * __restrict__ xia, float * __restrict__ xka, float * __restrict__ jia, float * __restrict__ jka,
+    float * __restrict__ kia, float * __restrict__ kka, float * __restrict__ jij, float * __restrict__ jkj,
+    float * __restrict__ kij, float * __restrict__ kkj,
+    float * __restrict__ dintc1, float * __restrict__ dintx1, float * __restrict__ t1v1,
+    float * __restrict__ dintc2, float * __restrict__ dintx2, float * __restrict__ t1v2);
 
-double * make_array(int n)
+float * make_array(int n)
 {
-  double * a = (double*) malloc(n*sizeof(double));
+  float * a = (float*) malloc(n*sizeof(float));
   for (int i=0; i<n; i++) {
     a[i] = drand48();
   }
@@ -70,11 +70,11 @@ int main(int argc, char* argv[])
   const int lnov = nocc * nvir;
   const int kchunk = (nocc - 1)/nkpass + 1;
 
-  const double memory = (nbf+8.0*lnvv+
+  const float memory = (nbf+8.0*lnvv+
       lnvv+kchunk*lnvv+lnov*nocc+kchunk*lnov+lnov*nocc+kchunk*lnov+lnvv+
       kchunk*lnvv+lnvv+kchunk*lnvv+lnov*nocc+kchunk*lnov+lnov*nocc+
       kchunk*lnov+lnov+nvir*kchunk+nvir*nocc+
-      6.0*lnvv)*sizeof(double);
+      6.0*lnvv)*sizeof(float);
   printf("This test requires %f GB of memory.\n", 1.0e-9*memory);
 
   if (1.0e-9*memory > MAX_MEM) {
@@ -84,43 +84,43 @@ int main(int argc, char* argv[])
   }
 
   srand48(2);
-  double * eorb = make_array(nbf);
-  double * f1n = make_array(lnvv);
-  double * f2n = make_array(lnvv);
-  double * f3n = make_array(lnvv);
-  double * f4n = make_array(lnvv);
-  double * f1t = make_array(lnvv);
-  double * f2t = make_array(lnvv);
-  double * f3t = make_array(lnvv);
-  double * f4t = make_array(lnvv);
-  double * Tij = make_array(lnvv);
-  double * Tkj = make_array(kchunk*lnvv);
-  double * Tia = make_array(lnov*nocc);
-  double * Tka = make_array(kchunk*lnov);
-  double * Xia = make_array(lnov*nocc);
-  double * Xka = make_array(kchunk*lnov);
-  double * Jia = make_array(lnvv);
-  double * Jka = make_array(kchunk*lnvv);
-  double * Kia = make_array(lnvv);
-  double * Kka = make_array(kchunk*lnvv);
-  double * Jij = make_array(lnov*nocc);
-  double * Jkj = make_array(kchunk*lnov);
-  double * Kij = make_array(lnov*nocc);
-  double * Kkj = make_array(kchunk*lnov);
-  double * Dja = make_array(lnov);
-  double * Djka = make_array(nvir*kchunk);
-  double * Djia = make_array(nvir*nocc);
-  double * dintc1 = make_array(lnvv);
-  double * dintc2 = make_array(lnvv);
-  double * dintx1 = make_array(lnvv);
-  double * dintx2 = make_array(lnvv);
-  double * t1v1 = make_array(lnvv);
-  double * t1v2 = make_array(lnvv);
+  float * eorb = make_array(nbf);
+  float * f1n = make_array(lnvv);
+  float * f2n = make_array(lnvv);
+  float * f3n = make_array(lnvv);
+  float * f4n = make_array(lnvv);
+  float * f1t = make_array(lnvv);
+  float * f2t = make_array(lnvv);
+  float * f3t = make_array(lnvv);
+  float * f4t = make_array(lnvv);
+  float * Tij = make_array(lnvv);
+  float * Tkj = make_array(kchunk*lnvv);
+  float * Tia = make_array(lnov*nocc);
+  float * Tka = make_array(kchunk*lnov);
+  float * Xia = make_array(lnov*nocc);
+  float * Xka = make_array(kchunk*lnov);
+  float * Jia = make_array(lnvv);
+  float * Jka = make_array(kchunk*lnvv);
+  float * Kia = make_array(lnvv);
+  float * Kka = make_array(kchunk*lnvv);
+  float * Jij = make_array(lnov*nocc);
+  float * Jkj = make_array(kchunk*lnov);
+  float * Kij = make_array(lnov*nocc);
+  float * Kkj = make_array(kchunk*lnov);
+  float * Dja = make_array(lnov);
+  float * Djka = make_array(nvir*kchunk);
+  float * Djia = make_array(nvir*nocc);
+  float * dintc1 = make_array(lnvv);
+  float * dintc2 = make_array(lnvv);
+  float * dintx1 = make_array(lnvv);
+  float * dintx2 = make_array(lnvv);
+  float * t1v1 = make_array(lnvv);
+  float * t1v2 = make_array(lnvv);
 
   int ntimers = MIN(maxiter,nocc*nocc*nocc*nocc);
-  double * timers = (double*) calloc(ntimers,sizeof(double));
+  float * timers = (float*) calloc(ntimers,sizeof(float));
 
-  double emp4=0.0, emp5=0.0;
+  float emp4=0.0, emp5=0.0;
 
   int iter = 0;
 
@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
               &ncor, &nocc, &nvir, &emp4, &emp5, &a, &i, &j, &k, &klo,
               Tij, Tkj, Tia, Tka, Xia, Xka, Jia, Jka, Kia, Kka, Jij, Jkj, Kij, Kkj,
               dintc1, dintx1, t1v1, dintc2, dintx2, t1v2);
-          timers[iter] = (double)(clock()-t0) / CLOCKS_PER_SEC;
+          timers[iter] = (float)(clock()-t0) / CLOCKS_PER_SEC;
 
           iter++;
           if (iter==maxiter) {
@@ -154,23 +154,23 @@ int main(int argc, char* argv[])
   }
 
 maxed_out:
-  double tsum =  0.0;
-  double tmax = -1.0e10;
-  double tmin =  1.0e10;
+  float tsum =  0.0;
+  float tmax = -1.0e10;
+  float tmin =  1.0e10;
   for (int i=0; i<iter; i++) {
     tsum += timers[i];
     tmax  = MAX(tmax,timers[i]);
     tmin  = MIN(tmin,timers[i]);
   }
-  double tavg = tsum / iter;
+  float tavg = tsum / iter;
   printf("TIMING: min=%lf, max=%lf, avg=%lf\n", tmin, tmax, tavg);
 
-  double dgemm_flops = ((8.0*nvir)*nvir)*(nvir+nocc);
-  double dgemm_mops  = 8.0*(4.0*nvir*nvir + 2.0*nvir*nocc);
+  float dgemm_flops = ((8.0*nvir)*nvir)*(nvir+nocc);
+  float dgemm_mops  = 8.0*(4.0*nvir*nvir + 2.0*nvir*nocc);
 
   /* The inner loop of tengy touches 86 f[1234][nt] elements and 8 other arrays...
    * We will just assume flops=mops even though flops>mops */
-  double tengy_ops = ((1.0*nvir)*nvir)*(86+8);
+  float tengy_ops = ((1.0*nvir)*nvir)*(86+8);
 
   printf("OPS: dgemm_flops=%10.3e dgemm_mops=%10.3e tengy_ops=%10.3e\n",
          dgemm_flops, dgemm_mops, tengy_ops);

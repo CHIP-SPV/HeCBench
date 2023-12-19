@@ -16,30 +16,30 @@ int main(int argc, char* argv[])
   // Define the domain
   const int x_points = atoi(argv[1]);
   const int y_points = atoi(argv[2]);
-  const double x_len = 2.0;
-  const double y_len = 2.0;
-  const double del_x = x_len/(x_points-1);
-  const double del_y = y_len/(y_points-1);
+  const float x_len = 2.0;
+  const float y_len = 2.0;
+  const float del_x = x_len/(x_points-1);
+  const float del_y = y_len/(y_points-1);
 
   const int grid_elems = x_points * y_points;
-  const int grid_size = sizeof(double) * grid_elems;
+  const int grid_size = sizeof(float) * grid_elems;
 
-  double *x = (double*) malloc (sizeof(double) * x_points);
-  double *y = (double*) malloc (sizeof(double) * y_points);
-  double *u = (double*) malloc (grid_size);
-  double *v = (double*) malloc (grid_size);
-  double *u_new = (double*) malloc (grid_size);
-  double *v_new = (double*) malloc (grid_size);
+  float *x = (float*) malloc (sizeof(float) * x_points);
+  float *y = (float*) malloc (sizeof(float) * y_points);
+  float *u = (float*) malloc (grid_size);
+  float *v = (float*) malloc (grid_size);
+  float *u_new = (float*) malloc (grid_size);
+  float *v_new = (float*) malloc (grid_size);
 
   // store device results
-  double *du = (double*) malloc (grid_size);
-  double *dv = (double*) malloc (grid_size);
+  float *du = (float*) malloc (grid_size);
+  float *dv = (float*) malloc (grid_size);
 
   // Define the parameters
   const int num_itrs = 100;     // Number of time iterations
-  const double nu = 0.01;
-  const double sigma = 0.0009;
-  const double del_t = sigma * del_x * del_y / nu;      // CFL criteria
+  const float nu = 0.01;
+  const float sigma = 0.0009;
+  const float del_t = sigma * del_x * del_y / nu;      // CFL criteria
 
   printf("2D Burger's equation\n");
   printf("Grid dimension: x = %d y = %d\n", x_points, y_points);
@@ -63,16 +63,16 @@ int main(int argc, char* argv[])
     }
   }
 
-  double *d_u_new;
+  float *d_u_new;
   hipMalloc((void**)&d_u_new, grid_size);
 
-  double *d_v_new;
+  float *d_v_new;
   hipMalloc((void**)&d_v_new, grid_size);
 
-  double *d_u;
+  float *d_u;
   hipMalloc((void**)&d_u, grid_size);
 
-  double *d_v;
+  float *d_v;
   hipMalloc((void**)&d_v, grid_size);
 
   hipMemcpy(d_u_new, u_new, grid_size, hipMemcpyHostToDevice);

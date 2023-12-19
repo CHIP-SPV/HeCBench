@@ -75,7 +75,7 @@
 //                                                                            //
 ////////////////////////////////////////////////////////////////////////////////
 
-double embedded_fehlberg_7_8(
+__host__ float embedded_fehlberg_7_8(
     fp timeinst,
     fp h,
     fp* initvalu,
@@ -169,7 +169,7 @@ double embedded_fehlberg_7_8(
   fp** finavalu_temp;
 
   int i;
-  double ktime = 0.0;
+  float ktime = 0.0;
 
   //    TEMPORARY STORAGE ALLOCATION
 

@@ -2,16 +2,16 @@
 
 __global__ 
 void core (
-    double *__restrict__ u_new,
-    double *__restrict__ v_new,
-    const double *__restrict__ u,
-    const double *__restrict__ v,
+    float *__restrict__ u_new,
+    float *__restrict__ v_new,
+    const float *__restrict__ u,
+    const float *__restrict__ v,
     const int x_points,
     const int y_points,
-    const double nu,
-    const double del_t,
-    const double del_x,
-    const double del_y)
+    const float nu,
+    const float del_t,
+    const float del_x,
+    const float del_y)
 {
   int i = blockIdx.y * blockDim.y + threadIdx.y + 1;
   int j = blockIdx.x * blockDim.x + threadIdx.x + 1;
@@ -32,8 +32,8 @@ void core (
 
 __global__ 
 void bound_h (
-    double *__restrict__ u_new,
-    double *__restrict__ v_new,
+    float *__restrict__ u_new,
+    float *__restrict__ v_new,
     const int x_points,
     const int y_points)
 {
@@ -48,8 +48,8 @@ void bound_h (
 
 __global__ 
 void bound_v (
-    double *__restrict__ u_new,
-    double *__restrict__ v_new,
+    float *__restrict__ u_new,
+    float *__restrict__ v_new,
     const int x_points,
     const int y_points)
 {
@@ -64,10 +64,10 @@ void bound_v (
 
 __global__ 
 void update (
-    double *__restrict__ u,
-    double *__restrict__ v,
-    const double *__restrict__ u_new,
-    const double *__restrict__ v_new,
+    float *__restrict__ u,
+    float *__restrict__ v,
+    const float *__restrict__ u_new,
+    const float *__restrict__ v_new,
     const int n)
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;

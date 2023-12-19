@@ -3,7 +3,7 @@
 #include <hip/hip_runtime.h>
 
 #ifndef dataType
-#define dataType double
+#define dataType float
 #endif
 
 #include "CustomComplex.h"
@@ -51,10 +51,10 @@ int main(int argc, char **argv) {
   int ngpown = ncouls / nodes_per_group;
 
   // Constants that will be used later
-  const dataType e_lk = 10;
-  const dataType dw = 1;
-  const dataType to1 = 1e-6;
-  const dataType e_n1kq = 6.0;
+  const dataType e_lk = 10.0f;
+  const dataType dw = 1.0f;
+  const dataType to1 = 1e-6f;
+  const dataType e_n1kq = 6.0f;
 
   // Printing out the params passed.
   std::cout << "Sizeof(CustomComplex<dataType> = "
@@ -65,8 +65,8 @@ int main(int argc, char **argv) {
             << "\t ngpown = " << ngpown << "\t nend = " << nend
             << "\t nstart = " << nstart << std::endl;
 
-  CustomComplex<dataType> expr0(0.0, 0.0);
-  CustomComplex<dataType> expr(0.025, 0.025);
+  CustomComplex<dataType> expr0(0.0f, 0.0f);
+  CustomComplex<dataType> expr(0.025f, 0.025f);
   size_t memFootPrint = 0;
 
   // Start the timer before the work begins.

@@ -33,13 +33,13 @@ __device__ __forceinline__ T1 DIV(T1 x, T2 y)
 // POW
 template<class T>
 __device__ __forceinline__ T POW (T in, T in2);
-
+/*
 template<>
 __device__ __forceinline__ double POW<double>(double in, double in2)
 {
     return pow(in, in2);
 }
-
+*/
 template<>
 __device__ __forceinline__ float POW<float>(float in, float in2)
 {
@@ -48,13 +48,13 @@ __device__ __forceinline__ float POW<float>(float in, float in2)
 // EXP
 template<class T>
 __device__ __forceinline__ T EXP(T in);
-
+/*
 template<>
 __device__ __forceinline__ double EXP<double>(double in)
 {
     return exp(in);
 }
-
+*/
 template<>
 __device__ __forceinline__ float EXP<float>(float in)
 {
@@ -64,13 +64,13 @@ __device__ __forceinline__ float EXP<float>(float in)
 // EXP10
 template<class T>
 __device__ __forceinline__ T EXP10(T in);
-
+/*
 template<>
 __device__ __forceinline__ double EXP10<double>(double in)
 {
     return exp10(in);
 }
-
+*/
 template<>
 __device__ __forceinline__ float EXP10<float>(float in)
 {
@@ -80,13 +80,13 @@ __device__ __forceinline__ float EXP10<float>(float in)
 // EXP2
 template<class T>
 __device__ __forceinline__ T EXP2(T in);
-
+/*
 template<>
 __device__ __forceinline__ double EXP2<double>(double in)
 {
     return exp2(in);
 }
-
+*/
 template<>
 __device__ __forceinline__ float EXP2<float>(float in)
 {
@@ -96,13 +96,13 @@ __device__ __forceinline__ float EXP2<float>(float in)
 // FMAX
 template<class T>
 __device__ __forceinline__ T MAX(T in, T in2);
-
+/*
 template<>
 __device__ __forceinline__ double MAX<double>(double in, double in2)
 {
     return fmax(in, in2);
 }
-
+*/
 template<>
 __device__ __forceinline__ float MAX<float>(float in, float in2)
 {
@@ -112,13 +112,13 @@ __device__ __forceinline__ float MAX<float>(float in, float in2)
 // FMIN
 template<class T>
 __device__ __forceinline__ T MIN(T in, T in2);
-
+/*
 template<>
 __device__ __forceinline__ double MIN<double>(double in, double in2)
 {
     return fmin(in, in2);
 }
-
+*/
 template<>
 __device__ __forceinline__ float MIN<float>(float in, float in2)
 {
@@ -128,13 +128,13 @@ __device__ __forceinline__ float MIN<float>(float in, float in2)
 // LOG
 template<class T>
 __device__ __forceinline__ T LOG(T in);
-
+/*
 template<>
 __device__ __forceinline__ double LOG<double>(double in)
 {
     return log(in);
 }
-
+*/
 template<>
 __device__ __forceinline__ float LOG<float>(float in)
 {
@@ -144,13 +144,13 @@ __device__ __forceinline__ float LOG<float>(float in)
 // LOG10
 template<class T>
 __device__ __forceinline__ T LOG10(T in);
-
+/*
 template<>
 __device__ __forceinline__ double LOG10<double>(double in)
 {
     return log10(in);
 }
-
+*/
 template<>
 __device__ __forceinline__ float LOG10<float>(float in)
 {

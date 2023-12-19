@@ -2,7 +2,7 @@
 //  MAIN FUNCTION
 //=====================================================================
 
-double master(fp timeinst,
+__host__ float master(fp timeinst,
     fp* initvalu,
     fp* parameter,
     fp* finavalu,

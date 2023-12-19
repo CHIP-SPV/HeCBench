@@ -92,8 +92,7 @@ void RunBenchmark(ResultDatabase &resultDB, OptionParser &op)
     hipGetDevice(&device);
     hipDeviceProp_t deviceProp;
     hipGetDeviceProperties(&deviceProp, device);
-    if ((deviceProp.major == 1 && deviceProp.minor >= 3) ||
-                   (deviceProp.major >= 2))
+    if (0)
     {
         cout << "Running double precision test" << endl;
         RunTest<double>("S3D-DP", resultDB, op);
@@ -167,8 +166,8 @@ void RunTest(string testName, ResultDatabase &resultDB, OptionParser &op)
     // Initialize temp and pressure
     for (int i=0; i<n; i++)
     {
-        host_p[i] = 1.0132e6;
-        host_t[i] = 1000.0;
+        host_p[i] = 1.0132e6f;
+        host_t[i] = 1000.0f;
     }
 
     // Init molwt: for now these are just 1, to compare results betw. cpu & gpu
@@ -231,7 +230,7 @@ void RunTest(string testName, ResultDatabase &resultDB, OptionParser &op)
     // Get elapsed transfer time
     float iTransferTime = 0.0f;
     hipEventElapsedTime(&iTransferTime, start, stop);
-    iTransferTime *= 1.e-3;
+    iTransferTime *= 1e-3f;
 
     unsigned int passes = op.getOptionInt("passes");
     for (unsigned int i = 0; i < passes; i++)
@@ -295,7 +294,7 @@ void RunTest(string testName, ResultDatabase &resultDB, OptionParser &op)
         // Get elapsed transfer time
         float kernelTime = 0.0f;
         hipEventElapsedTime(&kernelTime, start, stop);
-        kernelTime *= 1.e-3;
+        kernelTime *= 1e-3f;
 
         // Copy back result
         CUDA_SAFE_CALL(hipEventRecord(start, 0));
@@ -307,10 +306,10 @@ void RunTest(string testName, ResultDatabase &resultDB, OptionParser &op)
         // Get elapsed transfer time
         float oTransferTime = 0.0f;
         hipEventElapsedTime(&oTransferTime, start, stop);
-        oTransferTime *= 1.e-3;
+        oTransferTime *= 1e-3f;
 
         // Approximately 10k flops per grid point (estimated by Ramanan)
-        double gflops = ((n*10000.) / 1.e9);
+        float gflops = ((n*10000.0f) / 1e9f);
 
         resultDB.AddResult(testName, toString(n) + "_gridPoints", "GFLOPS",
                 gflops / kernelTime);

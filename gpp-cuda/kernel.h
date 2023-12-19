@@ -13,8 +13,8 @@ __global__ void solver(
 {
   dataType achtemp_re_loc[nend - nstart], achtemp_im_loc[nend - nstart];
   for (int iw = nstart; iw < nend; ++iw) {
-    achtemp_re_loc[iw] = 0.00;
-    achtemp_im_loc[iw] = 0.00;
+    achtemp_re_loc[iw] = (dataType)0.0;
+    achtemp_im_loc[iw] = (dataType)0.0;
   }
 
   for (int n1 = blockIdx.x; n1 < number_bands; n1 += gridDim.x) // 512 iterations
@@ -24,7 +24,7 @@ __global__ void solver(
       int indigp = inv_igp_index[my_igp];
       int igp = indinv[indigp];
       CustomComplex<dataType> sch_store1 =
-          CustomComplex_conj(aqsmtemp(n1, igp)) * aqsntemp(n1, igp) * 0.5 *
+          CustomComplex_conj(aqsmtemp(n1, igp)) * aqsntemp(n1, igp) * (dataType)0.5 *
           vcoul[igp];
 
       for (int ig = threadIdx.x; ig < ncouls; ig += blockDim.x) {
