@@ -54,3 +54,6 @@ black-scholes-hip
 binomial-hip
 bspline-vgh-hip
 bfs-hip
+hybridsort-hip
+aop-hip
+hotspot3D-hip
