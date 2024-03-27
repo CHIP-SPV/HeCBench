@@ -219,11 +219,11 @@ int main(int argc, char* argv[])
   const int n = atoi(argv[1]);
   const int repeat = atoi(argv[2]);
 
-  run< 128>(n, repeat);  
-  run< 256>(n, repeat);  
-  run< 512>(n, repeat);  
-  run<1024>(n, repeat);  
-  run<2048>(n, repeat);  
+//  run< 128>(n, repeat);
+  run< 256>(n, repeat);
+//  run< 512>(n, repeat);
+//  run<1024>(n, repeat);
+//  run<2048>(n, repeat);
 
   return 0; 
 }
