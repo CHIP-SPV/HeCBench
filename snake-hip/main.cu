@@ -190,14 +190,16 @@ int main(int argc, const char * const argv[])
     // verify
     sneaky_snake_ref(ReadSeq, RefSeq, HFinal_Results, NumReads, F_ErrorThreshold);
     error = memcmp(DFinal_Results, HFinal_Results, NumReads * sizeof(int));
-    if (error) break;
 
     // stats
     int D_accepted = 0;
     for(int i = 0; i < NumReads; i++) if(DFinal_Results[i] == 1) D_accepted++;
 
-    printf("Error threshold: %2d | Average kernel time (us): %5.4f | Accepted: %10d | Rejected: %10d\n", 
-          F_ErrorThreshold, elapsed_time / repeat, D_accepted, NumReads - D_accepted);
+    printf("Error threshold: %2d |  Accepted: %10d | Rejected: %10d\n",
+          F_ErrorThreshold, D_accepted, NumReads - D_accepted);
+
+    if (error) break;
+    printf("Average kernel time (us): %5.4f", elapsed_time / repeat);
   }
   printf("%s\n", error ? "FAIL" : "PASS");
   

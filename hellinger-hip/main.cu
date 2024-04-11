@@ -28,9 +28,7 @@ constexpr int M = m_size / 8;
 constexpr int N = m_size / 4;
 constexpr int P = m_size / 2;
 
-#ifdef VERIFY
 #include "verify.h"
-#endif
 
 __global__ 
 void hellinger(
@@ -119,9 +117,7 @@ int main(int argc, char** argv)
   std::cout << "Problem size: c(" << M << "," << P << ") = a(" << M << "," << N
             << ") * b(" << N << "," << P << ")\n";
 
-#ifdef VERIFY
   bool ok = VerifyResult(a_host, b_host, c_host, c_back);
-#endif
 
   delete[] a_host;
   delete[] b_host;

@@ -141,7 +141,7 @@ int main(int argc, char **argv)
        int e = abs(res[i] - pix[i]);
        if (e > max_error) max_error = e;
     }
-    printf("Maximum error between host and device results: %d\n", max_error);
+    printf("FAILED: Maximum error between host and device results: %d\n", max_error);
     exit(1);
   }
   else {

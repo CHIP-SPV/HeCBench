@@ -138,6 +138,7 @@ int main(int argc, char** argv)
   t2 = std::chrono::high_resolution_clock::now();
   double times =  std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
   float GB=(float)arrayLength*sizeof(int)*N;
+  std::cout << "Average kernel execution time " << times << " s"<<std::endl;
   std::cout << "The average performance of reduction is "<< 1.0E-09 * GB/times<<" GBytes/sec"<<std::endl;
 
   int sum;
@@ -158,6 +159,7 @@ int main(int argc, char** argv)
   t2 = std::chrono::high_resolution_clock::now();
   times =  std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
   GB=(float)arrayLength*sizeof(int)*N;
+  std::cout << "Average kernel execution time " << times << " s"<<std::endl;
   std::cout << "The average performance of reduction is "<< 1.0E-09 * GB/times<<" GBytes/sec"<<std::endl;
 
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
@@ -177,6 +179,7 @@ int main(int argc, char** argv)
   t2 = std::chrono::high_resolution_clock::now();
   times =  std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
   GB=(float)arrayLength*sizeof(int)*N;
+  std::cout << "Average kernel execution time " << times << " s"<<std::endl;
   std::cout << "The average performance of reduction is "<< 1.0E-09 * GB/times<<" GBytes/sec"<<std::endl;
 
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
@@ -196,6 +199,7 @@ int main(int argc, char** argv)
   t2 = std::chrono::high_resolution_clock::now();
   times =  std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
   GB=(float)arrayLength*sizeof(int)*N;
+  std::cout << "Average kernel execution time " << times << " s"<<std::endl;
   std::cout << "The average performance of reduction is "<< 1.0E-09 * GB/times<<" GBytes/sec"<<std::endl;
 
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
@@ -215,6 +219,7 @@ int main(int argc, char** argv)
   t2 = std::chrono::high_resolution_clock::now();
   times =  std::chrono::duration_cast<std::chrono::duration<double> >(t2 - t1).count();
   GB=(float)arrayLength*sizeof(int)*N;
+  std::cout << "Average kernel execution time " << times << " s"<<std::endl;
   std::cout << "The average performance of reduction is "<< 1.0E-09 * GB/times<<" GBytes/sec"<<std::endl;
 
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
