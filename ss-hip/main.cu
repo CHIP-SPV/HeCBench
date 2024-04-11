@@ -223,7 +223,7 @@ int main(int argc, char* argv[])
     hipMemcpy(resultCount, resultCountBuf, workGroupCount * sizeof(uint), hipMemcpyDeviceToHost);
     hipMemcpy(result, resultBuf, (textLength - subStrLength + 1) * sizeof(uint), hipMemcpyDeviceToHost);
 
-    if (verify(resultCount, workGroupCount, result, searchLenPerWG, cpuResults));
+    if (verify(resultCount, workGroupCount, result, searchLenPerWG, cpuResults))
       return -1;
   }
 
