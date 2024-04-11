@@ -169,8 +169,8 @@ int main(int argc, char* argv[])
     
   // scan over N elements (N = [64, 1024])
 //  bscan<64>(repeat);
-//  bscan<128>(repeat);
-  bscan<256>(repeat);
+  bscan<128>(repeat);
+//  bscan<256>(repeat);
 //  bscan<512>(repeat);
 //  bscan<1024>(repeat);
 

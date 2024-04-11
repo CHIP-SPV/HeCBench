@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
   bool ok = true;
   for (int i = 0; i < N-M+1; i++) {
     if (fabsf(lb[i] - lb_h[i]) > 1e-3f) {
-      printf("%d %f %f\n", i, lb[i], lb_h[i]);
+      printf("ITEM %d: %f vs %f\n", i, lb[i], lb_h[i]);
       ok = false;
       break;
     }

@@ -575,7 +575,7 @@ int main(int argc, char **argv)
     }
 
     std::string         filename;
-    int                 timing_iterations   = 100;
+    int                 timing_iterations   = 2;
     int                 entropy_reduction   = 0;
     int                 height              = 1080;
     int                 width               = 1920;

@@ -118,7 +118,7 @@ int main(int argc, char* argv[]) {
   hipMemcpy(d_input, input, img_size_byte, hipMemcpyHostToDevice);
   hipMemcpy(d_output, d_input, img_size_byte, hipMemcpyDeviceToDevice);
 
-  const int numDetections = img_size * 0.8f;
+  const int numDetections = 1024;
   Box* detections = (Box*) malloc (numDetections * sizeof(Box));
   for (int i = 0; i < numDetections; i++) {
     detections[i].width = 64 + rand() % 128;
