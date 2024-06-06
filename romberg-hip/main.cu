@@ -122,5 +122,5 @@ int main( int argc, char** argv)
 
   hipFree(d_result);
   free(h_result);
-  return 0;
+  return ok ? 0 : 1;
 }

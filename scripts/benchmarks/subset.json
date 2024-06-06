@@ -526,20 +526,6 @@
     ]
   ],
 
-  "haversine-hip": [
-    "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
-    [
-      "../geodesic-sycl/locations.txt", "100"
-    ]
-  ],
-
-  "haversine-sycl": [
-    "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
-    [
-      "../geodesic-sycl/locations.txt", "100"
-    ]
-  ],
-
   "hausdorff-hip": [
     "(?:Average execution time of kernels: )([0-9.+-e]+)(?: \\(ms\\))",
     [
