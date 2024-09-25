@@ -2,7 +2,7 @@
 
 LEVEL0=1
 OPENCL=1
-REPEATS=4
+REPEATS=1
 
 export CHIP_L0_COLLECT_EVENTS_TIMEOUT=5
 export CHIP_L0_IMM_CMD_LISTS=1
@@ -19,34 +19,50 @@ export CHIP_LOGLEVEL=crit
 
 # -------------------
 
+module load oneapi/2024.1.0
+
+# ╭─pvelesko@cupcake /space/pvelesko/HeCBench ‹chipStar-bench●› 
+# ╰─$ clinfo -l                                                                                                                                                                                                             130 ↵
+# Platform #0: Intel(R) OpenCL
+#  `-- Device #0: 13th Gen Intel(R) Core(TM) i9-13900K
+# Platform #1: Intel(R) OpenCL Graphics
+#  `-- Device #0: Intel(R) Arc(TM) A770 Graphics
+# Platform #2: Intel(R) OpenCL Graphics
+#  `-- Device #0: Intel(R) UHD Graphics 770
+
+if [ $OPENCL -ne 0 ]; then
+  export SYCL_CACHE_PERSISTENT=0
+  export ONEAPI_DEVICE_SELECTOR="opencl:gpu"
+  
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
+fi
+
+if [ $LEVEL0 -ne 0 ]; then
+  export SYCL_CACHE_PERSISTENT=0
+  export ONEAPI_DEVICE_SELECTOR="level0:gpu"
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
+fi
+
+
+#############################################
+
 if [ $OPENCL -ne 0 ]; then
 
-  export CHIP_BE=opencl
-  export CHIP_PLATFORM=1
-
-  ./scripts/autohecbench.py --warmup true --repeat ${REPEATS} -o test_FULL_${REPEATS}_x_hip_strict_oclBE.csv hip
+  # export CHIP_BE=opencl
+  # export CHIP_PLATFORM=1
+  module load opencl/dgpu
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} -o test_FULL_${REPEATS}_x_hip_strict_oclBE.csv hip
+  module unload opencl/dgpu
 fi
 
 # -------------------
 
 if [ $LEVEL0 -ne 0 ]; then
 
-  unset CHIP_PLATFORM
-  export CHIP_BE=level0
-
-  ./scripts/autohecbench.py --warmup true --repeat ${REPEATS} -o test_FULL_${REPEATS}_x_hip_strict_l0BE.csv hip
+  module load level-zero/dgpu
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} -o test_FULL_${REPEATS}_x_hip_strict_l0BE.csv hip
+  module unload level-zero/dgpu
 fi
 
 #############################################
 
-source /opt/intel/oneapi/setvars.sh
-
-if [ $OPENCL -ne 0 ]; then
-  export SYCL_DEVICE_FILTER=opencl:gpu:2
-  ./scripts/autohecbench.py --warmup true --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
-fi
-
-if [ $LEVEL0 -ne 0 ]; then
-  export SYCL_DEVICE_FILTER=ext_oneapi_level_zero:gpu:0
-  ./scripts/autohecbench.py --warmup true --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
-fi
