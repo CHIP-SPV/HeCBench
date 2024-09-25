@@ -1,7 +1,9 @@
+#!/usr/bin/env python3
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import argparse
 
 outlier_threshold = 0.5
 
@@ -17,75 +19,86 @@ def geometric_mean_without_outliers(series, threshold=outlier_threshold):
     log_series = np.log(series)
     return np.exp(np.mean(log_series[(log_series > np.log(1-threshold)) & (log_series < np.log(1+threshold))]))
 
-sycl_df = read_csv('test_FULL_4_x_sycl_strict_oclBE.csv', '-sycl')
-hip_ocl_df = read_csv('test_FULL_4_x_hip_strict_oclBE.csv', '-hip')
-hip_l0_df = read_csv('test_FULL_4_x_hip_strict_l0BE.csv', '-hip')
+# Parse command-line arguments
+parser = argparse.ArgumentParser(description='Generate benchmark comparison plot.')
+parser.add_argument('-b', '--baseline', required=True, nargs=2, metavar=('FILE', 'LABEL'), help='Baseline CSV file and label')
+parser.add_argument('-c', '--comparison', action='append', required=True, nargs=2, metavar=('FILE', 'LABEL'), help='Comparison CSV file and label (can be used multiple times)')
+parser.add_argument('-o', '--output', required=True, help='Output filename for the plot')
+args = parser.parse_args()
 
-common_benchmarks = sycl_df.index.intersection(hip_ocl_df.index).intersection(hip_l0_df.index)
+# Read baseline file
+baseline_file, baseline_label = args.baseline
+sycl_df = read_csv(baseline_file, '-sycl')
 
+# Read comparison file(s)
+comparison_dfs = [read_csv(file, '-hip') for file, _ in args.comparison]
+comparison_labels = [label for _, label in args.comparison]
+
+# Find common benchmarks
+common_benchmarks = sycl_df.index
+for df in comparison_dfs:
+    common_benchmarks = common_benchmarks.intersection(df.index)
+
+# Filter dataframes to include only common benchmarks
 sycl_df = sycl_df.loc[common_benchmarks]
-hip_ocl_df = hip_ocl_df.loc[common_benchmarks]
-hip_l0_df = hip_l0_df.loc[common_benchmarks]
+comparison_dfs = [df.loc[common_benchmarks] for df in comparison_dfs]
 
+# Create the main dataframe
 df = pd.DataFrame({
     'Benchmark': common_benchmarks,
-    'SYCL': sycl_df['mean'],
-    'HIP (OCL)': hip_ocl_df['mean'],
-    'HIP (L0)': hip_l0_df['mean']
+    baseline_label: sycl_df['mean']
 })
 
-df['OCL_Speedup'] = df['SYCL'] / df['HIP (OCL)']
-df['L0_Speedup'] = df['SYCL'] / df['HIP (L0)']
-df['L0_vs_OCL_Speedup'] = df['HIP (OCL)'] / df['HIP (L0)']
+# Add comparison data and calculate speedups
+for i, (comp_df, label) in enumerate(zip(comparison_dfs, comparison_labels)):
+    df[label] = comp_df['mean']
+    df[f'{label}_Speedup'] = df[baseline_label] / df[label]
 
-ocl_geo_mean = geometric_mean(df['OCL_Speedup'])
-l0_geo_mean = geometric_mean(df['L0_Speedup'])
-l0_vs_ocl_geo_mean = geometric_mean(df['L0_vs_OCL_Speedup'])
+# Sort by the first speedup column
+first_speedup_col = f'{comparison_labels[0]}_Speedup'
+df = df.sort_values(first_speedup_col, ascending=True)
 
-ocl_geo_mean_no_outliers = geometric_mean_without_outliers(df['OCL_Speedup'])
-l0_geo_mean_no_outliers = geometric_mean_without_outliers(df['L0_Speedup'])
-l0_vs_ocl_geo_mean_no_outliers = geometric_mean_without_outliers(df['L0_vs_OCL_Speedup'])
-
-df = df.sort_values('SYCL', ascending=False)
-
+# Plotting
 plt.figure(figsize=(20, 12))
 sns.set(style="whitegrid")
 
 x = range(len(df))
-width = 0.35
+width = 0.8 / len(comparison_dfs)
 
-plt.bar(x, df['OCL_Speedup'], width, label='HIP (OCL)', color='skyblue')
-plt.bar([i + width for i in x], df['L0_Speedup'], width, label='HIP (L0)', color='orange')
+colors = plt.cm.get_cmap('Set2')(np.linspace(0, 1, len(comparison_dfs)))
 
-for i, (ocl, l0) in enumerate(zip(df['OCL_Speedup'], df['L0_Speedup'])):
-    plt.text(i, ocl, f'{ocl:.2f}x', ha='center', va='bottom', rotation=90)
-    plt.text(i + width, l0, f'{l0:.2f}x', ha='center', va='bottom', rotation=90)
+for i, (comp_df, label) in enumerate(zip(comparison_dfs, comparison_labels)):
+    speedup_col = f'{label}_Speedup'
+    plt.bar([j + i*width for j in x], df[speedup_col], width, label=label, color=colors[i])
+    
+    for j, speedup in enumerate(df[speedup_col]):
+        plt.text(j + i*width, speedup, f'{speedup:.2f}x', ha='center', va='bottom', rotation=90)
 
 plt.xlabel('Benchmarks', fontsize=12)
-plt.ylabel('Speedup relative to SYCL (higher is better)', fontsize=12)
-plt.title('chipStar Speedup Relative to SYCL', fontsize=16)
-plt.xticks([i + width/2 for i in x], df['Benchmark'], rotation=90, ha='right')
+plt.ylabel(f'Speedup relative to {baseline_label} (higher is better)', fontsize=12)
+plt.title(f'Speedup Relative to {baseline_label}', fontsize=16)
+plt.xticks([i + width*(len(comparison_dfs)-1)/2 for i in x], df['Benchmark'], rotation=90, ha='right')
 plt.legend()
 
-plt.axhline(y=1, color='r', linestyle='--', label='SYCL Baseline')
+plt.axhline(y=1, color='r', linestyle='--', label=f'{baseline_label} Baseline')
 
 plt.yscale('log')
 
-geomean_text = (
-    f'Outlier threshold: {outlier_threshold}\n'
-    f'Geo Mean Speedup (with/without outliers):\n'
-    f'OCL: {ocl_geo_mean:.2f}x / {ocl_geo_mean_no_outliers:.2f}x\n'
-    f'L0: {l0_geo_mean:.2f}x / {l0_geo_mean_no_outliers:.2f}x\n'
-    f'L0 vs OCL: {l0_vs_ocl_geo_mean:.2f}x / {l0_vs_ocl_geo_mean_no_outliers:.2f}x'
-)
+# Calculate and display geometric means
+geomean_text = f'Outlier threshold: {outlier_threshold}\nGeo Mean Speedup (with/without outliers):\n'
+for label in comparison_labels:
+    speedup_col = f'{label}_Speedup'
+    geo_mean = geometric_mean(df[speedup_col])
+    geo_mean_no_outliers = geometric_mean_without_outliers(df[speedup_col])
+    geomean_text += f'{label}: {geo_mean:.2f}x / {geo_mean_no_outliers:.2f}x\n'
 
 plt.text(0.95, 0.95, geomean_text, 
          transform=plt.gca().transAxes, ha='right', va='top', 
          bbox=dict(facecolor='white', alpha=0.5, edgecolor='black'))
 
 plt.tight_layout()
-plt.savefig('benchmark_comparison_bar_log.png', dpi=300)
+plt.savefig(args.output, dpi=300)
 plt.close()
 
-print(f"Plot saved as 'benchmark_comparison_bar_log.png'")
+print(f"Plot saved as '{args.output}'")
 print(f"Number of common benchmarks: {len(common_benchmarks)}")
