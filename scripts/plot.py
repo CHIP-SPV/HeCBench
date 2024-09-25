@@ -62,6 +62,11 @@ parser.add_option("-z", "--zlabel", dest="zlabel", default=None,
 
 parser.add_option("-v", "--bar-values", dest="bar_values", default=True, action="store_false",
                   help="do not draw values of each bar, default = draw")
+parser.add_option("--log-scale", dest="log_scale", default=True, action="store_false",
+                  help="plot y-axis on a logarithmic scale, default = True")
+
+parser.add_option("--bar-labels", dest="bar_labels", default=True, action="store_false",
+                  help="place speedup labels at the top of each bar, default = True")
 
 (options, args) = parser.parse_args()
 if (not options.input_comp) or (not options.input_base):
@@ -156,11 +161,19 @@ plt.xticks(rotation='vertical')
 if options.refline:
 	plt.axhline(1.0, ls='dotted')
 if options.geomean:
-	g = geomean(sorted_mins)
-	s = "Geomean = %.2f" % g
-	plt.axhline(g, ls='dashed', label=s)
+    g = geomean(sorted_mins)
+    s = f"Geomean = {g:.2f}"
+    plt.text(0.02, 0.98, s, transform=plt.gca().transAxes, 
+             verticalalignment='top', horizontalalignment='left',
+             bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
 if options.bar_values:
 	plt.bar_label(bar1, fmt='%.2f', label_type='edge', rotation='vertical', fontsize='small')
+
+if options.log_scale:
+    plt.yscale('log')
+
+if options.bar_labels:
+    plt.bar_label(bar1, fmt='%.2f', label_type='edge', rotation='vertical', fontsize='small')
 
 # plt.legend()
 plt.tight_layout()
