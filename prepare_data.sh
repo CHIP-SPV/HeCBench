@@ -39,3 +39,14 @@ cd $HECBENCH/svd3x3-cuda
 if [ ! -e Dataset_1M.txt ]; then
   wget https://github.com/kuiwuchn/3x3_SVD_CUDA/raw/master/svd3x3/svd3x3/Dataset_1M.txt
 fi
+
+mkdir -p rodinia_3.1
+
+if [ ! -e rodinia_3.1.tar.bz2 ]; then
+  wget http://www.cs.virginia.edu/\~skadron/lava/Rodinia/Packages/rodinia_3.1.tar.bz2
+  tar xjf rodinia_3.1.tar.bz2 -C rodinia_3.1 --strip-components=1
+fi
+
+mkdir data
+cp -r rodinia_3.1/data/* ./data
+
