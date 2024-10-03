@@ -100,10 +100,119 @@ class Benchmark:
             res = 1/res
         return res
 
+    def dry_run(self):
+        cmd = ["make", "run", "-n"]
+        proc = subprocess.run(cmd, cwd=self.path, capture_output=True, encoding="ascii")
+        try:
+            proc.check_returncode()
+        except subprocess.CalledProcessError as e:
+            print(f'Failed dry run in {self.path}.\n{e}')
+            if e.stdout:
+                print(e.stdout, file=sys.stderr)
+            if e.stderr:
+                print(e.stderr, file=sys.stderr)
+            raise(e)
+        
+        # Extract the actual command being executed
+        lines = proc.stdout.split('\n')
+        for line in lines:
+            if './' in line:  # This assumes the command starts with './'
+                return line.strip()
+        return None
 
 def comp(b):
     print("compiling: {}".format(b.name))
     b.compile()
+
+def get_bench_map(lang):
+    base_map = {
+        'adam': './main 10000 200 100',
+        'aes': './main 100 0 ../urng-sycl/URNG_Input.bmp',
+        'aidw': './main 10 1 100',
+        'all-pairs-distance': './main 10000',
+        'asmooth': './main 8192 2000 9 100',
+        'asta': './main',
+        'atomicReduction': './main',
+        'bezier-surface': './main -n 8192',
+        'bfs': './main ../data/bfs/graph1MW_6.txt',
+        'bilateral': './main 2960 1440 0.5 0.5 1000',
+        'boxfilter': './main ../boxfilter-sycl/data/lenaRGB.ppm 10000',
+        'bitonic-sort': './main 25 2',
+        'bscan': './main 1000',
+        'ced': './main -a 0',
+        'chemv': './main',
+        'chi2': './main ../chi2-cuda/traindata 4000 400000 2000 2000 256 1000',
+        'colorwheel': './main 10 4096 100',
+        'columnarSolver': './main ../columnarSolver-cuda/data',
+        'compute-score': './main -p=1000',
+        'crossEntropy': './main 100',
+        'dct8x8': './main 8192 8192 100',
+        'eigenvalue': './main 2048 10000',
+        'entropy': './main 8192 8192 100',
+        'f16max': './main 100',
+        'fft': './main 3 100',
+        'floydwarshall': './main 1024 100 16',
+        'fsm': './main 65536',
+        'haccmk': './main 1000',
+        'hausdorff': './main 100000 100000 100',
+        'hellinger': './main 100',
+        'histogram': './main --i=100',
+        'hogbom': './main ../hogbom-cuda/data/dirty_4096.img ../hogbom-cuda/data/psf_4096.img 1000',
+        'hwt1d': './main 8388608 100',
+        'hybridsort': './main r',
+        'is': './main 256 256 256',
+        'jenkins-hash': './main 256 16777216 100',
+        'keogh': './main 256 20000000 100',
+        'layout': './main 1000',
+        'lfib4': './main 2000000000',
+        'linearprobing': './main 16 8',
+        'lombscargle': './main 100',
+        'mandelbrot': './main 1000',
+        'matern': './main 300 100',
+        'maxpool3d': './main 2048 2048 96 100',
+        'minisweep': './main --niterations 100',
+        'minkowski': './main 100',
+        'mrc': './main 10000000 1000',
+        'mr': './main',
+        'murmurhash3': './main 100000 100',
+        'nlll': './main 2048 1024 1000 100',
+        'nw': './main 16384 10',
+        'overlap': './main',
+        'overlay': './main 640 480',
+        'p2p': './main 100',
+        'pad': './main -a 0.1',
+        'perplexity': './main 10000 50 100',
+        'pnpoly': './main 100',
+        'pool': './main 128 48 224 224 54 54 100',
+        'present': './main 100000 100',
+        'quicksort': './main 10 2048 2048',
+        'radixsort': './main 1000',
+        'romberg': './main 128 64 1000',
+        'rsbench': './main -s large -m event',
+        'scan2': './main 1000 33554432 256',
+        'scan': './main 268435456 100',
+        'sc': './main -a 0.1',
+        'shuffle': './main 200000 100',
+        'snake': './main 100 ../snake-cuda/Datasets/ERR240727_1_E2_30000Pairs.txt 30000 1000',
+        'sobel': './main ../sobel-sycl/SobelFilter_Input.bmp 100000',
+        'softmax': './main 100000 784 100',
+        'sort': './main 3 100',
+        'ss': './main ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000',
+        'sssp': './main -g 120 -t 1 -w 10 -r 100',
+        'stddev': './main 65536 16384 100',
+        'stencil1d': './main 134217728 1000',
+        'svd3x3': './main ../svd3x3-cuda/Dataset_1M.txt 100',
+        'swish': './main 10000000 1000',
+        'tensorAccessor': './main 8192 8192 1000',
+        'tensorT': './main 100',
+        'tqs': './main -f ../tqs-cuda/input/patternsNP100NB512FB25.txt',
+        'tsa': './main 1024 1024 100',
+        'urng': './main ../urng-sycl/URNG_Input.bmp 16 16 1000',
+        'vanGenuchten': './main 256 256 256 1000',
+        'wyllie': './main 8000000 1 100',
+    }
+    
+    return {f"{k}-{lang}": v for k, v in base_map.items()}
 
 def main():
     parser = argparse.ArgumentParser(description='HeCBench runner')
@@ -145,6 +254,8 @@ def main():
                         help='vtune report root directory base')
     parser.add_argument('--vtune-root-suffix', default=None,
                         help='vtune report root directory suffix ')
+    parser.add_argument('--generate-map', action='store_true',
+                        help='Generate a map of benchmark commands')
 
     args = parser.parse_args()
 
@@ -218,6 +329,27 @@ def main():
         args.warmup = False
         args.repeat = 1
 
+    if args.generate_map:
+        benchmark_map = {}
+        for b in benches:
+            try:
+                print(f"Dry running: {b.name}")
+                cmd = b.dry_run()
+                if cmd:
+                    benchmark_map[b.name] = cmd
+                else:
+                    print(f"Warning: Could not extract command for {b.name}")
+            except Exception as err:
+                print(f"Error dry running: {b.name}")
+                print(err)
+
+        print("\nBenchmark Command Map:")
+        print("benchmark_map = {")
+        for name, cmd in benchmark_map.items():
+            print(f"    '{name}': '{cmd}',")
+        print("}")
+        exit(0)
+    
     for i, b in enumerate(benches):
         try:
             print("\nrunning {}/{}: {}".format(i, len(benches), b.name), flush=True)
@@ -263,6 +395,7 @@ def main():
     t_done = time.time()
     print("compilation took {} s, runnning took {} s.".format(t_compiled-t0, t_done-t_compiled))
 
+
+
 if __name__ == "__main__":
     main()
-
