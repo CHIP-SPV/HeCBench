@@ -40,6 +40,18 @@ if [ ! -e Dataset_1M.txt ]; then
   wget https://github.com/kuiwuchn/3x3_SVD_CUDA/raw/master/svd3x3/svd3x3/Dataset_1M.txt
 fi
 
+###################
+
+cd $HECBENCH/chi2-cuda
+if [ ! -e traindata ]; then
+  echo "############ DOWNLOADING traindata for chi2 benchmark"
+  wget https://web.njit.edu/~usman/courses/cs677_spring19/traindata.gz
+  gunzip traindata.gz
+fi
+
+
+
+cd $HECBENCH
 mkdir -p rodinia_3.1
 
 if [ ! -e rodinia_3.1.tar.bz2 ]; then

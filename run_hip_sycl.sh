@@ -1,8 +1,8 @@
 #!/bin/bash
 
-LEVEL0=1
-OPENCL=1
-REPEATS=1
+export LEVEL0=1
+export OPENCL=1
+export REPEATS=1
 
 export CHIP_L0_COLLECT_EVENTS_TIMEOUT=5
 export CHIP_L0_IMM_CMD_LISTS=1
@@ -35,13 +35,13 @@ if [ $OPENCL -ne 0 ]; then
   export SYCL_CACHE_PERSISTENT=0
   export ONEAPI_DEVICE_SELECTOR="opencl:gpu"
   
-  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o chipStar-v1.2-test_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
 fi
 
 if [ $LEVEL0 -ne 0 ]; then
   export SYCL_CACHE_PERSISTENT=0
   export ONEAPI_DEVICE_SELECTOR="level0:gpu"
-  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o chipStar-v1.2-test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
+  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
 fi
 
 
@@ -70,20 +70,6 @@ fi
 
 module unload HIP/chipStar/v1.2
 module load HIP/chipStar/v1.1
-
-if [ $OPENCL -ne 0 ]; then
-  export SYCL_CACHE_PERSISTENT=0
-  export ONEAPI_DEVICE_SELECTOR="opencl:gpu"
-  
-  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o chipStar-v1.1-test_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
-fi
-
-if [ $LEVEL0 -ne 0 ]; then
-  export SYCL_CACHE_PERSISTENT=0
-  export ONEAPI_DEVICE_SELECTOR="level0:gpu"
-  ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o chipStar-v1.1-test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
-fi
-
 
 #############################################
 

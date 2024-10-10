@@ -26,7 +26,7 @@
   "aes-sycl": [
     "(?:Average kernel execution time )([0-9.+-e]+)",
     [
-      "100",
+      "10",
       "0",
       "../data/bfs/graph1MW_6.txt"
     ]
@@ -53,14 +53,14 @@
   "all-pairs-distance-hip": [
     "(?:Average kernel execution time \\(w/o shared memory\\): )([0-9.+-e]+)",
     [
-      "10000"
+      "5000"
     ]
   ],
 
   "all-pairs-distance-sycl": [
     "(?:Average kernel execution time \\(w/o shared memory\\): )([0-9.+-e]+)",
     [
-      "10000"
+      "5000"
     ]
   ],
 
@@ -176,12 +176,12 @@
 
   "boxfilter-hip": [
     "(?:device execution time )([0-9.]+)",
-    [ "../boxfilter-sycl/data/lenaRGB.ppm", "10000" ]
+    [ "../boxfilter-sycl/data/lenaRGB.ppm", "1000" ]
   ],
 
   "boxfilter-sycl": [
     "(?:device execution time )([0-9.]+)",
-    [ "../boxfilter-sycl/data/lenaRGB.ppm", "10000" ]
+    [ "../boxfilter-sycl/data/lenaRGB.ppm", "1000" ]
   ],
 
   "bitonic-sort-hip": [
@@ -233,8 +233,8 @@
   "burger-hip": [
     "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "4096",
-      "4096"
+      "1024",
+      "1024"
     ]
   ],
 
@@ -381,16 +381,16 @@
   "eigenvalue-hip": [
     "(?:Average kernel execution time )([0-9.+-e]+)",
     [
-      "2048",
-      "400"
+      "1024",
+      "200"
     ]
   ],
 
   "eigenvalue-sycl": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "2048",
-      "400"
+      "1024",
+      "200"
     ]
   ],
 
@@ -484,7 +484,7 @@
     "(?:Device offloading time )([0-9.+-e]+)(?: \\(us\\))",
     [
       "-s",
-      "4096",
+      "2048",
       "-t", "-q"
     ]
   ],
@@ -493,7 +493,7 @@
     "(?:Device offloading time )([0-9.+-e]+)(?: \\(us\\))",
     [
       "-s",
-      "4096",
+      "2048",
       "-t", "-q"
     ]
   ],
@@ -571,18 +571,18 @@
   "histogram-hip": [
     "(?:Avg time )([0-9.+-e]+)(?: us )",
     [
-      "--width=4096",
-      "--height=4096",
-      "--i=255"
+      "--width=2048",
+      "--height=2048",
+      "--i=100"
     ]
   ],
 
   "histogram-sycl": [
     "(?:Avg time )([0-9.+-e]+)(?: us )",
     [
-      "--width=4096",
-      "--height=4096",
-      "--i=255"
+      "--width=2048",
+      "--height=2048",
+      "--i=100"
     ]
   ],
 
@@ -717,14 +717,14 @@
   "lombscargle-hip": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
     [
-      "100"
+      "50"
     ]
   ],
 
   "lombscargle-sycl": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(us\\))",
     [
-      "100"
+      "50"
     ]
   ],
 
@@ -1055,12 +1055,12 @@
 
   "scan-hip": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
-    ["268435456","100"]
+    ["134217728", "50"]
   ],
 
   "scan-sycl": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
-    ["268435456","100"]
+    ["134217728", "50"]
   ],
 
   "sc-hip": [
@@ -1175,12 +1175,12 @@
 
   "svd3x3-hip": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
-    ["../svd3x3-cuda/Dataset_1M.txt", "100"]
+    ["../svd3x3-cuda/Dataset_500K.txt", "50"]
   ],
 
   "svd3x3-sycl": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
-    ["../svd3x3-cuda/Dataset_1M.txt", "100"]
+    ["../svd3x3-cuda/Dataset_500K.txt", "50"]
   ],
 
   "swish-hip": [

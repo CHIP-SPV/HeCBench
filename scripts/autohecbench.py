@@ -87,7 +87,7 @@ class Benchmark:
         cmd.append("./" + self.binary)
         cmd.extend(self.args)
         print("Running: " + " ".join(cmd))
-        proc = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="ascii", timeout=5200, env=extra_env)
+        proc = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="ascii", timeout=1200, env=extra_env)
         out = proc.stdout
         if self.verbose:
             print(out)
