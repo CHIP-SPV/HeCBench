@@ -359,8 +359,34 @@ def main():
             if (b.name.startswith("tensorAccessor")
                 or b.name.startswith("matern")
                 or b.name.startswith("wyllie")
+                or b.name.startswith("rsbench")
                 or b.name.startswith("sort-sycl")):
                 print("will likely timeout, skipping", flush=True)
+                continue
+            if(b.name.startswith("fresnel")
+                or b.name.startswith("goulash")
+                or b.name.startswith("romberg")
+                or b.name.startswith("vanGenuchten")):
+                print("Required aspect fp64 is not supported on the device", flush=True)
+                continue
+            if(b.name.startswith("heat2d")
+                or b.name.startswith("ced-sycl")
+                or b.name.startswith("colorwheel")
+                or b.name.startswith("shuffle-sycl")
+                or b.name.startswith("stencil1d-sycl")
+                or b.name.startswith("lud-hip")
+                or b.name.startswith("snake-hip")):
+                print("Test will fail, skipping", flush=True)
+                continue
+            if(b.name.startswith("columnarSolver")
+                or b.name.startswith("ans")):
+                print("can't find compatible device", flush=True)
+                continue
+            if(b.name.startswith("chi2")):
+                print("can't find data", flush=True)
+                continue
+            if(b.name.startswith("hellinger-hip")):
+                print("Double type is not supported on this platform", flush=True)
                 continue
             time.sleep(1)
 

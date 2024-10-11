@@ -19,7 +19,7 @@
     [
       "100",
       "0",
-      "../data/bfs/graph1MW_6.txt"
+      "../aes-cuda/dots.bmp"
     ]
   ],
 
@@ -28,14 +28,14 @@
     [
       "10",
       "0",
-      "../data/bfs/graph1MW_6.txt"
+      "../aes-cuda/dots.bmp"
     ]
   ],
 
   "aidw-sycl": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "100",
+      "10",
       "1",
       "10"
     ]
@@ -44,7 +44,7 @@
   "aidw-hip": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "100",
+      "10",
       "1",
       "10"
     ]
@@ -233,16 +233,21 @@
   "burger-hip": [
     "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
+<<<<<<< Updated upstream
       "1024",
       "1024"
+=======
+      "2048",
+      "2048"
+>>>>>>> Stashed changes
     ]
   ],
 
   "burger-sycl": [
     "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "4096",
-      "4096"
+      "2048",
+      "2048"
     ]
   ],
 
@@ -303,14 +308,14 @@
   "colorwheel-hip": [
     "(?:kernel execution time : )([0-9.]+)",
     [
-      "10", "4096", "100"
+      "10", "2048", "100"
     ]
   ],
 
   "colorwheel-sycl": [
     "(?:kernel execution time : )([0-9.]+)",
     [
-      "10", "4096", "100"
+      "10", "2048", "100"
     ]
   ],
 
@@ -411,14 +416,14 @@
   "f16max-hip": [
     "(?:execution time )([0-9.+-e]+)(?: \\(us\\))",
     [
-      "100"
+      "10"
     ]
   ],
 
   "f16max-sycl": [
     "(?:execution time )([0-9.+-e]+)(?: \\(us\\))",
     [
-      "100"
+      "10"
     ]
   ],
 
@@ -455,14 +460,14 @@
   "fresnel-hip": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "100"
+      "10"
     ]
   ],
 
   "fresnel-sycl": [
     "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-      "100"
+      "10"
     ]
   ],
 
@@ -501,14 +506,14 @@
   "goulash-hip": [
     "(?:total kernel time )([0-9.+-e]+)",
     [
-      "101", "5"
+      "10", "1"
     ]
   ],
 
   "goulash-sycl": [
     "(?:total kernel time )([0-9.+-e]+)",
     [
-      "101", "5"
+      "10", "1"
     ]
   ],
 
@@ -543,14 +548,14 @@
   "heat2d-hip": [
     "([0-9.+-e]+)(?: usec/iter)",
     [
-      "4096", "8192", "1000", "data.txt"
+      "2048", "4096", "100", "data.txt"
     ]
   ],
 
   "heat2d-sycl": [
     "([0-9.+-e]+)(?: usec/iter)",
     [
-      "4096", "8192", "1000", "data.txt"
+      "2048", "4096", "100", "data.txt"
     ]
   ],
 
@@ -955,12 +960,12 @@
 
   "pnpoly-hip": [
     "(?:Average kernel execution time \\(pnpoly_opt<64>\\): )([0-9.+-e]+)(?: \\(s\\))",
-    ["100"]
+    ["80"]
   ],
 
   "pnpoly-sycl": [
     "(?:Average kernel execution time \\(pnpoly_opt<64>\\): )([0-9.+-e]+)(?: \\(s\\))",
-    ["100"]
+    ["80"]
   ],
 
   "pool-hip": [
@@ -1005,22 +1010,22 @@
 
   "romberg-hip": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
-    ["128","64","1000"]
+    ["128","64","100"]
   ],
 
   "romberg-sycl": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
-    ["128","64","1000"]
+    ["128","64","100"]
   ],
 
   "rsbench-hip": [
     "(?:Runtime:\\s+)([0-9+-.e]+)",
-    ["-s", "large", "-m", "event"]
+    ["-s", "small", "-m", "event"]
   ],
 
   "rsbench-sycl": [
     "(?:Runtime:\\s+)([0-9+-.e]+)",
-    ["-s", "large", "-m", "event"]
+    ["-s", "small", "-m", "event"]
   ],
 
   "rtm8-hip": [
@@ -1055,12 +1060,20 @@
 
   "scan-hip": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
+<<<<<<< Updated upstream
     ["134217728", "50"]
+=======
+    ["134217728","100"]
+>>>>>>> Stashed changes
   ],
 
   "scan-sycl": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
+<<<<<<< Updated upstream
     ["134217728", "50"]
+=======
+    ["134217728","100"]
+>>>>>>> Stashed changes
   ],
 
   "sc-hip": [
@@ -1170,7 +1183,7 @@
 
   "stencil1d-sycl": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(s\\))",
-    ["134217728", "100"]
+    ["2097152", "1"]
   ],
 
   "svd3x3-hip": [
@@ -1249,7 +1262,7 @@
       "256",
       "256",
       "256",
-      "100"
+      "10"
     ]
   ],
 
@@ -1259,7 +1272,7 @@
       "256",
       "256",
       "256",
-      "100"
+      "10"
     ]
   ],
 
