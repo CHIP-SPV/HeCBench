@@ -42,8 +42,6 @@ fi
 
 ###################
 
-<<<<<<< Updated upstream
-=======
 cd $HECBENCH
 
 mkdir -p rodinia_3.1
@@ -59,7 +57,6 @@ cp -r rodinia_3.1/data/* ./data
 
 ###################
 
->>>>>>> Stashed changes
 cd $HECBENCH/chi2-cuda
 if [ ! -e traindata ]; then
   echo "############ DOWNLOADING traindata for chi2 benchmark"
@@ -67,21 +64,6 @@ if [ ! -e traindata ]; then
   gunzip traindata.gz
 fi
 
-<<<<<<< Updated upstream
-
-
-cd $HECBENCH
-mkdir -p rodinia_3.1
-
-if [ ! -e rodinia_3.1.tar.bz2 ]; then
-  wget http://www.cs.virginia.edu/\~skadron/lava/Rodinia/Packages/rodinia_3.1.tar.bz2
-  tar xjf rodinia_3.1.tar.bz2 -C rodinia_3.1 --strip-components=1
-fi
-
-mkdir data
-cp -r rodinia_3.1/data/* ./data
-
-=======
 #####################
 
 cd $HECBENCH/ced-sycl
@@ -103,4 +85,3 @@ if [ ! -e dots.bmp ]; then
   echo "############ DOWNLOADING dots.bmp for aes-cuda"
   wget https://people.math.sc.edu/Burkardt/data/bmp/dots.bmp
 fi
->>>>>>> Stashed changes
