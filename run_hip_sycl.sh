@@ -40,7 +40,7 @@ fi
 
 if [ $LEVEL0 -ne 0 ]; then
   export SYCL_CACHE_PERSISTENT=0
-  export ONEAPI_DEVICE_SELECTOR="level0:gpu"
+  export ONEAPI_DEVICE_SELECTOR="level_zero:gpu"
   ./scripts/autohecbench.py --warmup false --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o test_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
 fi
 
