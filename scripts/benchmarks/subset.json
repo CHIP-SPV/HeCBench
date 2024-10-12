@@ -233,13 +233,8 @@
   "burger-hip": [
     "(?:Total kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
     [
-<<<<<<< Updated upstream
       "1024",
       "1024"
-=======
-      "2048",
-      "2048"
->>>>>>> Stashed changes
     ]
   ],
 
@@ -1060,20 +1055,12 @@
 
   "scan-hip": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
-<<<<<<< Updated upstream
     ["134217728", "50"]
-=======
-    ["134217728","100"]
->>>>>>> Stashed changes
   ],
 
   "scan-sycl": [
     "(?:execution time of scan \\(w/  bank conflicts\\): )([0-9.+-e]+)",
-<<<<<<< Updated upstream
     ["134217728", "50"]
-=======
-    ["134217728","100"]
->>>>>>> Stashed changes
   ],
 
   "sc-hip": [
