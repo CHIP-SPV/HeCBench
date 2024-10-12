@@ -87,7 +87,7 @@ src/logan_functions.o: src/logan_functions.cpp \
 clean:
 	rm -rf $(program) $(obj)
 
-demo: $(program)
+main: $(program)
 	./$(program) ../logan-cuda/inputs/example.txt 17 21 1
 
 run: $(program)

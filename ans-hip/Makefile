@@ -7,7 +7,7 @@ NVCC_FLAGS = --std=c++14 -O3 -pthread
 INC_DIR = include
 SRC_DIR = src
 OBJ_DIR = bin
-EXEC_NAME = demo
+EXEC_NAME = main
 
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cc)
 CU_SRC_FILES := $(wildcard $(SRC_DIR)/*.cu)
