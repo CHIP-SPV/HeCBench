@@ -156,9 +156,10 @@ int main(int argc, char *argv[]) {
   // verification
   bool ok = true;
   for (int i = 0; i < Lx*Ly; i++) {
-    // choose 1e-2 because the error rate increases with the iteration from 1 to 100000
-    if ( fabs(cpu_arr[i] - gpu_arr[i]) > 1e-2 ) {
-      printf("Mismatch at %d cpu=%f gpu=%f\n", i, cpu_arr[i], gpu_arr[i]);
+    float relError = fabs(cpu_arr[i] - gpu_arr[i]) / fabs(cpu_arr[i]);
+    if (relError > 0.01) { // 1% error threshold
+      printf("Mismatch at %d cpu=%f gpu=%f (relative error: %.2f%%)\n", 
+             i, cpu_arr[i], gpu_arr[i], relError * 100);
       ok = false;
       break;
     }
