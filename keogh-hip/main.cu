@@ -117,10 +117,15 @@ int main(int argc, char* argv[]) {
   reference(subject, avgs, stds, lb_h, lower, upper, M, N);
   bool ok = true;
   for (int i = 0; i < N-M+1; i++) {
-    if (fabsf(lb[i] - lb_h[i]) > 1e+30) {
-      printf("%d %f %f\n", i, lb[i], lb_h[i]);
-      ok = false;
-      break;
+    // Calculate the relative difference
+    float relDiff = fabsf(lb[i] - lb_h[i]) / fabsf(lb_h[i]);
+    
+    // Check if the relative difference is greater than 1%
+    if (relDiff > 0.01f) {
+        printf("Mismatch at index %d: GPU = %f, CPU = %f (Relative diff: %.2f%%)\n", 
+               i, lb[i], lb_h[i], relDiff * 100);
+        ok = false;
+        break;
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
