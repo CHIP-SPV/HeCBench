@@ -371,7 +371,6 @@ def main():
                 continue
             if(b.name.startswith("heat2d")
                 or b.name.startswith("ced-sycl")
-                or b.name.startswith("colorwheel")
                 or b.name.startswith("shuffle-sycl")
                 or b.name.startswith("stencil1d-sycl")
                 or b.name.startswith("lud-hip")
