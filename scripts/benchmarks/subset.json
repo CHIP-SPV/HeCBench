@@ -1175,12 +1175,12 @@
 
   "svd3x3-hip": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
-    ["../svd3x3-cuda/Dataset_500K.txt", "50"]
+    ["../svd3x3-cuda/Dataset_1M.txt", "50"]
   ],
 
   "svd3x3-sycl": [
     "(?:Average kernel execution time: )([0-9.+-e]+)(?: \\(us\\))",
-    ["../svd3x3-cuda/Dataset_500K.txt", "50"]
+    ["../svd3x3-cuda/Dataset_1M.txt", "50"]
   ],
 
   "swish-hip": [

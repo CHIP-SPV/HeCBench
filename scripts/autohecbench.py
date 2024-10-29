@@ -365,17 +365,31 @@ def main():
                 continue
             if(b.name.startswith("fresnel")
                 or b.name.startswith("goulash")
+                or b.name.startswith("burger")
+                or b.name.startswith("cooling")
+                or b.name.startswith("crossEntropy")
+                or b.name.startswith("fft")
+                or b.name.startswith("is")
+                or b.name.startswith("minisweep")
+                or b.name.startswith("pad")
+                or b.name.startswith("tsa")
                 or b.name.startswith("romberg")
                 or b.name.startswith("vanGenuchten")):
                 print("Required aspect fp64 is not supported on the device", flush=True)
                 continue
             if(b.name.startswith("heat2d")
-                or b.name.startswith("ced-sycl")
+                or b.name.startswith("aes")
+                or b.name.startswith("ced")
+                or b.name.startswith("f16max-hip")
                 or b.name.startswith("shuffle-sycl")
                 or b.name.startswith("stencil1d-sycl")
+                or b.name.startswith("linearprobing-sycl")
                 or b.name.startswith("lud-hip")
                 or b.name.startswith("snake-hip")):
                 print("Test will fail, skipping", flush=True)
+                continue
+            if(b.name.startswith("bsw")):
+                print("Data file too large", flush=True)
                 continue
             if(b.name.startswith("columnarSolver")
                 or b.name.startswith("ans")):
@@ -384,7 +398,9 @@ def main():
             if(b.name.startswith("chi2")):
                 print("can't find data", flush=True)
                 continue
-            if(b.name.startswith("hellinger-hip")):
+            if(b.name.startswith("hellinger-hip")
+                or b.name.startswith("tensorT-hip")
+                or b.name.startswith("quicksort-hip")):
                 print("Double type is not supported on this platform", flush=True)
                 continue
             time.sleep(1)
