@@ -16,6 +16,7 @@ import matplotlib.pyplot as plt
 import csv
 
 import math
+outlier_factor = 30
 
 def geomean(xs):
         return math.exp(math.fsum(math.log(x) for x in xs) / len(xs))
@@ -122,12 +123,10 @@ for K in Baseline.keys():
 	if not K in Compared.keys():
 		print("skipping bench: ", K)
 		continue
-	Comp = Compared[K]['min'] / Baseline[K]['min']
-	if Comp > 10:
-		print("Bench too large:", K, " compared: ", Compared[K]['min'], " baseline: ", Baseline[K]['min'], " compared/base: ", Comp)
-		continue
-	if Comp < 0.1:
-		print("Bench too small:", K, " compared: ", Compared[K]['min'], " baseline: ", Baseline[K]['min'], " compared/base: ", Comp)
+	
+	Comp = max(Compared[K]['min'] / Baseline[K]['min'], Baseline[K]['min'] / Compared[K]['min'])
+	if Comp > outlier_factor:
+		print(f"Outlier, exceeding factor {outlier_factor}:", K, " compared: ", Compared[K]['min'], " baseline: ", Baseline[K]['min'], " compared/base: ", Comp)
 		continue
 	bench_names.append(K)
 	mins.append(Compared[K]['min'] / Baseline[K]['min'])
@@ -145,41 +144,56 @@ if not options.errbars:
 if options.style:
 	plt.style.use(options.style)
 
+# Adjust figure size for journal quality (typical column width)
+plt.figure(figsize=(8, 6), dpi=300)  # Higher DPI for print quality
+
 bar_width = 0.68
 bar1 = plt.bar(sorted_bench_names, [x-float(options.bottom) for x in sorted_mins], bar_width, align='center',
                yerr=errs, color=options.color, ecolor=options.ecolor,
                label=options.zlabel, bottom=float(options.bottom) )
 
 if options.xlabel:
-	plt.xlabel(options.xlabel)
+	plt.xlabel(options.xlabel, fontsize=9)
 if options.ylabel:
-	plt.ylabel(options.ylabel)
+	plt.ylabel(options.ylabel, fontsize=9)
 if options.title:
-	plt.title(options.title)
+	plt.title(options.title, fontsize=10, pad=10)
 
-plt.xticks(rotation='vertical')
+# More conservative margins
+plt.margins(x=0.01, y=0.15)
+
+# Refined subplot parameters
+plt.subplots_adjust(left=0.12, right=0.95, bottom=0.25, top=0.92)
+
+# Clean, readable axis labels
+plt.xticks(rotation=45, fontsize=8, ha='right')
+
 if options.refline:
-	plt.axhline(1.0, ls='dotted')
+	plt.axhline(1.0, ls='dotted', color='gray', alpha=0.5)
 if options.geomean:
-    g = geomean(sorted_mins)
-    s = f"Geomean = {g:.2f}"
-    plt.text(0.02, 0.98, s, transform=plt.gca().transAxes, 
-             verticalalignment='top', horizontalalignment='left',
-             bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
-if options.bar_values:
-	plt.bar_label(bar1, fmt='%.2f', label_type='edge', rotation='vertical', fontsize='small')
+	g = geomean(sorted_mins)
+	s = f"Geomean = {g:.2f}"
+	plt.text(0.02, 0.95, s, transform=plt.gca().transAxes, 
+			 verticalalignment='top', horizontalalignment='left',
+			 fontsize=8, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
+
+# Only show one set of bar labels to reduce clutter
+if options.bar_labels:
+	plt.bar_label(bar1, fmt='%.2f', label_type='edge', 
+				 rotation=45, fontsize=7,  # Rotated labels
+				 padding=5)  # Increased padding
+elif options.bar_values:  # Don't show both types of labels
+	plt.bar_label(bar1, fmt='%.2f', label_type='edge', 
+				 rotation=45, fontsize=7,
+				 padding=5)  # Increased padding
 
 if options.log_scale:
-    plt.yscale('log')
+	plt.yscale('log')
 
-if options.bar_labels:
-    plt.bar_label(bar1, fmt='%.2f', label_type='edge', rotation='vertical', fontsize='small')
-
-# plt.legend()
 plt.tight_layout()
 
 if options.output:
-	plt.savefig(options.output)
+	plt.savefig(options.output, bbox_inches='tight', dpi=300)  # High DPI for print
 else:
 	plt.show()
 

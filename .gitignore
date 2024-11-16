@@ -18,3 +18,5 @@ cfd-*/density_energy
 cfd-*/momentum
 srad-*/image_out.pgm
 data
+*.png
+*.csv
