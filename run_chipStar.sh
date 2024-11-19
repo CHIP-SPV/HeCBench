@@ -5,39 +5,41 @@ export WARMPUP=1
 export CHIP_L0_COLLECT_EVENTS_TIMEOUT=5
 export CHIP_DEVICE_TYPE=gpu
 export CHIP_LOGLEVEL=crit
-export CACHE1=1
+export CACHE=0
 
-if [ $CACHE1 -eq 0 ]; then
+if [ $CACHE -eq 0 ]; then
     export CHIP_MODULE_CACHE_DIR=""
 fi  
 
 # Load base modules
-source /etc/profile.d/modules.sh
-module load oneapi/2024.2.2
+#source /etc/profile.d/modules.sh
+#module load oneapi/2024.2.2
 
 # Function to run benchmarks for a specific ChipStar version
 run_benchmarks() {
     local VERSION=$1
-    local RUNTIME="chipStar-${VERSION}-Warmup${WARMPUP}-cache"
+    local RUNTIME="chipStar-${VERSION}-Warmup${WARMPUP}-cache${CACHE}"
     
-    # # OpenCL benchmark
-    # module load opencl/dgpu
-    # rm -f ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv
-    # ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
-    #     -o ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv hip 2>&1 | \
-    #     tee ${RUNTIME}_ocl_benchmark.log
-    # module unload opencl/dgpu
-    
-    # Level Zero benchmark
-    module load level-zero/dgpu
+    # OpenCL benchmark
+    #module load opencl/dgpu
+    export CHIP_BE=opencl
+    rm -f ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv
+    ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
+        -o ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv hip 2>&1 | \
+        tee ${RUNTIME}_ocl_benchmark.log
+    ##module unload opencl/dgpu
+    #
+    ## Level Zero benchmark
+    ##module load level-zero/dgpu
+    export CHIP_BE=level0
     rm -f ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv
     ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
         -o ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv hip 2>&1 | \
         tee ${RUNTIME}_l0_benchmark.log
-    module unload level-zero/dgpu
+    ##module unload level-zero/dgpu
     
     # Generate plot
-    ./scripts/plot.py -g -v -r --color '#b7cce9' -m 0.8 -s seaborn-v0_8-pastel \
+    python3 ./scripts/plot.py -g -v -r --color '#b7cce9' -m 0.8 -s seaborn-pastel \
         -t "HeCBench, Intel Arc770, ${RUNTIME}(OCL) vs ${RUNTIME}(L0) speedup" \
         -b ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv \
         -c ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv \

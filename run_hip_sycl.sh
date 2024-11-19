@@ -13,8 +13,8 @@ export CHIP_DEVICE_TYPE=gpu
 export CHIP_LOGLEVEL=crit
 
 # -------------------
-source /etc/profile.d/modules.sh
-module load oneapi/2024.2.2
+#source /etc/profile.d/modules.sh
+#module load oneapi/2024.2.2
 module load HIP/chipStar/v1.2.1
 #export CHIP_MODULE_CACHE_DIR=""
 
@@ -29,21 +29,21 @@ if [ $OPENCL -ne 0 ]; then
   export SYCL_CACHE_PERSISTENT=0
   export ONEAPI_DEVICE_SELECTOR="opencl:gpu"
   
-  ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o ${RUNTIME}_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
+  ./scripts/autohecbench.py --clean --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o ${RUNTIME}_FULL_${REPEATS}_x_sycl_strict_oclBE.csv --sycl-type opencl sycl
 fi
 
 if [ $LEVEL0 -ne 0 ]; then
   export SYCL_CACHE_PERSISTENT=0
   export ONEAPI_DEVICE_SELECTOR="level_zero:gpu"
-  ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o ${RUNTIME}_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
+  ./scripts/autohecbench.py --clean --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fp-model=precise -fno-sycl-instrument-device-code" -o ${RUNTIME}_FULL_${REPEATS}_x_sycl_strict_l0BE.csv --sycl-type opencl sycl
 fi
 
 # Generate plot
-./scripts/plot.py -g -v -r --color '#b7cce9' -m 0.8 -s seaborn-v0_8-pastel \
-    -t "HeCBench, Intel Arc770, ${RUNTIME}(OCL) vs ${RUNTIME}(L0) speedup" \
-    -b ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv \
-    -c ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv \
-    -o ${RUNTIME}_ocl_vs_l0.png
+#	./scripts/plot.py -g -v -r --color '#b7cce9' -m 0.8 -s seaborn-v0_8-pastel \
+#	    -t "HeCBench, Intel Arc770, ${RUNTIME}(OCL) vs ${RUNTIME}(L0) speedup" \
+#	    -b ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv \
+#	    -c ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv \
+#	    -o ${RUNTIME}_ocl_vs_l0.png
 
 
 #############################################
