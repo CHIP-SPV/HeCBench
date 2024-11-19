@@ -5,10 +5,12 @@ export WARMPUP=1
 export CHIP_L0_COLLECT_EVENTS_TIMEOUT=5
 export CHIP_DEVICE_TYPE=gpu
 export CHIP_LOGLEVEL=crit
-export CACHE=0
+export CACHE=1
 
 if [ $CACHE -eq 0 ]; then
     export CHIP_MODULE_CACHE_DIR=""
+else
+    export CHIP_MODULE_CACHE_DIR=${HOME}/chipStarCache
 fi  
 
 # Load base modules
