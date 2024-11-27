@@ -1,0 +1,508 @@
+compiling: bscan-hip
+compiling: ced-hip
+compiling: chemv-hip
+compiling: lud-hip
+compiling: mandelbrot-hip
+compiling: matern-hip
+compiling: snake-hip
+compiling: sobel-hip
+compiling: softmax-hip
+compiling: compute-score-hip
+compiling: crossEntropy-hip
+compiling: dct8x8-hip
+compiling: hwt1d-hip
+compiling: hybridsort-hip
+compiling: is-hip
+compiling: romberg-hip
+compiling: rsbench-hip
+compiling: scan2-hip
+compiling: adam-hip
+compiling: aes-hip
+compiling: aidw-hip
+compiling: maxpool3d-hip
+compiling: minisweep-hip
+compiling: minkowski-hip
+compiling: scan-hip
+compiling: sc-hip
+compiling: shuffle-hip
+compiling: all-pairs-distance-hip
+compiling: asmooth-hip
+compiling: asta-hip
+compiling: hellinger-hip
+compiling: histogram-hip
+compiling: hogbom-hip
+compiling: overlay-hip
+compiling: p2p-hip
+compiling: pad-hip
+compiling: vanGenuchten-hip
+compiling: wyllie-hip
+compiling: atomicReduction-hip
+compiling: bezier-surface-hip
+compiling: bfs-hip
+compiling: fft-hip
+compiling: floydwarshall-hip
+compiling: fsm-hip
+compiling: mrc-hip
+compiling: mr-hip
+compiling: murmurhash3-hip
+compiling: sort-hip
+compiling: ss-hip
+compiling: sssp-hip
+compiling: eigenvalue-hip
+compiling: entropy-hip
+compiling: f16max-hip
+compiling: gaussian-hip
+compiling: haccmk-hip
+compiling: hausdorff-hip
+compiling: nlll-hip
+compiling: nw-hip
+compiling: overlap-hip
+compiling: stddev-hip
+compiling: stencil1d-hip
+compiling: svd3x3-hip
+compiling: bilateral-hip
+compiling: boxfilter-hip
+compiling: bitonic-sort-hip
+compiling: lfib4-hip
+compiling: linearprobing-hip
+compiling: lombscargle-hip
+compiling: present-hip
+compiling: quicksort-hip
+compiling: radixsort-hip
+compiling: swish-hip
+compiling: tensorAccessor-hip
+compiling: tensorT-hip
+compiling: chi2-hip
+compiling: colorwheel-hip
+compiling: columnarSolver-hip
+compiling: jenkins-hash-hip
+compiling: keogh-hip
+compiling: layout-hip
+compiling: perplexity-hip
+compiling: pnpoly-hip
+compiling: pool-hip
+compiling: tqs-hip
+compiling: tsa-hip
+compiling: urng-hip
+
+running 0/86: adam-hip
+Running: ./main 10000 200 100
+Running: ./main 10000 200 100
+Running: ./main 10000 200 100
+
+running 1/86: aes-hip
+Test will fail, skipping
+
+running 2/86: aidw-hip
+Running: ./main 10 1 10
+Running: ./main 10 1 10
+Running: ./main 10 1 10
+
+running 3/86: all-pairs-distance-hip
+Running: ./main 5000
+Running: ./main 5000
+Running: ./main 5000
+Error running: all-pairs-distance-hip
+Command '['./main', '5000']' returned non-zero exit status 1.
+
+running 4/86: asmooth-hip
+Running: ./main 12800 8 5 20
+Running: ./main 12800 8 5 20
+Running: ./main 12800 8 5 20
+
+running 5/86: asta-hip
+Running: ./main
+Running: ./main
+Running: ./main
+
+running 6/86: atomicReduction-hip
+Running: ./main
+Error running: atomicReduction-hip
+/home/pvelesko/HeCBench/scripts/../atomicReduction-hip:
+no regex match for (?:Average kernel execution time )([0-9.+-e]+)(?: \(s\)) in
+Array size: 200 MB
+Thread block size: 256
+Repeat the kernel execution  32 times
+Device name: Intel(R) Data Center GPU Max 1550
+Average kernel execution time 0.0124617 s
+The average performance of reduction is 538.522 GBytes/sec
+VERIFICATION: result is CORRECT
+
+Average kernel execution time 0.0127577 s
+The average performance of reduction is 526.028 GBytes/sec
+VERIFICATION: result is CORRECT
+
+Average kernel execution time 0.0129049 s
+The average performance of reduction is 520.025 GBytes/sec
+VERIFICATION: result is CORRECT
+
+Average kernel execution time 0.0135656 s
+The average performance of reduction is 494.699 GBytes/sec
+VERIFICATION: result is CORRECT
+
+Average kernel execution time 0.0138492 s
+The average performance of reduction is 484.569 GBytes/sec
+VERIFICATION: result is CORRECT
+
+
+
+running 7/86: bezier-surface-hip
+Running: ./main -n 8192
+Running: ./main -n 8192
+Running: ./main -n 8192
+
+running 8/86: bfs-hip
+Running: ./main ../data/bfs/graph1MW_6.txt
+Running: ./main ../data/bfs/graph1MW_6.txt
+Running: ./main ../data/bfs/graph1MW_6.txt
+
+running 9/86: bilateral-hip
+Running: ./main 1000 1000 1 5 100
+Running: ./main 1000 1000 1 5 100
+Running: ./main 1000 1000 1 5 100
+
+running 10/86: boxfilter-hip
+Running: ./main ../boxfilter-sycl/data/lenaRGB.ppm 1000
+Running: ./main ../boxfilter-sycl/data/lenaRGB.ppm 1000
+Running: ./main ../boxfilter-sycl/data/lenaRGB.ppm 1000
+
+running 11/86: bitonic-sort-hip
+Running: ./main 22 1
+Running: ./main 22 1
+Running: ./main 22 1
+
+running 12/86: bscan-hip
+Running: ./main 1000
+Running: ./main 1000
+Running: ./main 1000
+
+running 13/86: ced-hip
+Test will fail, skipping
+
+running 14/86: chemv-hip
+Running: ./main
+Running: ./main
+Running: ./main
+
+running 15/86: chi2-hip
+can't find data
+
+running 16/86: colorwheel-hip
+Running: ./main 10 2048 100
+Running: ./main 10 2048 100
+Running: ./main 10 2048 100
+
+running 17/86: columnarSolver-hip
+can't find compatible device
+
+running 18/86: compute-score-hip
+Running: ./main
+Running: ./main
+Running: ./main
+
+running 19/86: crossEntropy-hip
+Required aspect fp64 is not supported on the device
+
+running 20/86: dct8x8-hip
+Running: ./main 8192 8192 100
+Running: ./main 8192 8192 100
+Running: ./main 8192 8192 100
+
+running 21/86: eigenvalue-hip
+Running: ./main 1024 200
+Running: ./main 1024 200
+Running: ./main 1024 200
+
+running 22/86: entropy-hip
+Running: ./main 8192 8192 100
+Running: ./main 8192 8192 100
+Running: ./main 8192 8192 100
+
+running 23/86: f16max-hip
+Test will fail, skipping
+
+running 24/86: fft-hip
+Required aspect fp64 is not supported on the device
+
+running 25/86: floydwarshall-hip
+Running: ./main 1024 100 16
+Running: ./main 1024 100 16
+Running: ./main 1024 100 16
+
+running 26/86: fsm-hip
+Running: ./main 1000
+Running: ./main 1000
+Running: ./main 1000
+
+running 27/86: gaussian-hip
+Running: ./main -s 2048 -t -q
+Running: ./main -s 2048 -t -q
+Running: ./main -s 2048 -t -q
+
+running 28/86: haccmk-hip
+Running: ./main 1000
+Running: ./main 1000
+Running: ./main 1000
+
+running 29/86: hausdorff-hip
+Running: ./main 100000 100000 100
+Running: ./main 100000 100000 100
+Running: ./main 100000 100000 100
+
+running 30/86: hellinger-hip
+Double type is not supported on this platform
+
+running 31/86: histogram-hip
+Running: ./main --width=2048 --height=2048 --i=100
+Running: ./main --width=2048 --height=2048 --i=100
+Running: ./main --width=2048 --height=2048 --i=100
+
+running 32/86: hogbom-hip
+Running: ./main ../hogbom-cuda/data/dirty_4096.img ../hogbom-cuda/data/psf_4096.img 100
+Running: ./main ../hogbom-cuda/data/dirty_4096.img ../hogbom-cuda/data/psf_4096.img 100
+Running: ./main ../hogbom-cuda/data/dirty_4096.img ../hogbom-cuda/data/psf_4096.img 100
+
+running 33/86: hwt1d-hip
+Running: ./main 8388608 100
+Running: ./main 8388608 100
+Running: ./main 8388608 100
+
+running 34/86: hybridsort-hip
+Running: ./run r
+Running: ./run r
+Running: ./run r
+
+running 35/86: is-hip
+Required aspect fp64 is not supported on the device
+
+running 36/86: jenkins-hash-hip
+Running: ./main 256 16777216 100
+Running: ./main 256 16777216 100
+Running: ./main 256 16777216 100
+
+running 37/86: keogh-hip
+Running: ./main 256 16777216 100
+Running: ./main 256 16777216 100
+Running: ./main 256 16777216 100
+
+running 38/86: layout-hip
+Running: ./main 1000
+Running: ./main 1000
+Running: ./main 1000
+
+running 39/86: lfib4-hip
+Running: ./main 200000000
+Running: ./main 200000000
+Running: ./main 200000000
+
+running 40/86: linearprobing-hip
+Running: ./main 16 8
+Running: ./main 16 8
+Running: ./main 16 8
+
+running 41/86: lombscargle-hip
+Running: ./main 50
+Running: ./main 50
+Running: ./main 50
+
+running 42/86: lud-hip
+Test will fail, skipping
+
+running 43/86: mandelbrot-hip
+Running: ./main 1000
+Running: ./main 1000
+Running: ./main 1000
+
+running 44/86: matern-hip
+will likely timeout, skipping
+
+running 45/86: maxpool3d-hip
+Running: ./main 2048 2048 96 100
+Running: ./main 2048 2048 96 100
+Running: ./main 2048 2048 96 100
+
+running 46/86: minisweep-hip
+Required aspect fp64 is not supported on the device
+
+running 47/86: minkowski-hip
+Running: ./main 100
+Running: ./main 100
+Running: ./main 100
+
+running 48/86: mrc-hip
+Running: ./main 8192 100
+Running: ./main 8192 100
+Running: ./main 8192 100
+
+running 49/86: mr-hip
+Running: ./main
+Running: ./main
+Running: ./main
+
+running 50/86: murmurhash3-hip
+Running: ./main 100000 20
+Running: ./main 100000 20
+Running: ./main 100000 20
+
+running 51/86: nlll-hip
+Running: ./main 2048 640 512 40
+Running: ./main 2048 640 512 40
+Running: ./main 2048 640 512 40
+
+running 52/86: nw-hip
+Running: ./main 16384 24
+Running: ./main 16384 24
+Running: ./main 16384 24
+
+running 53/86: overlap-hip
+Running: ./main
+Running: ./main
+Running: ./main
+
+running 54/86: overlay-hip
+Running: ./main 640 480
+Running: ./main 640 480
+Running: ./main 640 480
+
+running 55/86: p2p-hip
+Running: ./main 100
+Error running: p2p-hip
+/home/pvelesko/HeCBench/scripts/../p2p-hip:
+no regex match for (?:Total kernel execution time: )([0-9.]+) in
+[./main] - Starting...
+Checking for multiple GPUs...
+There are 1 GPUs
+Two or more GPUs with Peer-to-Peer access capability are required for ./main.
+Waiving test.
+
+
+running 56/86: pad-hip
+Required aspect fp64 is not supported on the device
+
+running 57/86: perplexity-hip
+Running: ./main 10000 50 100
+Running: ./main 10000 50 100
+Running: ./main 10000 50 100
+
+running 58/86: pnpoly-hip
+Running: ./main 80
+Running: ./main 80
+Running: ./main 80
+
+running 59/86: pool-hip
+Running: ./main 128 48 224 224 54 54 100
+Running: ./main 128 48 224 224 54 54 100
+Running: ./main 128 48 224 224 54 54 100
+
+running 60/86: present-hip
+Running: ./main 100000 100
+Running: ./main 100000 100
+Running: ./main 100000 100
+
+running 61/86: quicksort-hip
+Double type is not supported on this platform
+
+running 62/86: radixsort-hip
+Running: ./main 100
+Running: ./main 100
+Running: ./main 100
+
+running 63/86: romberg-hip
+Required aspect fp64 is not supported on the device
+
+running 64/86: rsbench-hip
+will likely timeout, skipping
+
+running 65/86: scan2-hip
+Running: ./main 1000 33554432 256
+Running: ./main 1000 33554432 256
+Running: ./main 1000 33554432 256
+
+running 66/86: scan-hip
+Running: ./main 134217728 50
+Running: ./main 134217728 50
+Running: ./main 134217728 50
+
+running 67/86: sc-hip
+Running: ./main -a 0.1
+Running: ./main -a 0.1
+Running: ./main -a 0.1
+
+running 68/86: shuffle-hip
+Running: ./main 200000 100
+Running: ./main 200000 100
+Running: ./main 200000 100
+
+running 69/86: snake-hip
+Test will fail, skipping
+
+running 70/86: sobel-hip
+Running: ./main ../sobel-sycl/SobelFilter_Input.bmp 100000
+Running: ./main ../sobel-sycl/SobelFilter_Input.bmp 100000
+Running: ./main ../sobel-sycl/SobelFilter_Input.bmp 100000
+
+running 71/86: softmax-hip
+Running: ./main 100000 784 100
+Running: ./main 100000 784 100
+Running: ./main 100000 784 100
+
+running 72/86: sort-hip
+Running: ./main 3 100
+Running: ./main 3 100
+Running: ./main 3 100
+
+running 73/86: ss-hip
+Running: ./main ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000
+Running: ./main ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000
+Running: ./main ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000
+
+running 74/86: sssp-hip
+Running: ./main -g 120 -t 1 -w 10 -r 100
+Running: ./main -g 120 -t 1 -w 10 -r 100
+Running: ./main -g 120 -t 1 -w 10 -r 100
+
+running 75/86: stddev-hip
+Running: ./main 64000 15360 100
+Running: ./main 64000 15360 100
+Running: ./main 64000 15360 100
+
+running 76/86: stencil1d-hip
+Running: ./main 134217728 100
+Running: ./main 134217728 100
+Running: ./main 134217728 100
+
+running 77/86: svd3x3-hip
+Running: ./main ../svd3x3-cuda/Dataset_1M.txt 50
+Running: ./main ../svd3x3-cuda/Dataset_1M.txt 50
+Running: ./main ../svd3x3-cuda/Dataset_1M.txt 50
+
+running 78/86: swish-hip
+Running: ./main 10000000 100
+Running: ./main 10000000 100
+Running: ./main 10000000 100
+
+running 79/86: tensorAccessor-hip
+will likely timeout, skipping
+
+running 80/86: tensorT-hip
+Double type is not supported on this platform
+
+running 81/86: tqs-hip
+Running: ./main -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
+Running: ./main -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
+Running: ./main -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
+
+running 82/86: tsa-hip
+Required aspect fp64 is not supported on the device
+
+running 83/86: urng-hip
+Running: ./main ../urng-sycl/URNG_Input.bmp 16 16 100
+Running: ./main ../urng-sycl/URNG_Input.bmp 16 16 100
+Running: ./main ../urng-sycl/URNG_Input.bmp 16 16 100
+
+running 84/86: vanGenuchten-hip
+Required aspect fp64 is not supported on the device
+
+running 85/86: wyllie-hip
+will likely timeout, skipping
+compilation took 0.23197078704833984 s, runnning took 1505.3327164649963 s.
