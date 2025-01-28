@@ -176,6 +176,13 @@ if options.geomean:
 	plt.text(0.02, 0.95, s, transform=plt.gca().transAxes, 
 			 verticalalignment='top', horizontalalignment='left',
 			 fontsize=8, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
+	
+	# Add the number of samples being plotted
+	n_samples = len(sorted_mins)
+	n_text = f"N = {n_samples}"
+	plt.text(0.02, 0.90, n_text, transform=plt.gca().transAxes, 
+			 verticalalignment='top', horizontalalignment='left',
+			 fontsize=8, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
 
 # Only show one set of bar labels to reduce clutter
 if options.bar_labels:
