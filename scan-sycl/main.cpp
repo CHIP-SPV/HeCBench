@@ -239,11 +239,11 @@ int main(int argc, char* argv[])
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  run< 128>(q, n, repeat);
+  // run< 128>(q, n, repeat);
   run< 256>(q, n, repeat);
-  run< 512>(q, n, repeat);
-  run<1024>(q, n, repeat);
-  run<2048>(q, n, repeat);
+  // run< 512>(q, n, repeat);
+  // run<1024>(q, n, repeat);
+  // run<2048>(q, n, repeat);
 
   return 0;
 }
