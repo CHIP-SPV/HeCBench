@@ -1,64 +1,107 @@
-#!/bin/bash
+#!/bin/bash -l
 
-export REPEATS=2
+export REPEATS=1
 export WARMPUP=1
 export CHIP_L0_COLLECT_EVENTS_TIMEOUT=5
 export CHIP_DEVICE_TYPE=gpu
 export CHIP_LOGLEVEL=crit
 export CACHE=1
-
+export CHIP_LAZY_JIT=OFF
 if [ $CACHE -eq 0 ]; then
     export CHIP_MODULE_CACHE_DIR=""
 else
     export CHIP_MODULE_CACHE_DIR=${HOME}/chipStarCache
-fi  
+fi
 
-# Load base modules
-#source /etc/profile.d/modules.sh
-#module load oneapi/2024.2.2
+
+# SYCL Stuff
+
+# ain.cpp:1:10: fatal error: 'oneapi/dpl/execution' file not found
+#    1 | #include <oneapi/dpl/execution>
+export CPLUS_INCLUDE_PATH=/space/pvelesko/install/oneapi/dpl/2022.3/include:$CPLUS_INCLUDE_PATH
+
+module load llvm/18.0-lto # for OpenMP
 
 # Function to run benchmarks for a specific ChipStar version
-run_benchmarks() {
-    local VERSION=$1
-    local RUNTIME="chipStar-${VERSION}-Warmup${WARMPUP}-cache${CACHE}"
+function run_chipStar_benchmarks() {
+    local RUNTIME=$1
     
     # OpenCL benchmark
-    #module load opencl/dgpu
-    export CHIP_BE=opencl
-    rm -f ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv
-    ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
-        -o ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv hip 2>&1 | \
-        tee ${RUNTIME}_ocl_benchmark.log
-    ##module unload opencl/dgpu
-    #
-    ## Level Zero benchmark
-    ##module load level-zero/dgpu
+    module load opencl/dgpu
+    rm -f ${RUNTIME}_oclBE.csv
+    ./scripts/autohecbench.py --clean --warmup ${WARMPUP} --repeat ${REPEATS} \
+        -o ${RUNTIME}-oclBE.csv hip 2>&1 | \
+        tee ${RUNTIME}-ocl_benchmark.log
+    module unload opencl/dgpu
+
+    # Level Zero benchmark
+    module load level-zero/dgpu
     export CHIP_BE=level0
-    rm -f ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv
+    rm -f ${RUNTIME}-l0BE.csv
     ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
-        -o ${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv hip 2>&1 | \
-        tee ${RUNTIME}_l0_benchmark.log
-    ##module unload level-zero/dgpu
-    
-    # Generate plot
-    python3 ./scripts/plot.py -g -v -r --color '#b7cce9' -m 0.8 -s seaborn-pastel \
-        -t "HeCBench, Intel Arc770, ${RUNTIME}(OCL) vs ${RUNTIME}(L0) speedup" \
-        -b ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_oclBE.csv \
-        -c ./${RUNTIME}_FULL_${REPEATS}_x_hip_strict_l0BE.csv \
-        -o ${RUNTIME}_ocl_vs_l0.png
+        -o ${RUNTIME}-l0BE.csv hip 2>&1 | \
+        tee ${RUNTIME}-l0_benchmark.log
+    module unload level-zero/dgpu
 }
 
-# # Test v1.1.0
-# module load HIP/chipStar/v1.1.0
-# run_benchmarks "v1.1.0"
-# module unload HIP/chipStar/v1.1.0
+function run_sycl_benchmarks() {
+    RUNTIME=$1
+    
+    export ONEAPI_DEVICE_SELECTOR="opencl:0" # A770
+    rm -f ${RUNTIME}-sycl-oclBE.csv
+    ./scripts/autohecbench.py -c --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fno-sycl-instrument-device-code-split" -o ${RUNTIME}-sycl-oclBE.csv --sycl-type opencl sycl 2>&1 | \
+        tee ${RUNTIME}-sycl-ocl_benchmark.log
 
-# # Test v1.2.0
-# module load HIP/chipStar/v1.2.0
-# run_benchmarks "v1.2.0"
-# module unload HIP/chipStar/v1.2.0
+    export ONEAPI_DEVICE_SELECTOR="level_zero:0" # A770
+    rm -f ${RUNTIME}-sycl-l0BE.csv
+    ./scripts/autohecbench.py -c --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fno-sycl-instrument-device-code-split" -o ${RUNTIME}-sycl-l0BE.csv --sycl-type opencl sycl 2>&1 | \
+        tee ${RUNTIME}-sycl-l0_benchmark.log
+}
+
+##################################### Run dgpu benchmarks #####################################
+# export CHIP_JIT_FLAGS=""
+# export SYCL_PROGRAM_COMPILE_OPTIONS=""
+
+# Test v1.1.0
+module load HIP/chipStar/v1.1.0
+run_chipStar_benchmarks "v1.1.0"
+module unload HIP/chipStar/v1.1.0
+
+# Test v1.2.0
+module load HIP/chipStar/v1.2.0
+run_chipStar_benchmarks "v1.2.0"
+module unload HIP/chipStar/v1.2.0
+
+Test v1.2.1
+module load HIP/chipStar/v1.2.1
+run_chipStar_benchmarks "chipstar-v1.2.1-dgpu"
+module unload HIP/chipStar/v1.2.1
+
+# RUN SYCL BENCHMARKS
+module load oneapi/2024.2.2
+run_sycl_benchmarks "SYCL-dgpu"
+module unload oneapi/2024.2.2
+
+
+export CHIP_JIT_FLAGS="-cl-fast-relaxed-math"
+export SYCL_PROGRAM_COMPILE_OPTIONS="-cl-fast-relaxed-math"
 
 # Test v1.2.1
 module load HIP/chipStar/v1.2.1
-run_benchmarks "v1.2.1"
+run_chipStar_benchmarks "chipstar-v1.2.1-dgpu-fast-relaxed-math"
 module unload HIP/chipStar/v1.2.1
+
+RUN SYCL BENCHMARKS
+module load oneapi/2024.2.2
+run_sycl_benchmarks "SYCL-dgpu-fast-relaxed-math"
+module unload oneapi/2024.2.2
+
+# Test v1.1.0
+module load HIP/chipStar/v1.1.0
+run_chipStar_benchmarks "chipstar-v1.1.0-dgpu-fast-relaxed-math"
+module unload HIP/chipStar/v1.1.0
+
+# Test v1.2.0
+module load HIP/chipStar/v1.2.0
+run_chipStar_benchmarks "chipstar-v1.2.0-dgpu-fast-relaxed-math"
+module unload HIP/chipStar/v1.2.0
