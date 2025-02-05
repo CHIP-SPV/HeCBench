@@ -25,61 +25,71 @@ module load llvm/18.0-lto # for OpenMP
 # Function to run benchmarks for a specific ChipStar version
 function run_chipStar_benchmarks() {
     local RUNTIME=$1
+    local DEVICE=$2
+    local RUNTIME=${DEVICE}-${RUNTIME}
     
     # OpenCL benchmark
-    module load opencl/dgpu
+    module load opencl/${DEVICE}
     rm -f ${RUNTIME}_oclBE.csv
     ./scripts/autohecbench.py --clean --warmup ${WARMPUP} --repeat ${REPEATS} \
         -o ${RUNTIME}-oclBE.csv hip 2>&1 | \
         tee ${RUNTIME}-ocl_benchmark.log
-    module unload opencl/dgpu
+    module unload opencl/${DEVICE}
 
     # Level Zero benchmark
-    module load level-zero/dgpu
+    module load level-zero/${DEVICE}
     export CHIP_BE=level0
     rm -f ${RUNTIME}-l0BE.csv
     ./scripts/autohecbench.py --warmup ${WARMPUP} --repeat ${REPEATS} \
         -o ${RUNTIME}-l0BE.csv hip 2>&1 | \
         tee ${RUNTIME}-l0_benchmark.log
-    module unload level-zero/dgpu
+    module unload level-zero/${DEVICE}
 }
 
 function run_sycl_benchmarks() {
     RUNTIME=$1
+    DEVICE=$2
+    RUNTIME=${DEVICE}-${RUNTIME}
     
-    export ONEAPI_DEVICE_SELECTOR="opencl:0" # A770
+    if [ "$DEVICE" == "dgpu" ]; then
+        export ONEAPI_DEVICE_SELECTOR="opencl:0" 
+        export ONEAPI_DEVICE_SELECTOR="level_zero:0"
+    elif [ "$DEVICE" == "igpu" ]; then
+        export ONEAPI_DEVICE_SELECTOR="opencl:1"
+        export ONEAPI_DEVICE_SELECTOR="level_zero:1"
+    fi
+
     rm -f ${RUNTIME}-sycl-oclBE.csv
     ./scripts/autohecbench.py -c --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fno-sycl-instrument-device-code-split" -o ${RUNTIME}-sycl-oclBE.csv --sycl-type opencl sycl 2>&1 | \
         tee ${RUNTIME}-sycl-ocl_benchmark.log
 
-    export ONEAPI_DEVICE_SELECTOR="level_zero:0" # A770
     rm -f ${RUNTIME}-sycl-l0BE.csv
     ./scripts/autohecbench.py -c --warmup ${WARMPUP} --repeat ${REPEATS} --extra-compile-flags="-fno-sycl-instrument-device-code-split" -o ${RUNTIME}-sycl-l0BE.csv --sycl-type opencl sycl 2>&1 | \
         tee ${RUNTIME}-sycl-l0_benchmark.log
 }
 
-##################################### Run dgpu benchmarks #####################################
-# export CHIP_JIT_FLAGS=""
-# export SYCL_PROGRAM_COMPILE_OPTIONS=""
+##################################### Run benchmarks #####################################
+export CHIP_JIT_FLAGS=""
+export SYCL_PROGRAM_COMPILE_OPTIONS=""
 
 # Test v1.1.0
 module load HIP/chipStar/v1.1.0
-run_chipStar_benchmarks "v1.1.0"
+run_chipStar_benchmarks "v1.1.0" "igpu"
 module unload HIP/chipStar/v1.1.0
 
 # Test v1.2.0
 module load HIP/chipStar/v1.2.0
-run_chipStar_benchmarks "v1.2.0"
+run_chipStar_benchmarks "v1.2.0" "igpu"
 module unload HIP/chipStar/v1.2.0
 
-Test v1.2.1
+# Test v1.2.1
 module load HIP/chipStar/v1.2.1
-run_chipStar_benchmarks "chipstar-v1.2.1-dgpu"
+run_chipStar_benchmarks "chipstar-v1.2.1" "igpu"
 module unload HIP/chipStar/v1.2.1
 
 # RUN SYCL BENCHMARKS
 module load oneapi/2024.2.2
-run_sycl_benchmarks "SYCL-dgpu"
+run_sycl_benchmarks "SYCL" "igpu"
 module unload oneapi/2024.2.2
 
 
@@ -88,20 +98,20 @@ export SYCL_PROGRAM_COMPILE_OPTIONS="-cl-fast-relaxed-math"
 
 # Test v1.2.1
 module load HIP/chipStar/v1.2.1
-run_chipStar_benchmarks "chipstar-v1.2.1-dgpu-fast-relaxed-math"
+run_chipStar_benchmarks "chipstar-v1.2.1-fast-relaxed-math" "igpu"
 module unload HIP/chipStar/v1.2.1
 
 RUN SYCL BENCHMARKS
 module load oneapi/2024.2.2
-run_sycl_benchmarks "SYCL-dgpu-fast-relaxed-math"
+run_sycl_benchmarks "SYCL-fast-relaxed-math" "igpu"
 module unload oneapi/2024.2.2
 
 # Test v1.1.0
 module load HIP/chipStar/v1.1.0
-run_chipStar_benchmarks "chipstar-v1.1.0-dgpu-fast-relaxed-math"
+run_chipStar_benchmarks "chipstar-v1.1.0-fast-relaxed-math" "igpu"
 module unload HIP/chipStar/v1.1.0
 
 # Test v1.2.0
 module load HIP/chipStar/v1.2.0
-run_chipStar_benchmarks "chipstar-v1.2.0-dgpu-fast-relaxed-math"
+run_chipStar_benchmarks "chipstar-v1.2.0-fast-relaxed-math" "igpu"
 module unload HIP/chipStar/v1.2.0
