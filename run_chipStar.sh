@@ -80,6 +80,56 @@ function run_sycl_benchmarks() {
         tee ${RUNTIME}-sycl-l0_benchmark.log
 }
 
+##################################### Run dGPU benchmarks #####################################
+export DEVICE="dgpu"
+export CHIP_JIT_FLAGS=""
+export SYCL_PROGRAM_COMPILE_OPTIONS=""
+
+# Test v1.1.0
+module load HIP/chipStar/v1.1.0
+run_chipStar_benchmarks "v1.1.0" ${DEVICE}
+module unload HIP/chipStar/v1.1.0
+
+# Test v1.2.0
+module load HIP/chipStar/v1.2.0
+run_chipStar_benchmarks "v1.2.0" ${DEVICE}
+module unload HIP/chipStar/v1.2.0
+
+# Test v1.2.1
+module load HIP/chipStar/v1.2.1
+run_chipStar_benchmarks "chipstar-v1.2.1" ${DEVICE}
+module unload HIP/chipStar/v1.2.1
+
+# RUN SYCL BENCHMARKS
+module load oneapi/2024.2.2
+run_sycl_benchmarks "SYCL" ${DEVICE}
+module unload oneapi/2024.2.2
+
+
+export CHIP_JIT_FLAGS="-cl-fast-relaxed-math"
+export SYCL_PROGRAM_COMPILE_OPTIONS="-cl-fast-relaxed-math"
+
+# Test v1.2.1
+module load HIP/chipStar/v1.2.1
+run_chipStar_benchmarks "chipstar-v1.2.1-fast-relaxed-math" ${DEVICE}
+module unload HIP/chipStar/v1.2.1
+
+RUN SYCL BENCHMARKS
+module load oneapi/2024.2.2
+run_sycl_benchmarks "SYCL-fast-relaxed-math" ${DEVICE}
+module unload oneapi/2024.2.2
+
+# Test v1.1.0
+module load HIP/chipStar/v1.1.0
+run_chipStar_benchmarks "chipstar-v1.1.0-fast-relaxed-math" ${DEVICE}
+module unload HIP/chipStar/v1.1.0
+
+# Test v1.2.0
+module load HIP/chipStar/v1.2.0
+run_chipStar_benchmarks "chipstar-v1.2.0-fast-relaxed-math" ${DEVICE}
+module unload HIP/chipStar/v1.2.0
+
+
 ##################################### Run iGPU benchmarks #####################################
 export DEVICE="igpu"
 export CHIP_JIT_FLAGS=""
