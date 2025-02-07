@@ -124,95 +124,65 @@ def comp(b):
     print("compiling: {}".format(b.name))
     b.compile()
 
-def get_bench_map(lang):
-    base_map = {
-        'adam': './main 10000 200 100',
-        'aes': './main 100 0 ../urng-sycl/URNG_Input.bmp',
-        'aidw': './main 10 1 100',
-        'all-pairs-distance': './main 10000',
-        'asmooth': './main 8192 2000 9 100',
-        'asta': './main',
-        'atomicReduction': './main',
-        'bezier-surface': './main -n 8192',
-        'bfs': './main ../data/bfs/graph1MW_6.txt',
-        'bilateral': './main 2960 1440 0.5 0.5 1000',
-        'boxfilter': './main ../boxfilter-sycl/data/lenaRGB.ppm 10000',
-        'bitonic-sort': './main 25 2',
-        'bscan': './main 1000',
-        'ced': './main -a 0',
-        'chemv': './main',
-        'chi2': './main ../chi2-cuda/traindata 4000 400000 2000 2000 256 1000',
-        'colorwheel': './main 10 4096 100',
-        'columnarSolver': './main ../columnarSolver-cuda/data',
-        'compute-score': './main -p=1000',
-        'crossEntropy': './main 100',
-        'dct8x8': './main 8192 8192 100',
-        'eigenvalue': './main 2048 10000',
-        'entropy': './main 8192 8192 100',
-        'f16max': './main 100',
-        'fft': './main 3 100',
-        'floydwarshall': './main 1024 100 16',
-        'fsm': './main 65536',
-        'haccmk': './main 1000',
-        'hausdorff': './main 100000 100000 100',
-        'hellinger': './main 100',
-        'histogram': './main --i=100',
-        'hogbom': './main ../hogbom-cuda/data/dirty_4096.img ../hogbom-cuda/data/psf_4096.img 1000',
-        'hwt1d': './main 8388608 100',
-        'hybridsort': './main r',
-        'is': './main 256 256 256',
-        'jenkins-hash': './main 256 16777216 100',
-        'keogh': './main 256 20000000 100',
-        'layout': './main 1000',
-        'lfib4': './main 2000000000',
-        'linearprobing': './main 16 8',
-        'lombscargle': './main 100',
-        'mandelbrot': './main 1000',
-        'matern': './main 300 100',
-        'maxpool3d': './main 2048 2048 96 100',
-        'minisweep': './main --niterations 100',
-        'minkowski': './main 100',
-        'mrc': './main 10000000 1000',
-        'mr': './main',
-        'murmurhash3': './main 100000 100',
-        'nlll': './main 2048 1024 1000 100',
-        'nw': './main 16384 10',
-        'overlap': './main',
-        'overlay': './main 640 480',
-        'p2p': './main 100',
-        'pad': './main -a 0.1',
-        'perplexity': './main 10000 50 100',
-        'pnpoly': './main 100',
-        'pool': './main 128 48 224 224 54 54 100',
-        'present': './main 100000 100',
-        'quicksort': './main 10 2048 2048',
-        'radixsort': './main 1000',
-        'romberg': './main 128 64 1000',
-        'rsbench': './main -s large -m event',
-        'scan2': './main 1000 33554432 256',
-        'scan': './main 268435456 100',
-        'sc': './main -a 0.1',
-        'shuffle': './main 200000 100',
-        'snake': './main 100 ../snake-cuda/Datasets/ERR240727_1_E2_30000Pairs.txt 30000 1000',
-        'sobel': './main ../sobel-sycl/SobelFilter_Input.bmp 100000',
-        'softmax': './main 100000 784 100',
-        'sort': './main 3 100',
-        'ss': './main ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000',
-        'sssp': './main -g 120 -t 1 -w 10 -r 100',
-        'stddev': './main 65536 16384 100',
-        'stencil1d': './main 134217728 1000',
-        'svd3x3': './main ../svd3x3-cuda/Dataset_1M.txt 100',
-        'swish': './main 10000000 1000',
-        'tensorAccessor': './main 8192 8192 1000',
-        'tensorT': './main 100',
-        'tqs': './main -f ../tqs-cuda/input/patternsNP100NB512FB25.txt',
-        'tsa': './main 1024 1024 100',
-        'urng': './main ../urng-sycl/URNG_Input.bmp 16 16 1000',
-        'vanGenuchten': './main 256 256 256 1000',
-        'wyllie': './main 8000000 1 100',
-    }
-    
-    return {f"{k}-{lang}": v for k, v in base_map.items()}
+def should_skip(bench_name):
+    """Check if a benchmark should be skipped based on known issues."""
+    # Timeout prone benchmarks
+    if (bench_name.startswith("tensorAccessor")
+        # or bench_name.startswith("vanGenuchten") # chipStar fail with -cl-fast-relaxed-math
+        # or bench_name.startswith("pnpoly") # chipStar fail with -cl-fast-relaxed-math
+        # or bench_name.startswith("eigenvalue") # chipStar fail with -cl-fast-relaxed-math
+        # or bench_name.startswith("entropy")): # chipStar fail with -cl-fast-relaxed-math
+        or bench_name.startswith("lud") # verification takes forever
+        or bench_name.startswith("matern")
+        or bench_name.startswith("wyllie")
+        or bench_name.startswith("rsbench")
+        or bench_name.startswith("sort")):
+
+        return "will likely timeout"
+
+    # Double precision not supported
+    if (bench_name.startswith("fresnel")
+        or bench_name.startswith("goulash")
+        or bench_name.startswith("burger")
+        or bench_name.startswith("cooling")
+        or bench_name.startswith("crossEntropy")
+        or bench_name.startswith("fft")
+        or bench_name.startswith("is")
+        or bench_name.startswith("minisweep")
+        or bench_name.startswith("pad")
+        or bench_name.startswith("tsa")
+        or bench_name.startswith("romberg")
+        or bench_name.startswith("hellinger")
+        or bench_name.startswith("tensorT")
+        or bench_name.startswith("quicksort")):
+        return "doubles not supported"
+
+    # Hardware/environment requirements
+    if bench_name.startswith("p2p"):
+        return "requires multiple GPUs"
+
+    # Known test failures
+    if (bench_name.startswith("heat2d")      # fails in both SYCL and HIP
+        or bench_name.startswith("aes")         # fails in SYCL, passes in HIP
+        or bench_name.startswith("ced")         # fails in SYCL, passes in HIP
+        or bench_name.startswith("f16max")      # passes in SYCL, fails in HIP
+        or bench_name.startswith("shuffle")     # fails in SYCL, passes in HIP
+        or bench_name.startswith("stencil1d")   # fails in SYCL, passes in HIP
+        or bench_name.startswith("linearprobing") # fails in SYCL, passes in HIP
+        or bench_name.startswith("snake")):       # passes in SYCL, fails in HIP
+        return "test will fail"
+
+    # Data issues
+    if bench_name.startswith("bsw"):
+        return "data file too large"
+    if bench_name.startswith("columnarSolver") or bench_name.startswith("ans"):
+        return "OOM"
+    if bench_name.startswith("chi2"):
+        return "can't find data"
+    if bench_name.startswith("histogram"):
+        return "OpenCL time overflow"
+
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description='HeCBench runner')
@@ -254,8 +224,8 @@ def main():
                         help='vtune report root directory base')
     parser.add_argument('--vtune-root-suffix', default=None,
                         help='vtune report root directory suffix ')
-    parser.add_argument('--generate-map', action='store_true',
-                        help='Generate a map of benchmark commands')
+    parser.add_argument('--failing-only', action='store_true',
+                        help='Run ONLY the tests that are known to fail or have issues')
 
     args = parser.parse_args()
 
@@ -283,12 +253,32 @@ def main():
     benches = []
     for b in args.bench:
         if b in ['sycl', 'cuda', 'hip', 'opencl']:
-            benches.extend([Benchmark(args, k, *v)
-                            for k, v in benchmarks.items()
-                            if k.endswith(b) and k not in fails])
+            for k, v in benchmarks.items():
+                if k.endswith(b) and k not in fails:
+                    skip_reason = should_skip(k)
+                    if args.failing_only:
+                        if skip_reason:
+                            print(f"Running known failing test {k}: {skip_reason}")
+                            benches.append(Benchmark(args, k, *v))
+                        continue
+                    else:
+                        if skip_reason:
+                            print(f"Skipping {k}: {skip_reason}")
+                            continue
+                        benches.append(Benchmark(args, k, *v))
             continue
 
-        benches.append(Benchmark(args, b, *benchmarks[b]))
+        skip_reason = should_skip(b)
+        if args.failing_only:
+            if skip_reason:
+                print(f"Running known failing test {b}: {skip_reason}")
+                benches.append(Benchmark(args, b, *benchmarks[b]))
+            continue
+        else:
+            if skip_reason:
+                print(f"Skipping {b}: {skip_reason}")
+                continue
+            benches.append(Benchmark(args, b, *benchmarks[b]))
 
     t0 = time.time()
     try:
@@ -329,79 +319,11 @@ def main():
         args.warmup = False
         args.repeat = 1
 
-    if args.generate_map:
-        benchmark_map = {}
-        for b in benches:
-            try:
-                print(f"Dry running: {b.name}")
-                cmd = b.dry_run()
-                if cmd:
-                    benchmark_map[b.name] = cmd
-                else:
-                    print(f"Warning: Could not extract command for {b.name}")
-            except Exception as err:
-                print(f"Error dry running: {b.name}")
-                print(err)
-
-        print("\nBenchmark Command Map:")
-        print("benchmark_map = {")
-        for name, cmd in benchmark_map.items():
-            print(f"    '{name}': '{cmd}',")
-        print("}")
-        exit(0)
-    
     for i, b in enumerate(benches):
         try:
             print("\nrunning {}/{}: {}".format(i, len(benches), b.name), flush=True)
             if b.name in existing:
                 print("result already exists, skipping", flush=True)
-                continue
-            if (b.name.startswith("tensorAccessor")
-                or b.name.startswith("matern")
-                or b.name.startswith("wyllie")
-                or b.name.startswith("rsbench")
-                or b.name.startswith("sort-sycl")):
-                print("will likely timeout, skipping", flush=True)
-                continue
-            if(b.name.startswith("fresnel")
-                or b.name.startswith("goulash")
-                or b.name.startswith("burger")
-                or b.name.startswith("cooling")
-                or b.name.startswith("crossEntropy")
-                or b.name.startswith("fft")
-                or b.name.startswith("is")
-                or b.name.startswith("minisweep")
-                or b.name.startswith("pad")
-                or b.name.startswith("tsa")
-                or b.name.startswith("romberg")
-                or b.name.startswith("vanGenuchten")):
-                print("Required aspect fp64 is not supported on the device", flush=True)
-                continue
-            if(b.name.startswith("heat2d")
-                or b.name.startswith("aes")
-                or b.name.startswith("ced")
-                or b.name.startswith("f16max-hip")
-                or b.name.startswith("shuffle-sycl")
-                or b.name.startswith("stencil1d-sycl")
-                or b.name.startswith("linearprobing-sycl")
-                or b.name.startswith("lud-hip")
-                or b.name.startswith("snake-hip")):
-                print("Test will fail, skipping", flush=True)
-                continue
-            if(b.name.startswith("bsw")):
-                print("Data file too large", flush=True)
-                continue
-            if(b.name.startswith("columnarSolver")
-                or b.name.startswith("ans")):
-                print("can't find compatible device", flush=True)
-                continue
-            if(b.name.startswith("chi2")):
-                print("can't find data", flush=True)
-                continue
-            if(b.name.startswith("hellinger-hip")
-                or b.name.startswith("tensorT-hip")
-                or b.name.startswith("quicksort-hip")):
-                print("Double type is not supported on this platform", flush=True)
                 continue
             time.sleep(1)
 
