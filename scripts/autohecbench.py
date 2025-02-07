@@ -87,18 +87,45 @@ class Benchmark:
         cmd.append("./" + self.binary)
         cmd.extend(self.args)
         print("Running: " + " ".join(cmd))
-        proc = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, encoding="ascii", timeout=1200, env=extra_env)
-        out = proc.stdout
-        if self.verbose:
-            print(out)
-        proc.check_returncode()
-        res = re.findall(self.res_regex, out)
-        if not res:
-            raise Exception(self.path + ":\nno regex match for " + self.res_regex + " in\n" + out)
-        res = sum([float(i) for i in res]) #in case of multiple outputs sum them
-        if self.invert:
-            res = 1/res
-        return res
+        try:
+            if extra_env is None:
+                extra_env = os.environ.copy()
+            proc = subprocess.run(cmd, cwd=self.path, stdout=subprocess.PIPE, stderr=subprocess.PIPE, 
+                                encoding="ascii", timeout=1200, env=extra_env)
+            out = proc.stdout
+            if proc.stderr:
+                print("stderr output:", proc.stderr)
+            if self.verbose:
+                print("stdout output:", out)
+            proc.check_returncode()
+            res = re.findall(self.res_regex, out)
+            if not res:
+                raise Exception(self.path + ":\nno regex match for " + self.res_regex + " in\n" + out)
+            res = sum([float(i) for i in res]) #in case of multiple outputs sum them
+            if self.invert:
+                res = 1/res
+            return res
+        except subprocess.TimeoutExpired as e:
+            print(f"Timeout running {self.name}: {e}")
+            if e.stdout:
+                print("stdout:", e.stdout)
+            if e.stderr:
+                print("stderr:", e.stderr)
+            raise
+        except subprocess.CalledProcessError as e:
+            print(f"Error running {self.name}. Return code: {e.returncode}")
+            if e.stdout:
+                print("stdout:", e.stdout)
+            if e.stderr:
+                print("stderr:", e.stderr)
+            raise
+        except Exception as e:
+            print(f"Unexpected error running {self.name}: {e}")
+            if hasattr(e, 'stdout') and e.stdout:
+                print("stdout:", e.stdout)
+            if hasattr(e, 'stderr') and e.stderr:
+                print("stderr:", e.stderr)
+            raise
 
     def dry_run(self):
         cmd = ["make", "run", "-n"]
