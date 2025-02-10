@@ -107,11 +107,11 @@
   ],
 
   "atomicReduction-hip": [
-    "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))"
+    "(?:Average kernel execution time )([0-9.]+)(?: s)"
   ],
 
   "atomicReduction-sycl": [
-    "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))"
+    "(?:Average kernel execution time )([0-9.]+)(?: s)"
   ],
 
   "bezier-surface-hip": [
@@ -387,7 +387,7 @@
   ],
 
   "eigenvalue-sycl": [
-    "(?:Average kernel execution time )([0-9.+-e]+)(?: \\(s\\))",
+    "(?:Average kernel execution time )([0-9.+-e]+)",
     [
       "1024",
       "200"
@@ -621,7 +621,7 @@
   "hybridsort-sycl": [
     "(?:GPU execution time: )([0-9.]+)",
     ["r"],
-    "run"
+    "main"
   ],
 
   "hybridsort-hip": [
@@ -1269,7 +1269,7 @@
   ],
 
   "wordcount-sycl": [
-    "(?:Total kernel execution time: )([0-9.]+)",
+    "(?:Average time of word count: )([0-9.]+)(?: \\(s\\))",
     ["100"]
   ],
 
