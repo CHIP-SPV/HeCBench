@@ -14,9 +14,10 @@ LAUNCHER  =
 
 program = main
 
-source = chi2.cu
+source = chi2.cu reference.cpp
 
 obj = $(source:.cu=.o)
+obj := $(obj:.cpp=.o)
 
 #===============================================================================
 # Sets Flags
@@ -47,8 +48,11 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../chi2-cuda/reference.h Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+chi2.o: chi2.cu reference.h Makefile
+	$(CC) $(CFLAGS) -c chi2.cu -o $@
+
+reference.o: reference.cpp reference.h Makefile
+	$(CC) $(CFLAGS) -c reference.cpp -o $@
 
 clean:
 	rm -rf $(program) $(obj)
