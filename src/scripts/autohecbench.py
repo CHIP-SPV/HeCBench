@@ -164,6 +164,8 @@ def main():
                         help='Clean the builds')
     parser.add_argument('--verbose', '-v', action='store_true',
                         help='Verbose outputs from the builds')
+    parser.add_argument('--compile-only', action='store_true',
+                        help='Only compile benchmarks, do not run them')
     parser.add_argument('--bench-dir', '-b',
                         help='Benchmark directory')
     parser.add_argument('--bench-data', '-d',
@@ -182,9 +184,13 @@ def main():
     logging.basicConfig(format="%(asctime)s [%(levelname)s] -- %(message)s", level=numeric_level)
 
     # warn user before continuing
-    logging.warning("This script will compile and run selected benchmarks in HeCBench and gather results. " +
-        "It is recommended that before you run this script, the dataset are available for certain benchmarks " +
-        "and the compilers are in the PATH environment.") 
+    if args.compile_only:
+        logging.warning("This script will compile selected benchmarks in HeCBench. " +
+            "It is recommended that the compilers are in the PATH environment.")
+    else:
+        logging.warning("This script will compile and run selected benchmarks in HeCBench and gather results. " +
+            "It is recommended that before you run this script, the dataset are available for certain benchmarks " +
+            "and the compilers are in the PATH environment.") 
 
     if not args.yes_prompt:
         response = await_input("Continue? [y/n] ", lambda r: r.lower() in ["y", "n", "yes", "no"])
@@ -262,72 +268,84 @@ def main():
 
     t_compiled = time.time()
 
-    outfile = sys.stdout
-    if args.overwrite:
-        filtered_benches = benches
-        if args.output:
-            outfile = open(args.output, 'w+t')
-        logging.info(f"Overwrite the output file {args.output}.")
+    if args.compile_only:
+        t_done = time.time()
+        logging.info("Compilation-only mode: skipping benchmark execution.")
     else:
-        recorded_benchmarks = set()
-        if args.output:
-            if os.path.isfile(args.output):
-                outfile = open(args.output, 'r+t')
-                for line in outfile:
-                    bench, *rest = line.split(',')
-                    recorded_benchmarks.add(bench)
-                    # record the status only when it is in the input benchmark list
-                    ch_index = bench.find('-')
-                    if bench[:ch_index] in benchmarks.keys():
-                        summary[bench]["run"] = "skipped"
-                outfile.seek(0, 2) # seek to end of the file.
-            else:
+        outfile = sys.stdout
+        if args.overwrite:
+            filtered_benches = benches
+            if args.output:
                 outfile = open(args.output, 'w+t')
+            logging.info(f"Overwrite the output file {args.output}.")
+        else:
+            recorded_benchmarks = set()
+            if args.output:
+                if os.path.isfile(args.output):
+                    outfile = open(args.output, 'r+t')
+                    for line in outfile:
+                        bench, *rest = line.split(',')
+                        recorded_benchmarks.add(bench)
+                        # record the status only when it is in the input benchmark list
+                        ch_index = bench.find('-')
+                        if bench[:ch_index] in benchmarks.keys():
+                            summary[bench]["run"] = "skipped"
+                    outfile.seek(0, 2) # seek to end of the file.
+                else:
+                    outfile = open(args.output, 'w+t')
 
-        filtered_benches = [b for b in benches if b.name not in recorded_benchmarks]
-        num_filtered_benches = len(benches) - len(filtered_benches)
-        if num_filtered_benches:
-            print(f"Filtered out {num_filtered_benches} benchmarks."
-                  " Results already exists in the output file.", flush=True)
+            filtered_benches = [b for b in benches if b.name not in recorded_benchmarks]
+            num_filtered_benches = len(benches) - len(filtered_benches)
+            if num_filtered_benches:
+                print(f"Filtered out {num_filtered_benches} benchmarks."
+                      " Results already exists in the output file.", flush=True)
 
-    for i, b in enumerate(filtered_benches, 1):
-        if b.name not in summary.keys():
-            summary[b.name] = {}
-        try:
-            print(f"running {i}/{len(filtered_benches)}: {b.name}", flush=True)
+        for i, b in enumerate(filtered_benches, 1):
+            if b.name not in summary.keys():
+                summary[b.name] = {}
+            try:
+                print(f"running {i}/{len(filtered_benches)}: {b.name}", flush=True)
 
-            if args.warmup:
-                b.run()
+                if args.warmup:
+                    b.run()
 
-            res = []
-            for i in range(args.repeat):
-                res.append(str(b.run()))
+                res = []
+                for i in range(args.repeat):
+                    res.append(str(b.run()))
 
-            print(b.name + "," + ", ".join(res), file=outfile)
-            summary[b.name]["run"] = "success"
-        except Exception as e:
-            print("Error running: ", b.name)
-            print(e)
-            summary[b.name]["run"] = "failed"
+                print(b.name + "," + ", ".join(res), file=outfile)
+                summary[b.name]["run"] = "success"
+            except Exception as e:
+                print("Error running: ", b.name)
+                print(e)
+                summary[b.name]["run"] = "failed"
 
-    if args.output:
-        outfile.close()
+        if args.output:
+            outfile.close()
 
-    t_done = time.time()
+        t_done = time.time()
 
     print("*****************************************************************************************")
     print(datetime.datetime.now())
-    print("Summary of the benchmark execution:\n")
-    print("Compilation took {} s, running took {} s.".format(t_compiled-t0, t_done-t_compiled))
+    if args.compile_only:
+        print("Summary of the benchmark compilation:\n")
+        print("Compilation took {} s.".format(t_compiled-t0))
+    else:
+        print("Summary of the benchmark execution:\n")
+        print("Compilation took {} s, running took {} s.".format(t_compiled-t0, t_done-t_compiled))
     if args.summary:
         with open(args.summary, "w") as f:
             json.dump(summary, f, indent=4, sort_keys=True)
         logging.info(f"Wrote the summary to {args.summary}.")
     else:
         print(json.dumps(summary, indent=4, sort_keys=True))
-    res = sum(('compile' in x.keys() and x['compile'] == 'failed' or
-               'run' in x.keys() and x['run'] == 'failed') for x in summary.values())
-    print(f'Number of benchmark compile or run failures: {res}');
+    if args.compile_only:
+        res = sum(('compile' in x.keys() and x['compile'] == 'failed') for x in summary.values())
+        print(f'Number of benchmark compile failures: {res}');
+    else:
+        res = sum(('compile' in x.keys() and x['compile'] == 'failed' or
+                   'run' in x.keys() and x['run'] == 'failed') for x in summary.values())
+        print(f'Number of benchmark compile or run failures: {res}');
     print("*****************************************************************************************")
 
 
