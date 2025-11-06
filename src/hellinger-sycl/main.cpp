@@ -121,7 +121,7 @@ int main(int argc, char** argv)
   q.memcpy(c_back, d_c, sizeof(int)*M*P).wait();
 
 #ifdef VERIFY
-  VerifyResult(h_a, h_b, h_c, c_back);
+  bool ok = VerifyResult(h_a, h_b, h_c, c_back);
 #endif
 
   delete[] h_a;

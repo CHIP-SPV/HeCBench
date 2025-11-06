@@ -25,7 +25,7 @@ void DCT8x8(
     int dir
 );
 
-void Verify(const float* h_OutputGPU, 
+int Verify(const float* h_OutputGPU, 
                   float* h_OutputCPU, 
             const float* h_Input, 
             const unsigned int stride,
@@ -46,8 +46,8 @@ void Verify(const float* h_OutputGPU,
   L2norm = sqrt(delta / sum);
   printf("Relative L2 norm: %.3e\n\n", L2norm);
   if (L2norm < 1E-6) {
-    printf("PASS\n");
-  } else {
+    printf("PASS\n"); 
+  else {
     printf("FAIL\n");
     exit(1);
   }

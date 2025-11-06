@@ -587,4 +587,5 @@ int main(int argc, char** argv) {
   hipFree(d_sbox_pmt_2);
   hipFree(d_sbox_pmt_1);
   hipFree(d_sbox_pmt_0);
+
 }

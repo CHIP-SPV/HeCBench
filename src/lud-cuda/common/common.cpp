@@ -125,6 +125,7 @@ lud_verify(float *m, float *lu, int matrix_dim){
   /*   printf("\n"); */
   /* } */
 
+  unsigned errs = 0;
   for (i=0; i<matrix_dim; i++){
       for (j=0; j<matrix_dim; j++){
           if ( fabs(m[i*s+j]-tmp[i*s+j]) > 0.0001)

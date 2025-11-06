@@ -66,34 +66,30 @@ main:	./main.o \
 #	UTILITIES
 # ======================================================================================================================================================150
 
-./util/avi/avilib.o:./util/avi/avilib.h \
-	./util/avi/avilib.c
-	$(CC)	$(CFLAGS) ./util/avi/avilib.c \
+./util/avi/avilib.o:./util/avi/avilib.h ./util/avi/avilib.c
+	$(CC)	$(CFLAGS)  \
 		-I./util/avi \
-		-c \
-		-o ./util/avi/avilib.o 
+		-o ./util/avi/avilib.o \
+		-c ./util/avi/avilib.c
 
-./util/avi/avimod.o:./util/avi/avilib.h \
-	./util/avi/avimod.c
-	$(CC)	$(CFLAGS) ./util/avi/avimod.c \
+./util/avi/avimod.o:./util/avi/avilib.h ./util/avi/avimod.c
+	$(CC)	$(CFLAGS)  \
 		-I./util/avi \
-		-c \
-		-o ./util/avi/avimod.o 
+		-o ./util/avi/avimod.o \
+		-c ./util/avi/avimod.c
 
-./util/file/file.o:	./util/file/file.h \
-	./util/file/file.c
-	$(CC)	$(CFLAGS) ./util/file/file.c \
+./util/file/file.o:	./util/file/file.h ./util/file/file.c
+	$(CC)	$(CFLAGS)  \
 		-I./util/file \
 		-I./util/timer \
-		-c \
-		-o ./util/file/file.o 
+		-o ./util/file/file.o \
+		-c ./util/file/file.c
 
-./util/timer/timer.o:	./util/timer/timer.h \
-	./util/timer/timer.c
-	$(CC)	$(CFLAGS) ./util/timer/timer.c \
+./util/timer/timer.o:	./util/timer/timer.h ./util/timer/timer.c
+	$(CC)	$(CFLAGS) \
 		-I./util/timer \
-		-c \
-		-o ./util/timer/timer.o 
+		-o ./util/timer/timer.o \
+		-c ./util/timer/timer.c
 
 run: main
 	$(LAUNCHER) ./main 104
@@ -103,4 +99,4 @@ clean:
 		./kernel/*.o \
 		./util/avi/*.o \
 		./util/file/*.o \
-		./util/timer/*.o
+		./util/timer/*.o 

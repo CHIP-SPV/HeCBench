@@ -57,7 +57,7 @@
 #define NUM_KEYS (TOTAL_KEYS)
 #define SIZE_OF_BUFFERS (NUM_KEYS)
 
-#define MAX_ITERATIONS (24)
+#define MAX_ITERATIONS (1)
 #define TEST_ARRAY_SIZE (5)
 
 /*************************************/

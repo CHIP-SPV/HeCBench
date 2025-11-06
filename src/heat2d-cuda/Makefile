@@ -53,5 +53,8 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	$(LAUNCHER) ./$(program) 4096 4096 1000
+data.txt: mkinit.py
+	python3 mkinit.py 4096 8192 data.txt
+
+run: $(program) data.txt
+	$(LAUNCHER) ./$(program) 4096 8192 1000 data.txt

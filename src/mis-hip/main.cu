@@ -214,12 +214,14 @@ int main(int argc, char* argv[])
     for (int v = 0; v < g.nodes; v++) {
       if ((nstatus[v] != in) && (nstatus[v] != out)) {
         fprintf(stderr, "ERROR: found unprocessed node in graph\n\n");
+        err = true;
         break;
       }
       if (nstatus[v] == in) {
         for (int i = g.nindex[v]; i < g.nindex[v + 1]; i++) {
           if (nstatus[g.nlist[i]] == in) {
             fprintf(stderr, "ERROR: found adjacent nodes in MIS\n\n");
+            err = true;
             break;
           }
         }
@@ -232,6 +234,7 @@ int main(int argc, char* argv[])
         }
         if (flag == 0) {
           fprintf(stderr, "ERROR: set is not maximal\n\n");
+          err = true;
           break;
         }
       }

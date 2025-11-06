@@ -26,7 +26,7 @@ void DCT8x8(
     int dir
 );
 
-void Verify(const float* h_OutputGPU, 
+int Verify(const float* h_OutputGPU, 
                   float* h_OutputCPU, 
             const float* h_Input, 
             const unsigned int stride,

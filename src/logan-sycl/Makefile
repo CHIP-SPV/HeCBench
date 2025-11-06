@@ -63,7 +63,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3 -ffast-math
+  CFLAGS += -O3
 endif
 
 ifeq ($(GPU),yes)
@@ -92,7 +92,7 @@ src/logan_functions.o: src/logan_functions.cpp \
 clean:
 	rm -rf $(program) $(obj)
 
-demo: $(program)
+main: $(program)
 	./$(program) ../logan-cuda/inputs/example.txt 17 21 1
 
 run: $(program)

@@ -13,6 +13,7 @@
 typedef unsigned int uint32_t;
 
 void LFIB4(uint32_t n, uint32_t *x) {
+  #pragma omp simd safelen(32)
   for (uint32_t k = P4; k < n; k++) {
     x[k] = x[k - P1] + x[k - P2] + x[k - P3] + x[k - P4];
   }
@@ -210,6 +211,7 @@ int main(int argc, char**argv) {
   }
 
   uint32_t n = atoi(argv[1]);
+  bool ok = true;
 
   srand(1234);
   uint32_t *x = (uint32_t*) malloc(n * sizeof(uint32_t));
@@ -250,7 +252,7 @@ int main(int argc, char**argv) {
     // Verify
     hipMemcpy(z, x_d, sizeof(uint32_t) * n, hipMemcpyDeviceToHost);
 
-    bool ok = true;
+    ok = true;
     for (uint32_t i = 0; i < n; i++) {
       if (x[i] != z[i]) {
         ok = false;
@@ -258,7 +260,7 @@ int main(int argc, char**argv) {
       }
     }
     printf("check = %s\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
+    if (!ok) exit(1);
 
     free(z);
     hipFree(x_d);

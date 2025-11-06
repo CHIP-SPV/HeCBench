@@ -128,6 +128,7 @@ int main(int argc, char * argv[])
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
+  auto AoSK = AoSKernel<treeSize>;
   for (int i = 0; i < iterations; i++)
     AoSKernel<treeSize><<<grid, block>>>((AppleTree*)inputBuffer, outputBuffer);
 
@@ -165,6 +166,7 @@ int main(int argc, char * argv[])
   hipDeviceSynchronize();
   start = std::chrono::steady_clock::now();
 
+  auto SoAK = SoAKernel<treeSize>;
   for (int i = 0; i < iterations; i++)
     SoAKernel<treeSize><<<grid, block>>>((ApplesOnTrees*)inputBuffer, outputBuffer);
 

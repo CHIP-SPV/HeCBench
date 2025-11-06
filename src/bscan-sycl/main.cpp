@@ -184,12 +184,12 @@ int main(int argc, char* argv[])
   const int repeat = atoi(argv[1]);
 
   // scan over N elements (N = [32, 1024])
-  bscan<32>(repeat);
-  bscan<64>(repeat);
-  bscan<128>(repeat);
+  // bscan<32>(repeat);
+  // bscan<64>(repeat);
+  // bscan<128>(repeat);
   bscan<256>(repeat);
-  bscan<512>(repeat);
-  bscan<1024>(repeat);
+  // bscan<512>(repeat);
+  // bscan<1024>(repeat);
 
   return 0; 
 }

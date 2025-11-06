@@ -98,7 +98,7 @@ int main(int argc, char * argv[])
   std::cout << "-------------------------------------------" << std::endl;
 
   sycl::range<2> gws (height, width/4);
-  sycl::range<2> lws (4, 1);
+  sycl::range<2> lws (1, 1);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();

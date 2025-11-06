@@ -94,8 +94,11 @@ run: main
 	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
 
 clean:
-	rm	-rf *.o *.out \
+	rm	-rf *.o main \
 		./kernel/*.o \
 		./util/timer/*.o \
 		./util/num/*.o \
     output.txt
+
+run: main
+	./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt

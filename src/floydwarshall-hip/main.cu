@@ -265,7 +265,8 @@ int main(int argc, char** argv) {
 
   // verify
   floydWarshallCPUReference(verificationPathDistanceMatrix, verificationPathMatrix, numNodes);
-  if(memcmp(pathDistanceMatrix, verificationPathDistanceMatrix, matrixSizeBytes) == 0)
+  int verify = memcmp(pathDistanceMatrix, verificationPathDistanceMatrix, matrixSizeBytes);
+  if (verify == 0)
   {
     printf("PASS\n");
   }

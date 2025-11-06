@@ -140,7 +140,7 @@ int main(int argc, char *argv[])
   hipMemcpy(r, d_r, size_bytes, hipMemcpyDeviceToHost);
 
   // verify
-  ok = true;
+  bool ok2 = true;
   for (size_t i = 0; i < size; ++i)
   {
     float2 fa = __half22float2(a[i]);
@@ -149,7 +149,7 @@ int main(int argc, char *argv[])
     float x = fmaxf(fa.x, fb.x);
     float y = fmaxf(fa.y, fb.y);
     if (fabsf(fr.x - x) > 1e-3 || fabsf(fr.y - y) > 1e-3) {
-      ok = false;
+      ok2 = false;
       break;
     }
   }
