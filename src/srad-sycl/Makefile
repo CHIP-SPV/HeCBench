@@ -108,5 +108,5 @@ endif
 clean:
 	rm -f ./*.o srad *.pgm ./util/graphics/*.o ./util/timer/*.o
 
-run: srad
-	$(LAUNCHER) ./srad 1000 0.5 502 458
+run: main
+	$(LAUNCHER) ./main 1000 0.5 502 458

@@ -137,6 +137,5 @@ clean:
 		./util/file/*.o \
 		./util/timer/*.o 
 
-run: heartwall
-	$(LAUNCHER) ./heartwall 104
-
+run: main
+	$(LAUNCHER) ./main 104

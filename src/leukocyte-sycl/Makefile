@@ -107,5 +107,5 @@ clean:
 	rm -f *.o leukocyte 
 	cd $(MATRIX_DIR); make cleanup
 
-run: leukocyte
-	$(LAUNCHER) ./leukocyte ../data/leukocyte/testfile.avi 100
+run: main
+	$(LAUNCHER) ./main ../data/leukocyte/testfile.avi 100
