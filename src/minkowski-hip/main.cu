@@ -101,7 +101,6 @@ int main(int argc, char* argv[]) {
 
     auto start = std::chrono::steady_clock::now();
 
-    auto kernel = minkowski<M, N, P>;
     for (int i = 0; i < repeat; i++)
       minkowski<M, N, K><<<dimGrid, dimBlock>>>(a_device, b_device, c_device, p, one_over_p);
 
