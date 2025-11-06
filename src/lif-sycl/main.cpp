@@ -243,5 +243,6 @@ int main(int argc, char* argv[]) {
   free(spikes_gold);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

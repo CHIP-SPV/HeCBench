@@ -180,6 +180,7 @@ void Usage(std::string prog_name, int exponent) {
                "enter the corresponding\n";
   std::cout << "    exponent between 0 and " << exponent - 1 << ".\n";
   std::cout << " k: Seed used to generate a random sequence.\n";
+  exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -229,6 +230,7 @@ int main(int argc, char *argv[]) {
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
+  if (unequal) exit(1);
 
   // Clean CPU memory.
   free(data_cpu);

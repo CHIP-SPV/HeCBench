@@ -238,6 +238,7 @@ int main(int argc, char *argv[])
       printf("dense2sparse_csr_example test PASSED\n");
   else
       printf("dense2sparse_csr_example test FAILED: wrong result\n");
+    exit(1);
   //--------------------------------------------------------------------------
   // device memory deallocation
   CHECK_CUDA( cudaFree(dBuffer) )

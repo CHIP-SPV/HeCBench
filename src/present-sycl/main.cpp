@@ -589,6 +589,7 @@ int main(int argc, char **argv) {
 
   if (h_checksum != d_checksum)
     printf("FAIL\n");
+  exit(1);
   else
     printf("PASS\n");
 

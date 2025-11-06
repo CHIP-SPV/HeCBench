@@ -438,7 +438,8 @@ int main(int argc, char *argv[])
         }
       }
   printf("%s\n", ok ? "PASS" : "FAIL");
-  free(phi_ref);
+  if (!ok) exit(1);
+free(phi_ref);
   free(u_ref);
 #endif
 

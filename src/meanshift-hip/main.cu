@@ -137,10 +137,13 @@ int main(int argc, char* argv[]) {
   hipMemcpy(result.data(), d_data, data_bytes, hipMemcpyDeviceToHost);
   auto centroids = mean_shift::gpu::utils::reduce_to_centroids<N, D>(result, mean_shift::gpu::MIN_DISTANCE);
   bool are_close = mean_shift::gpu::utils::are_close_to_real<M, D>(centroids, real, DIST_TO_REAL);
-  if (centroids.size() == M && are_close)
+  bool ok = (centroids.size() == M && are_close);
+  if (ok)
      std::cout << "PASS\n";
-  else
+  else {
      std::cout << "FAIL\n";
+     exit(1);
+  }
 
   // Reset device data
   hipMemcpy(d_data, data.data(), data_bytes, hipMemcpyHostToDevice);

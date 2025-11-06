@@ -148,4 +148,5 @@ int main(int argc, char **argv) {
     bTestResult = testSort<unsigned int, false>(argc, argv);
 
   printf(bTestResult ? "PASS\n" : "FAIL\n");
+  exit(1);
 }

@@ -115,7 +115,9 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
-  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  bool ok = (dst == T(0));
+  printf("%s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipblasHandle_t h;
   hipblasCreate(&h);
@@ -141,7 +143,9 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average hipblasDot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
-  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  bool ok = (dst == T(0));
+  printf("%s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   start = std::chrono::steady_clock::now();
 

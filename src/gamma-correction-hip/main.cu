@@ -97,8 +97,10 @@ int main(int argc, char* argv[]) {
   // check correctness
   if (check(image.begin(), image.end(), image2.begin())) {
     std::cout << "PASS\n";
+  exit(1);
   } else {
     std::cout << "FAIL\n";
+  exit(1);
   }
 
 #ifdef DEBUG

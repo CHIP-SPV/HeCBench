@@ -161,6 +161,10 @@ int main(int argc, char *argv[]) {
   if (ok)
     printf("PASS. ([%0.2f%%] queries exist in search.)\n",
             float(exist_count) / float(numQueries) * 100.0);
+  else {
+    printf("FAIL\n");
+    exit(1);
+  }
 
   printf("Tree size: %f GiBs.\n", float(btree.compute_usage()));
 

@@ -328,6 +328,7 @@ void gpu_kernel_multiple_outputs_impl(const int repeat, const func_t &f) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   sycl::free(d_x1, q);
   sycl::free(d_x2, q);
   sycl::free(d_cos, q);

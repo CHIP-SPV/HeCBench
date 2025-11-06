@@ -203,6 +203,7 @@ int main () {
   }
   else {
     std::cout << "FAIL" << std::endl;
+    exit(1);
     return -1;
   }
 

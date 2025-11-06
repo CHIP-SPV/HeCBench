@@ -188,6 +188,7 @@ int main() {
     {
       printf("%d %f %f\n", i, Y_cpu[i * INCY + 0].Re,Y_gpu[i * INCY + 0].Re);
       printf("FAIL\n");
+  exit(1);
       return EXIT_FAILURE;
     }
   printf("PASS\n");

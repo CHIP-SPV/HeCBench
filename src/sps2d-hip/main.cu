@@ -233,6 +233,7 @@ int main(int argc, char *argv[])
       printf("sparse2dense_csr_example test PASSED\n");
   else                    
       printf("sparse2dense_csr_example test FAILED: wrong result\n");
+    exit(1);
   //--------------------------------------------------------------------------
   // device memory deallocation
   CHECK_HIP( hipFree(dBuffer) )

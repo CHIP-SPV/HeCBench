@@ -340,6 +340,7 @@ int main(int argc, char *argv[])
         printf("spgemm_example test PASSED\n");
     else {
         printf("spgemm_example test FAILED: wrong result\n");
+    exit(1);
         return EXIT_FAILURE;
     }
   }

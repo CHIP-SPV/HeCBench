@@ -285,7 +285,9 @@ int main (void) {
   }
 
   fclose(pfile);
-  printf("%s\n", count == 0 ? "PASS" : "FAIL");
+  bool ok = (count == 0);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(aP_d);
   hipFree(aW_d);

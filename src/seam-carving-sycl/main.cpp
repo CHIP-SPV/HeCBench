@@ -185,6 +185,7 @@ int main(int argc, char **argv) {
     printf("Saving in resized.bmp...\n");
     int success = stbi_write_bmp("resized.bmp", current_w, h, 3, output);
     printf("%s\n", success ? "Success" : "Failed");
+    if (!success) exit(1);
 
     sycl::free(d_pixels, q);
     sycl::free(d_pixels_swap, q);

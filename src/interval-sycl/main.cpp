@@ -129,6 +129,7 @@ int main(int argc, char *argv[]) {
   bool bTestResult =
       checkAgainstHost(h_nresults, h_nresults_cpu, h_result, h_result_cpu);
   std::cout << (bTestResult ? "PASS" : "FAIL") << "\n";
+  exit(1);
 
   delete[] h_result_cpu;
   delete[] h_nresults_cpu;

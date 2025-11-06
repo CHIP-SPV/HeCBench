@@ -285,6 +285,7 @@ void quant(sycl::queue &q, int num_tokens, int hidden_size, int repeat) {
   error += memcmp(h_output, h_output_r, output_size_bytes);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   sycl::free(d_input, q);
   sycl::free(d_output, q);

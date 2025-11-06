@@ -258,6 +258,7 @@ int main(int argc, char**argv) {
       }
     }
     printf("check = %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
     free(z);
     cudaFree(x_d);

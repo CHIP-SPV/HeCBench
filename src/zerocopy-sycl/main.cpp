@@ -140,6 +140,7 @@ void eval(sycl::queue &q, bool warmup, bool bGenericSharedMemory, const int repe
       refNorm = (float)sqrt((double)refNorm);
 
       printf("%s\n", (errorNorm / refNorm < 1.e-6f) ? "SUCCESS" : "FAILURE");
+  exit(1);
     }
 
     // Memory clean up

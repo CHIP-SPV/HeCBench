@@ -103,6 +103,7 @@ int main(int argc, char* argv[]) {
 
   printf("%s\n", (complex_float_check && complex_double_check)
                  ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_cs);
   free(cs);

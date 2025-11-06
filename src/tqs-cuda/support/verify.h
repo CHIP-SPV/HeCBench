@@ -50,5 +50,6 @@ inline void verify(int *data, int *pattern, int poolSize, int iterations, int n_
     }
     if(error != 0) {
         printf("Test failed\n");
+        exit(1);
     }
 }

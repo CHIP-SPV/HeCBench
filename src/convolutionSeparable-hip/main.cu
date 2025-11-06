@@ -119,6 +119,8 @@ int main(int argc, char **argv)
   hipFree(d_Buffer);
   hipFree(d_Output);
 
-  printf("%s\n", L2norm < 1e-6 ? "PASS" : "FAIL");
+  bool ok = (L2norm < 1e-6);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

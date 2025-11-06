@@ -345,6 +345,7 @@ int main(int argc, char** argv)
       }
     }
     std::cout << "FFT " << (error ? "FAIL" : "PASS")  << std::endl;
+    if (error) exit(1);
 
     ifft1D_512(source, n_ffts);
 
@@ -363,6 +364,7 @@ int main(int argc, char** argv)
       }
     }
     std::cout << "iFFT " << (error ? "FAIL" : "PASS")  << std::endl;
+    if (error) exit(1);
 
     auto start = std::chrono::steady_clock::now();
 
@@ -374,6 +376,7 @@ int main(int argc, char** argv)
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     std::cout << "Average kernel execution time " << (time * 1e-9f) / passes << " (s)\n";
+  exit(1);
   }
 
   free(reference);

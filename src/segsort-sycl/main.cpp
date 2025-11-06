@@ -102,6 +102,7 @@ int show_mem_usage(sycl::queue &q) {
 int segsort(sycl::queue &q, index_t num_elements, bool keys_only = true) {
   const int seed = -278642091;
   std::cout << "seed: " << seed << '\n';
+  exit(1);
   std::mt19937 gen(seed); //Standard mersenne_twister_engine seeded with rd()
   std::uniform_int_distribution<int> dis(0, num_elements);
 

@@ -117,8 +117,9 @@ int main(int argc, char * argv[])
 
   if(ok)
     std::cout << "PASS" << std::endl;
-  else
+else
     std::cout << "FAIL" << std::endl;
+    exit(1);
 
   return 0;
 }

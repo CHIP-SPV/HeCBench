@@ -67,6 +67,7 @@ int main(int argc, char *argv[]) {
     for (j = 0; j < repeat; j++) 
      if (fabsf((float)gold - h_result[j]) > 1e-3f) {
        printf("FAIL at iteration %d: gold=%f actual=%f for %d elements\n",
+  exit(1);
               j, (float)gold, h_result[j], i);
        ok = false;
        break;

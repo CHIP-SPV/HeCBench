@@ -101,8 +101,9 @@ int main(int argc, char* argv[]) {
   hipMemcpy(cs, d_cs, n, hipMemcpyDeviceToHost);
   complex_double_check &= check(cs, n);
 
-  printf("%s\n", (complex_float_check && complex_double_check)
-                 ? "PASS" : "FAIL");
+  bool ok = (complex_float_check && complex_double_check);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_cs);
   free(cs);

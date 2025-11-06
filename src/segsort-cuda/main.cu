@@ -37,6 +37,7 @@ using val_t = uint64_t;
 
 #define CUDA_CHECK(_e, _s) if(_e != cudaSuccess) { \
   std::cout << "CUDA error (" << _s << "): " << cudaGetErrorString(_e) << std::endl; \
+  exit(1);
   return 0; }
 
 
@@ -117,6 +118,7 @@ int segsort(index_t num_elements, bool keys_only = true)
 {
   int seed = -278642091;
   std::cout << "seed: " << seed << '\n';
+  exit(1);
   std::mt19937 gen(seed); //Standard mersenne_twister_engine seeded with rd()
   std::uniform_int_distribution<int> dis(0, num_elements);
 

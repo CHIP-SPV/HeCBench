@@ -59,7 +59,9 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average oneMKL::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   q.memcpy(&dst, d_dst, sizeof(T)).wait();
   printf("Host: %lf  Device: %lf\n", sum, double(dst));
-  printf("%s\n\n", (fabs(double(dst) - sum) < 1e-1) ? "PASS" : "FAIL");
+  bool ok = (fabs(double(dst) - sum) < 1e-1);
+  printf("%s\n\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);

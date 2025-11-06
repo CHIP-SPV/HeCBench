@@ -150,18 +150,26 @@ inline void BitonicSort(int a[], int n) {
 // Function showing the array.
 void DisplayArray(int a[], int array_size) {
   for (int i = 0; i < array_size; ++i) std::cout << a[i] << " ";
+  exit(1);
   std::cout << "\n";
+  exit(1);
 }
 
 void Usage(std::string prog_name, int exponent) {
   std::cout << " Incorrect parameters\n";
+  exit(1);
   std::cout << " Usage: " << prog_name << " n k \n\n";
+  exit(1);
   std::cout << " n: Integer exponent presenting the size of the input array. "
+  exit(1);
                "The number of element in\n";
   std::cout << "    the array must be power of 2 (e.g., 1, 2, 4, ...). Please "
+  exit(1);
                "enter the corresponding\n";
   std::cout << "    exponent between 0 and " << exponent - 1 << ".\n";
+  exit(1);
   std::cout << " k: Seed used to generate a random sequence.\n";
+  exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -186,6 +194,7 @@ int main(int argc, char *argv[]) {
   }
 
   std::cout << "\nArray size: " << size << ", seed: " << seed << "\n";
+  exit(1);
 
   size_t size_bytes = size * sizeof(int);
 
@@ -203,14 +212,17 @@ int main(int argc, char *argv[]) {
   }
 
   std::cout << "Bitonic sort (parallel)..\n";
+  exit(1);
   ParallelBitonicSort(data_gpu, n);
 
   std::cout << "Bitonic sort (serial)..\n";
+  exit(1);
   BitonicSort(data_cpu, n);
 
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
+  exit(1);
 
   // Clean CPU memory.
   free(data_cpu);

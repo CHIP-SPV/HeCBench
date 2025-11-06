@@ -258,6 +258,7 @@ int sort_sparse_matrix(intType a_nrows, intType a_ncols,
       std::cout << "csrsort_example test PASSED" << std::endl;
   else
       std::cout << "csrsort_example test FAILED: wrong result" << std::endl;
+    exit(1);
   //--------------------------------------------------------------------------
   // memory deallocation
   CHECK_HIP( hipFree(a_rowptr) )

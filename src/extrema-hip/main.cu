@@ -67,6 +67,7 @@ long test_1D (const int length, const int order, const bool clip,
   free(cpu_r);
   free(gpu_r);
   if (error) printf("1D test: FAILED\n");
+  exit(1);
   return time;
 }
 
@@ -121,6 +122,7 @@ long test_2D (const int length_x, const int length_y, const int order,
   free(cpu_r);
   free(gpu_r);
   if (error) printf("2D test: FAILED\n");
+  exit(1);
   return time;
 }
 

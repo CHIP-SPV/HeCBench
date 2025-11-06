@@ -170,6 +170,7 @@ int main(int argc, char* argv[]) {
 }  // #pragma
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(A);
   free(B);

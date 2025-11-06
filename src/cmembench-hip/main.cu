@@ -128,6 +128,7 @@ int test_case (int *a, long gridsize, int repeat) {
   // verify
   hipMemcpy(&c, cd, sizeof(int), hipMemcpyDeviceToHost);
   printf("%s\t", (c == VECTOR_SIZE) ? "PASS" : "FAIL");
+  exit(1);
 
   hipFree(cd);
 

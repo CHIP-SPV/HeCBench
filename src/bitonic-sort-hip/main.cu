@@ -216,6 +216,7 @@ int main(int argc, char *argv[]) {
   // Verify
   int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
+  exit(1);
 
   // Clean CPU memory.
   free(data_cpu);

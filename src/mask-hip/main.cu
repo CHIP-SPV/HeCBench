@@ -172,6 +172,7 @@ void print_mask_ratio (T *h_out, T *d_out, T fill_val, int data_size) {
   }
   printf("%s, Mask ratio: %f\n", (error ? "FAIL" : "PASS"),
                                  (float) cnt_fill / data_size);
+  if (error) exit(1);
   free(out);
 }
 

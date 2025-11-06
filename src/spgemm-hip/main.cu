@@ -211,6 +211,7 @@ int COO(int m, int k, int n, int a_nnz, int repeat, int verify) {
       printf("spgemm_example test PASSED\n");
     else
       printf("spgemm_example test FAILED: wrong result\n");
+    exit(1);
   }
 
   //--------------------------------------------------------------------------
@@ -368,6 +369,7 @@ int CSR(int m, int k, int n, int a_nnz, int repeat, int verify) {
       printf("spgemm_example test PASSED\n");
     else
       printf("spgemm_example test FAILED: wrong result\n");
+    exit(1);
   }
 
   //--------------------------------------------------------------------------

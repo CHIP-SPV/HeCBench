@@ -370,6 +370,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   if (error > 1e-5) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
     printf("FAIL");
+  exit(1);
   } else {
     printf("PASS");
   }

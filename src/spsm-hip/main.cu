@@ -274,6 +274,7 @@ int main(int argc, char *argv[])
         printf("spsm_csr_example test PASSED\n");
     else
         printf("spsm_csr_example test FAILED: wrong result\n");
+    exit(1);
 
     free(hB2);
     free(hY);

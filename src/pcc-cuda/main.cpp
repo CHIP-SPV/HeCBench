@@ -48,12 +48,14 @@ int main(int argc, char *argv[])
 {
   if (argc != 3) {
      std::cout<<"Usage: " << argv[0] << " <Number of voxels> <Length of time series>\n";
+  exit(1);
      return 1;
   }
 
   int N = atoi(argv[1]);
   int L = atoi(argv[2]);
   std::cout<<"Number of voxels: "<<N<<"  "<<"Length of time series: "<<L<<"\n\n";
+  exit(1);
 
   std::default_random_engine g (123);
   std::uniform_real_distribution<float> uniform_distr (-6.f, 6.f);
@@ -74,6 +76,7 @@ int main(int argc, char *argv[])
     upper_tri[indii]=0;
 
   std::cout<<"\nComputing correlations ...\n";
+  exit(1);
 
   const size_t free_memory = FREE_MEMORY;
 
@@ -90,15 +93,18 @@ int main(int argc, char *argv[])
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout<<"\nRunning time for computing correlations: \n"<< (time * 1e-9f) << " (s)\n";
+  exit(1);
 
   double checksum = 0;
   for(size_t tab =0;tab<M11;tab++) {
     checksum += upper_tri[tab];
   }
   std::cout<<"Checksum: " << checksum << "\n";
+  exit(1);
 
   if (N < 100 && L < 100) {
     std::cout<<"\nWriting correlation values into the text file ... \n";
+  exit(1);
     std::ofstream correlations_print;
     correlations_print.open("corrs.txt");
     for(size_t tab =0;tab<M11;tab++) {
@@ -106,6 +112,7 @@ int main(int argc, char *argv[])
     }
     correlations_print.close();
     std::cout<<"\nCorrelations are stored into the text file corrs.txt \n";
+  exit(1);
   }
 
   delete [] upper_tri;

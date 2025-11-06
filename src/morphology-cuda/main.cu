@@ -55,6 +55,7 @@ int main(int argc, char* argv[])
   int s = 0;
   for (unsigned int i = 0; i < memSize; i++) s += srcImg[i];
   printf("%s\n", s == WHITE ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(img_d);
   cudaFree(tmp_d);

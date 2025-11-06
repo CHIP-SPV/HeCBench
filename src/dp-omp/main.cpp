@@ -73,6 +73,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
     printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
   }
 
   // Compute and compare results for golden-host and report errors and pass/fail

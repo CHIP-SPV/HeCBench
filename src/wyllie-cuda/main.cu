@@ -102,6 +102,7 @@ int main(int argc, char* argv[]) {
 #endif
 
   printf("%s\n", (h_res == d_res) ? "PASS" : "FAIL");
+  if (!ok) exit(1);
    
   return 0;
 }

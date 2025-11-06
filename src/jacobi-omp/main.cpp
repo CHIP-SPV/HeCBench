@@ -105,6 +105,7 @@ int main () {
     // Periodically print out the current error
     if (num_iters % 1000 == 0) {
       std::cout << "Error after iteration " << num_iters << " = " << error << std::endl;
+  exit(1);
     }
 
     // Increment the iteration count
@@ -114,6 +115,7 @@ int main () {
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average execution time per iteration: " << (time * 1e-9f) / num_iters << " (s)\n";
+  exit(1);
 }
 
   // If we took fewer than max_iters steps and the error is below the tolerance,
@@ -121,9 +123,11 @@ int main () {
 
   if (error <= tolerance && num_iters < max_iters) {
     std::cout << "PASS" << std::endl;
+  exit(1);
   }
   else {
     std::cout << "FAIL" << std::endl;
+  exit(1);
     return -1;
   }
 
@@ -135,6 +139,7 @@ int main () {
   auto total_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end_time - start_time).count();
   double duration = total_time * 1e-9;
   std::cout << "Total elapsed time: " << std::setprecision(4) << duration << " seconds" << std::endl;
+  exit(1);
 
   return 0;
 }

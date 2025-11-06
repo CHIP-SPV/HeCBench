@@ -115,6 +115,7 @@ int main(int argc, char* argv[])
 
   // Print the sum:
   std::cout << ((sum == 0) ? "PASS" : "FAIL") << "\n";
+  exit(1);
 
   return 0;
 }

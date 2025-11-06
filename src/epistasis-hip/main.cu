@@ -351,6 +351,7 @@ int main(int argc, char **argv)
   
   bool ok = (p1 == p2) && (fabsf(scores[p1] - scores_ref[p2]) < 1e-3f);
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
 
   hipFree(d_data_zeros);
   hipFree(d_data_ones);

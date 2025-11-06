@@ -367,6 +367,7 @@ void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average execution time of kernels: " << (time * 1e-9f) / iteration << " (s)\n";
+  exit(1);
 
   q.memcpy(weight_j, d_weight_j, sizeof(T) * e).wait();
 
@@ -393,6 +394,7 @@ void jaccard_weight (sycl::queue &q, const int iteration, const int n, const int
   if (error > 1e-5) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
     printf("FAIL");
+  exit(1);
   } else {
     printf("PASS");
   }

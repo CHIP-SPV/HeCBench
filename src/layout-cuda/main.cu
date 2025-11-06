@@ -78,17 +78,20 @@ int main(int argc, char * argv[])
   if(iterations < 1)
   {
     std::cout<<"Iterations cannot be 0 or negative. Exiting..\n";
+  exit(1);
     return -1;
   }
 
   if(treeNumber < GROUP_SIZE)
   {
     std::cout<<"treeNumber should be larger than the work group size"<<std::endl;
+  exit(1);
     return -1;
   }
   if(treeNumber % 256 !=0)
   {
     std::cout<<"treeNumber should be a multiple of 256"<<std::endl;
+  exit(1);
     return -1;
   }
 
@@ -148,9 +151,10 @@ int main(int argc, char * argv[])
     }
   }
 
-  if (fail)
+  if (fail) {
     std::cout << "FAIL\n";
-  else
+    exit(1);
+  } else
     std::cout << "PASS\n";
 
   //initialize soa data
@@ -183,9 +187,10 @@ int main(int argc, char * argv[])
     }
   }
 
-  if (fail)
+  if (fail) {
     std::cout << "FAIL\n";
-  else
+    exit(1);
+  } else
     std::cout << "PASS\n";
   
   cudaFree(inputBuffer);

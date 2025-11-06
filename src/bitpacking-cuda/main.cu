@@ -143,6 +143,7 @@ int main() {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");  
+  if (!ok) exit(1);
   }
 
   free(inputHost);

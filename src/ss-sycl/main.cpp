@@ -58,6 +58,7 @@ int verify(uint* resultCount, uint workGroupCount,
   else
   {
     std::cout << "Failed\n" << std::endl;
+    exit(1);
     return -1;
   }
 }
@@ -91,13 +92,15 @@ int main(int argc, char* argv[])
   if(iterations < 1)
   {
     std::cout<<"Error, iterations cannot be 0 or negative. Exiting..\n";
-    exit(0);
+    exit(1);
+    return -1;
   }
 
   // Check input text-file specified.
   if(file.length() == 0)
   {
     std::cout << "\n Error: Input File not specified..." << std::endl;
+    exit(1);
     return -1;
   }
 
@@ -107,6 +110,7 @@ int main(int argc, char* argv[])
   if(! textFile.is_open())
   {
     std::cout << "\n Unable to open file: " << file << std::endl;
+    exit(1);
     return -1;
   }
 
@@ -117,6 +121,7 @@ int main(int argc, char* argv[])
   if (!textFile.read ((char*)text, textLength))
   {
     std::cout << "\n Reading file failed " << std::endl;
+    exit(1);
     textFile.close();
     return -1;
   }
@@ -126,6 +131,7 @@ int main(int argc, char* argv[])
   if(subStrLength == 0)
   {
     std::cout << "\nError: Sub-String not specified..." << std::endl;
+    exit(1);
     return -1;
   }
 
@@ -133,6 +139,7 @@ int main(int argc, char* argv[])
   {
     std::cout << "\nText size less than search pattern (" << textLength
       << " < " << subStrLength << ")" << std::endl;
+    exit(1);
     return -1;
   }
 
@@ -140,6 +147,7 @@ int main(int argc, char* argv[])
   if(subStrLength != 1 && subStrLength <= 16)
   {
     std::cout << "\nSearch pattern size should be longer than 16" << std::endl;
+    exit(1);
     return -1;
   }
 #endif

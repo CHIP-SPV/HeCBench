@@ -146,6 +146,7 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
+    exit(1);
 
     // Reset device data
     result = data;
@@ -169,6 +170,7 @@ int main(int argc, char* argv[]) {
        std::cout << "PASS\n";
     else
        std::cout << "FAIL\n";
+    exit(1);
   }
 
   free(d_data_next);

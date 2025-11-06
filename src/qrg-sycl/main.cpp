@@ -258,6 +258,7 @@ int main(int argc, const char **argv)
     printf("PASS\n");
   else
     printf("FAIL\n");
+    exit(1);
 
   free(h_OutputGPU);
   sycl::free(d_Output, q);

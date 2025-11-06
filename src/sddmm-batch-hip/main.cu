@@ -282,6 +282,7 @@ int main(int argc, char *argv[])
         printf("sddmm_csr_batched_example test PASSED\n");
     else
         printf("sddmm_csr_batched_example test FAILED: wrong result\n");
+    exit(1);
   }
   //--------------------------------------------------------------------------
   // device memory deallocation

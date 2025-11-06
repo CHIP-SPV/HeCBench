@@ -31,6 +31,7 @@ void compareEqual(T const *a, T const *b, uint32_t size,
   if (max_relative_error != max_relative_error ||
       max_relative_error > eps * tolerance) {
     std::cout << "FAILED\n";
+  exit(1);
   } else {
     std::cout << "PASSED\n";
   }

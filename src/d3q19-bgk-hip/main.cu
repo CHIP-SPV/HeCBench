@@ -182,6 +182,7 @@ double run_benchmark(BoxCU &domain, lbm_vars h_vars, lbm_vars d_vars) {
         }
         else {
           printf(": FAILED\nExpected the value %f\n", reference_energy);
+    exit(1);
         }
       }
     }

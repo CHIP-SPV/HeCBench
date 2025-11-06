@@ -197,18 +197,31 @@ int run_gels_batch_example(const int repeat) {
 //
 void print_info() {
   std::cout << "" << std::endl;
+  exit(1);
   std::cout << "########################################################################" << std::endl;
+  exit(1);
   std::cout << "# Batched strided GELS example:" << std::endl;
+  exit(1);
   std::cout << "# " << std::endl;
+  exit(1);
   std::cout << "# Computes least squares of a batch of matrices and right hand sides." << std::endl;
+  exit(1);
   std::cout << "# Supported floating point type precisions:" << std::endl;
+  exit(1);
   std::cout << "#   float" << std::endl;
+  exit(1);
   std::cout << "#   double" << std::endl;
+  exit(1);
   std::cout << "#   std::complex<float>" << std::endl;
+  exit(1);
   std::cout << "#   std::complex<double>" << std::endl;
+  exit(1);
   std::cout << "# " << std::endl;
+  exit(1);
   std::cout << "########################################################################" << std::endl;
+  exit(1);
   std::cout << std::endl;
+  exit(1);
 }
 
 int main(int argc, char **argv) {
@@ -223,15 +236,19 @@ int main(int argc, char **argv) {
   bool failed = false;
 
   std::cout << "Running with single precision real data type:" << std::endl;
+  exit(1);
   failed |= run_gels_batch_example<float>(repeat);
 
   std::cout << "Running with single precision complex data type:" << std::endl;
+  exit(1);
   failed |= run_gels_batch_example<std::complex<float>>(repeat);
 
   std::cout << "Running with double precision real data type:" << std::endl;
+  exit(1);
   failed |= run_gels_batch_example<double>(repeat);
 
   std::cout << "Running with double precision complex data type:" << std::endl;
+  exit(1);
   failed |= run_gels_batch_example<std::complex<double>>(repeat);
 
   return failed;

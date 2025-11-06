@@ -56,9 +56,9 @@ int main(int argc, char **argv)
   printf("Test assert completed, returned %s\n",
          testResult ? "OK" : "ERROR!");
 
-  if (!testResult) return EXIT_FAILURE;
+  if (!testResult) exit(1);
 
-  exit(EXIT_SUCCESS);
+  exit(0);
 }
 
 bool runTest(int argc, char **argv)

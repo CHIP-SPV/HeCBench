@@ -148,10 +148,12 @@ int main(int argc, char * argv[])
     }
   }
 
-  if (fail)
+  if (fail) {
     std::cout << "FAIL\n";
-  else
+    exit(1);
+  } else {
     std::cout << "PASS\n";
+  }
 
   //initialize soa data
   for (int i = 0; i < treeNumber; i++)
@@ -183,10 +185,12 @@ int main(int argc, char * argv[])
     }
   }
 
-  if (fail)
+  if (fail) {
     std::cout << "FAIL\n";
-  else
+    exit(1);
+  } else {
     std::cout << "PASS\n";
+  }
   
   hipFree(inputBuffer);
   hipFree(outputBuffer);

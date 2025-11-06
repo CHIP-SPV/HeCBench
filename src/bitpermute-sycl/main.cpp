@@ -86,6 +86,7 @@ void bit_permute(sycl::queue &q, const int lg_domain_size, const int repeat)
   q.memcpy(inout, d_inout, domain_size_bytes).wait();
   int error = memcmp(out, inout, domain_size_bytes);
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   auto start = std::chrono::steady_clock::now();
 

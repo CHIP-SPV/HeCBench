@@ -102,5 +102,6 @@ int main(int argc, char **argv)
   free(h_Kernel);
 
   printf("%s\n", L2norm < 1e-6 ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }

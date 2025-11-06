@@ -155,6 +155,7 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
+    exit(1);
 
   // Reset device data
   q.memcpy(d_data, data.data(), data_bytes).wait();
@@ -185,6 +186,7 @@ int main(int argc, char* argv[]) {
      std::cout << "PASS\n";
   else
      std::cout << "FAIL\n";
+    exit(1);
 
   sycl::free(d_data, q);
   sycl::free(d_data_next, q);

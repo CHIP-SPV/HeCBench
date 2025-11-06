@@ -217,6 +217,7 @@ double run_benchmark(sycl::queue &q, BoxCU &domain, lbm_vars h_vars, lbm_vars d_
         }
         else {
           printf(": FAILED\nExpected the value %f\n", reference_energy);
+  exit(1);
         }
       }
     }

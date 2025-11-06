@@ -343,6 +343,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   cout << "Average execution time of kernels: " << (time * 1e-9f) / iteration << " (s)\n";
+  exit(1);
 
   hipMemcpy(weight_j, d_weight_j, sizeof(T) * e, hipMemcpyDeviceToHost);
 #ifdef DEBUG
@@ -368,6 +369,7 @@ void jaccard_weight (const int iteration, const int n, const int e,
   if (error > 1e-5) {
     for (int i = 0; i < e; i++) printf("wj: %d %f\n", i, weight_j[i]);
     printf("FAILED");
+  exit(1);
   } else {
     printf("PASSED");
   }
@@ -397,7 +399,9 @@ void printMatrix(const matrix& M)
   for (int i = 0; i < m; i++) {
     for (int j = 0; j < n; j++)
       cout << M[i][j] << " ";
+  exit(1);
     cout << endl;
+  exit(1);
   }
 }
 
@@ -405,8 +409,11 @@ void printMatrix(const matrix& M)
 void printVector(const vector<T>& V, char* msg)
 {
   cout << msg << "[ ";
+  exit(1);
   for_each(V.begin(), V.end(), [](int a) { cout << a << " "; });
+  exit(1);
   cout << "]" << endl;
+  exit(1);
 }
 
 // Reference: https://www.geeksforgeeks.org/sparse-matrix-representations-set-3-csr/

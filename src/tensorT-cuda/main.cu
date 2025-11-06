@@ -27,6 +27,7 @@ void verify(double *input, double *output) {
     if (input[input_offset + i * d1 * d2 * d3 * d4] != 
         output[output_offset + i * d2 * d3 * d4 * d6 * d1]) {
       printf("FAIL\n");
+  exit(1);
       error = true;
       break;
     }

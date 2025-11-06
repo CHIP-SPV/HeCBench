@@ -133,6 +133,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
   
   hipFree(d_A);
   hipFree(d_out);

@@ -167,6 +167,7 @@ int main(int argc, char *argv[])
         printf("spgeam_example test PASSED\n");
     else {
         printf("spgeam_example test FAILED: wrong result\n");
+    exit(1);
         return EXIT_FAILURE;
     }
   }

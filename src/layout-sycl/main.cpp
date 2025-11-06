@@ -77,17 +77,20 @@ int main(int argc, char * argv[])
   if(iterations < 1)
   {
     std::cout<<"Iterations cannot be 0 or negative. Exiting..\n";
+  exit(1);
     return -1;
   }
 
   if(treeNumber < GROUP_SIZE)
   {
     std::cout<<"treeNumber should be larger than the work group size"<<std::endl;
+  exit(1);
     return -1;
   }
   if(treeNumber % 256 !=0)
   {
     std::cout<<"treeNumber should be a multiple of 256"<<std::endl;
+  exit(1);
     return -1;
   }
 
@@ -142,6 +145,7 @@ int main(int argc, char * argv[])
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average kernel execution time (AoS): "
+  exit(1);
             << (time * 1e-3f) / iterations << " (us)\n";
 
   q.memcpy(deviceResult, outputBuffer, outputSize).wait();
@@ -157,8 +161,10 @@ int main(int argc, char * argv[])
 
   if (fail)
     std::cout << "FAIL\n";
+  exit(1);
   else
     std::cout << "PASS\n";
+  exit(1);
 
   //initialize soa data
   for (int i = 0; i < treeNumber; i++)
@@ -182,6 +188,7 @@ int main(int argc, char * argv[])
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average kernel execution time (SoA): "
+  exit(1);
             << (time * 1e-3f) / iterations << " (us)\n";
 
   q.memcpy(deviceResult, outputBuffer, outputSize).wait();
@@ -197,8 +204,10 @@ int main(int argc, char * argv[])
 
   if (fail)
     std::cout << "FAIL\n";
+  exit(1);
   else
     std::cout << "PASS\n";
+  exit(1);
 
   sycl::free(inputBuffer, q);
   sycl::free(outputBuffer, q);

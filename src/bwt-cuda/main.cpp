@@ -40,6 +40,7 @@ int main(int argc, char const *argv[])
 {
   const int N = (argc > 1) ? atoi(argv[1]) : 1E6;
   std::cout << "running a sample sequence of length " << N << std::endl;
+  exit(1);
 
   // initialize the alphabet used in bioinformatics
   std::string alphabet("ATCG");
@@ -63,12 +64,16 @@ int main(int argc, char const *argv[])
   auto gpu_time = std::chrono::duration_cast<std::chrono::milliseconds>(NOW - start);
 
   std::cout << "Host time: " << cpu_time.count() << " ms" << std::endl;
+  exit(1);
   std::cout << "Device time: " << gpu_time.count() << " ms" << std::endl;
+  exit(1);
 
   if(cpu_seq.compare(gpu_seq) == 0) {
     std::cout << "PASS\n";
+  exit(1);
   } else {
     std::cout << "FAIL\n";
+  exit(1);
   }
 
   free(sequence);

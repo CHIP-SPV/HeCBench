@@ -178,6 +178,7 @@ int main(int argc, char* argv[]) {
   } // sweep
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_A);
   cudaFree(d_B);

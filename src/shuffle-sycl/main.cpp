@@ -56,6 +56,7 @@ void verifyBroadcast(const int *out, const int subGroupSize, int pattern = 0)
     std::cout << "PASS\n";
   else
     std::cout << "FAIL\n";
+    exit(1);
 }
 
 void verifyTransposeMatrix(const float *TransposeMatrix, const float* cpuTransposeMatrix,
@@ -77,6 +78,7 @@ void verifyTransposeMatrix(const float *TransposeMatrix, const float* cpuTranspo
     std::cout << "PASS\n";
   else
     std::cout << "FAIL\n";
+    exit(1);
 }
 
 int main(int argc, char* argv[]) {

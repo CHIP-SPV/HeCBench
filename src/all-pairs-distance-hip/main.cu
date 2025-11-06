@@ -263,8 +263,13 @@ int main(int argc, char **argv) {
 
   printf("Average kernel execution time: %f (us)\n", elapsedTime / iterations);
   status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
-  if (status != 0) printf("FAIL\n");
-  else printf("PASS\n");
+  if (status != 0) {
+    printf("FAIL\n");
+    exit(1);
+  }
+  else {
+    printf("PASS\n");
+  }
 
   elapsedTime = 0; 
   for (int n = 0; n < iterations; n++) {
@@ -288,8 +293,13 @@ int main(int argc, char **argv) {
 
   printf("Average kernel execution time: %f (us)\n", elapsedTime / iterations);
   status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
-  if (status != 0) printf("FAIL\n");
-  else printf("PASS\n");
+  if (status != 0) {
+    printf("FAIL\n");
+    exit(1);
+  }
+  else {
+    printf("PASS\n");
+  }
 
   elapsedTime = 0; 
   for (int n = 0; n < iterations; n++) {
@@ -313,8 +323,13 @@ int main(int argc, char **argv) {
 
   printf("Average kernel execution time: %f (us)\n", elapsedTime / iterations);
   status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
-  if (status != 0) printf("FAIL\n");
-  else printf("PASS\n");
+  if (status != 0) {
+    printf("FAIL\n");
+    exit(1);
+  }
+  else {
+    printf("PASS\n");
+  }
 
   free(cpu_distance);
   free(gpu_distance);

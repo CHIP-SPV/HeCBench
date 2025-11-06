@@ -115,6 +115,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
 
   cudaMemcpy(&dst, d_dst, sizeof(T), cudaMemcpyDeviceToHost);
   printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
 
   cublasHandle_t h;
   cublasCreate(&h);
@@ -141,6 +142,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
 
   cudaMemcpy(&dst, d_dst, sizeof(T), cudaMemcpyDeviceToHost);
   printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
 
   start = std::chrono::steady_clock::now();
 
@@ -153,6 +155,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average std::transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
   printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
 
   cudaFree(d_dst);
   cudaFree(d_srcA);

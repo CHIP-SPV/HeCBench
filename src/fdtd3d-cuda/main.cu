@@ -35,8 +35,10 @@ int main(int argc, char **argv)
   // Finish
   if (bTestResult == true)
     printf("PASS\n");
-  else
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   return 0;
 }

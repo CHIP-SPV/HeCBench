@@ -103,6 +103,7 @@ int main(int argc, char * argv[])
     std::cout << "PASS" << std::endl;
   else
     std::cout << "FAIL" << std::endl;
+    exit(1);
 
   free(input);
   free(output);
