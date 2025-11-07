@@ -13,7 +13,7 @@ LAUNCHER  =
 # Program name & source code list
 #===============================================================================
 
-program = gerbil
+program = main
 
 obj = AddKernel.o        \
       CompressKernel.o   \

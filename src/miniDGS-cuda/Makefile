@@ -62,5 +62,5 @@ veryclean :
 	make clean
 	cd 3rdParty/ParMetis-3.1 && make clean
 
-run :
-	mpiexec -n $(NP) ./main  Meshes/FS_K01022.neu
+run: main
+	$(LAUNCHER) mpiexec -n $(NP) ./main  Meshes/FS_K01022.neu

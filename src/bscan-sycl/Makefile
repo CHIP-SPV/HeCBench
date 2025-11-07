@@ -19,13 +19,8 @@ HIP_ARCH  = gfx908
 # Program name & source code list
 #===============================================================================
 
-ifeq ($(HIP), yes)
-  program = main-wave64
-  source = main-wave64.cpp
-else
-  program = main
-  source = main.cpp
-endif
+program = main
+source = main.cpp
 
 obj = $(source:.cpp=.o)
 

@@ -40,9 +40,6 @@ endif
 # Linker Flags
 LDFLAGS = 
 
-# Linker Flags
-LDFLAGS = 
-
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
