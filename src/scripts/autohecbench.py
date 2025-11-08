@@ -54,7 +54,13 @@ class Benchmark:
 
         if args.extra_compile_flags:
             flags = args.extra_compile_flags.replace(',',' ')
+            # Add -Dregister= to handle C++17+ register keyword removal
+            if '-Dregister=' not in flags:
+                flags = flags + ' -Dregister='
             self.MAKE_ARGS.append('EXTRA_CFLAGS={}'.format(flags))
+        else:
+            # Add -Dregister= even if no other extra flags
+            self.MAKE_ARGS.append('EXTRA_CFLAGS=-Dregister=')
 
         if args.bench_dir:
             self.path = os.path.realpath(os.path.join(args.bench_dir, name))
