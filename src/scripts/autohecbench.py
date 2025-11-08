@@ -68,10 +68,11 @@ class Benchmark:
         self.invert = invert
         self.clean = args.clean
         self.verbose = args.verbose
+        self.run_timeout = 60 if args.quick else 600
 
     def compile(self, shared_data):
         if self.clean:
-            subprocess.run(["make", "clean"], cwd=self.path).check_returncode()
+            subprocess.run(["make", "clean"], cwd=self.path, timeout=None).check_returncode()
             time.sleep(1) # required to make sure clean is done before building, despite run waiting on the invoked executable
 
         out = subprocess.DEVNULL
@@ -79,7 +80,7 @@ class Benchmark:
             out = subprocess.PIPE
 
         proc = subprocess.run(["make"] + self.MAKE_ARGS, cwd=self.path,
-                              stdout=out, stderr=subprocess.STDOUT, encoding="utf-8")
+                              stdout=out, stderr=subprocess.STDOUT, encoding="utf-8", timeout=None)
 
         try:
             proc.check_returncode()
@@ -104,7 +105,7 @@ class Benchmark:
 
     def run(self):
         cmd = ["./" + self.binary] + self.args
-        proc = subprocess.run(cmd, cwd=self.path, timeout=600,
+        proc = subprocess.run(cmd, cwd=self.path, timeout=self.run_timeout,
                               stdout=subprocess.PIPE, encoding="utf-8")
         out = proc.stdout
         if self.verbose:
@@ -172,6 +173,8 @@ def main():
                         help='Benchmark data')
     parser.add_argument('--bench-fails', '-f',
                         help='List of failing benchmarks to ignore')
+    parser.add_argument('--quick', action='store_true',
+                        help='Use subset-quick.json with minimal args, repeat=1, and no warmup')
     parser.add_argument('bench', nargs='+',
                         help='Either specific benchmark name or sycl, cuda, or hip')
 
@@ -200,11 +203,20 @@ def main():
 
     script_dir = os.path.dirname(os.path.abspath(__file__))
 
+    # Handle --quick flag
+    if args.quick:
+        args.repeat = 1
+        args.warmup = False
+        logging.info("Quick mode enabled: using subset-quick.json, repeat=1, warmup=False")
+
     # Load benchmark data
     if args.bench_data:
         bench_data = args.bench_data
     else:
-        bench_data = os.path.join(script_dir, 'benchmarks', 'subset.json') 
+        if args.quick:
+            bench_data = os.path.join(script_dir, 'benchmarks', 'subset-quick.json')
+        else:
+            bench_data = os.path.join(script_dir, 'benchmarks', 'subset.json') 
 
     with open(bench_data) as f:
         benchmarks = json.load(f)
