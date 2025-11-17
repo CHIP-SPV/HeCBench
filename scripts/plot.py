@@ -14,8 +14,16 @@
 from optparse import OptionParser
 import matplotlib.pyplot as plt
 import csv
+import numpy as np
 
 import math
+
+#### CONFIG
+FONT_SIZE_TICKS = 20.28
+FONT_SIZE_AXIS_LABELS = 23.66
+FONT_SIZE_TITLE = 16
+FONT_SIZE_BAR_LABELS = 16.9
+#### END CONFIG
 outlier_factor = 30
 
 def geomean(xs):
@@ -26,6 +34,14 @@ parser.add_option("-b", "--input-file-baseline", dest="input_base",
                   help="CSV file with baseline data", metavar="PATH")
 parser.add_option("-c", "--input-file-compared", dest="input_comp",
                   help="CSV file with compared data", metavar="PATH")
+parser.add_option("--input-file-baseline-2", dest="input_base_2", default=None,
+                  help="CSV file with baseline data for second dataset (for grouped bars)", metavar="PATH")
+parser.add_option("--input-file-compared-2", dest="input_comp_2", default=None,
+                  help="CSV file with compared data for second dataset (for grouped bars)", metavar="PATH")
+parser.add_option("--group-label-1", dest="group_label_1", default="1x",
+                  help="Label for first group of bars", metavar="STRING")
+parser.add_option("--group-label-2", dest="group_label_2", default="5x",
+                  help="Label for second group of bars", metavar="STRING")
 parser.add_option("-o", "--output-file", dest="output", default=None, metavar="PATH",
                   help="if specified, write output to this file (SVG,PDF,..) otherwise show chart on screen")
 
@@ -73,6 +89,10 @@ parser.add_option("--bar-labels", dest="bar_labels", default=True, action="store
 if (not options.input_comp) or (not options.input_base):
 	parser.error("both input files must be specified")
 
+has_second_dataset = (options.input_base_2 is not None) and (options.input_comp_2 is not None)
+if (options.input_base_2 is None) != (options.input_comp_2 is None):
+	parser.error("both second dataset input files must be specified together")
+
 Baseline = {}
 Compared = {}
 
@@ -113,6 +133,48 @@ for row in reader:
 	'var': float(row[4]) }
 f.close()
 
+# Process second dataset if provided
+Baseline2 = {}
+Compared2 = {}
+if has_second_dataset:
+	f = open(options.input_comp_2,'r')
+	reader = csv.reader(f, delimiter = ',')
+	for row in reader:
+		if len(row) == 0:
+			continue
+		K = row[0]
+		if K.endswith('-hip'):
+			K = K[:-4]
+		if K.endswith('-cuda'):
+			K = K[:-5]
+		if K.endswith('-sycl'):
+			K = K[:-5]
+		Baseline2[K] = {
+		'min': float(row[1]),
+		'mean': float(row[2]),
+		'stddev': float(row[3]),
+		'var': float(row[4]) }
+	f.close()
+
+	f = open(options.input_base_2,'r')
+	reader = csv.reader(f, delimiter = ',')
+	for row in reader:
+		if len(row) == 0:
+			continue
+		K = row[0]
+		if K.endswith('-hip'):
+			K = K[:-4]
+		if K.endswith('-cuda'):
+			K = K[:-5]
+		if K.endswith('-sycl'):
+			K = K[:-5]
+		Compared2[K] = {
+		'min': float(row[1]),
+		'mean': float(row[2]),
+		'stddev': float(row[3]),
+		'var': float(row[4]) }
+	f.close()
+
 bench_names = []
 mins = []
 means = []
@@ -133,9 +195,41 @@ for K in Baseline.keys():
 	means.append(Compared[K]['mean'] / Baseline[K]['mean'])
 	stddevs.append(Compared[K]['stddev'] / Baseline[K]['mean'])
 
+# Process second dataset
+mins2 = []
+means2 = []
+stddevs2 = []
+if has_second_dataset:
+	for K in bench_names:
+		if K in Baseline2.keys() and K in Compared2.keys():
+			Comp = max(Compared2[K]['min'] / Baseline2[K]['min'], Baseline2[K]['min'] / Compared2[K]['min'])
+			if Comp > outlier_factor:
+				print(f"Outlier (2nd dataset), exceeding factor {outlier_factor}:", K)
+				mins2.append(None)
+				means2.append(None)
+				stddevs2.append(None)
+			else:
+				mins2.append(Compared2[K]['min'] / Baseline2[K]['min'])
+				means2.append(Compared2[K]['mean'] / Baseline2[K]['mean'])
+				stddevs2.append(Compared2[K]['stddev'] / Baseline2[K]['mean'])
+		else:
+			mins2.append(None)
+			means2.append(None)
+			stddevs2.append(None)
+
+# Sort by first dataset's values
 zipped_data = zip(bench_names, mins, means, stddevs)
 sorted_data = sorted(zipped_data, key = lambda x: x[1])
 sorted_bench_names, sorted_mins, sorted_means, sorted_stddevs = zip(*sorted_data)
+
+# Reorder second dataset to match sorted order
+if has_second_dataset:
+	name_to_val = {name: val for name, val in zip(bench_names, mins2)}
+	sorted_mins2 = [name_to_val.get(name, None) for name in sorted_bench_names]
+	name_to_val = {name: val for name, val in zip(bench_names, means2)}
+	sorted_means2 = [name_to_val.get(name, None) for name in sorted_bench_names]
+	name_to_val = {name: val for name, val in zip(bench_names, stddevs2)}
+	sorted_stddevs2 = [name_to_val.get(name, None) for name in sorted_bench_names]
 
 errs = sorted_stddevs
 if not options.errbars:
@@ -144,20 +238,76 @@ if not options.errbars:
 if options.style:
 	plt.style.use(options.style)
 
-# Adjust figure size for journal quality (typical column width)
-plt.figure(figsize=(8, 6), dpi=300)  # Higher DPI for print quality
+# Adjust figure size for full HD (1920x1080)
+plt.figure(figsize=(19.2, 10.8), dpi=100)  # Full HD resolution
 
-bar_width = 0.68
-bar1 = plt.bar(sorted_bench_names, [x-float(options.bottom) for x in sorted_mins], bar_width, align='center',
-               yerr=errs, color=options.color, ecolor=options.ecolor,
-               label=options.zlabel, bottom=float(options.bottom) )
+if has_second_dataset:
+	# Grouped bars
+	x = np.arange(len(sorted_bench_names))
+	bar_width = 0.35
+	offset = bar_width / 2
+	
+	# Filter out None values for second dataset
+	mins1_vals = [x-float(options.bottom) for x in sorted_mins]
+	mins2_vals = [(x-float(options.bottom)) if x is not None else 0 for x in sorted_mins2]
+	errs2 = [x if x is not None else 0 for x in sorted_stddevs2] if options.errbars else None
+	
+	# Accessibility: Use colorblind-friendly colors and patterns
+	# Choose colors - use provided color for first, colorblind-friendly alternative for second
+	if options.color:
+		color1 = options.color
+		# Use a colorblind-friendly alternative color (blue to orange/red)
+		import matplotlib.colors as mcolors
+		# Convert to RGB and create a distinct colorblind-friendly alternative
+		rgb = mcolors.hex2color(options.color)
+		# Use orange/red as alternative (distinguishable for most colorblind types)
+		color2 = '#ff7f0e'  # Orange - colorblind-friendly alternative
+		# Ensure sufficient contrast
+		edge_color1 = '#000000'  # Black edges for contrast
+		edge_color2 = '#000000'
+		edge_width = 1.0
+	else:
+		# Default colorblind-friendly palette
+		color1 = '#1f77b4'  # Blue
+		color2 = '#ff7f0e'  # Orange
+		edge_color1 = '#000000'
+		edge_color2 = '#000000'
+		edge_width = 1.0
+	
+	# Create bars with patterns for accessibility
+	bar1 = plt.bar(x - offset, mins1_vals, bar_width, align='center',
+	               yerr=errs, color=color1, ecolor=options.ecolor or '#000000',
+	               edgecolor=edge_color1, linewidth=edge_width,
+	               label=options.group_label_1, bottom=float(options.bottom))
+	bar2 = plt.bar(x + offset, mins2_vals, bar_width, align='center',
+	               yerr=errs2, color=color2, ecolor=options.ecolor or '#000000',
+	               edgecolor=edge_color2, linewidth=edge_width,
+	               hatch='///',  # Add diagonal pattern for accessibility
+	               label=options.group_label_2, bottom=float(options.bottom))
+	
+	plt.xticks(x, sorted_bench_names, rotation=45, fontsize=FONT_SIZE_TICKS, ha='right')
+	# Accessibility: Legend with better positioning and frame
+	plt.legend(fontsize=FONT_SIZE_TICKS, frameon=True, fancybox=False, shadow=False, 
+	           edgecolor='black', framealpha=1.0)
+else:
+	# Single set of bars (original behavior)
+	bar_width = 0.68
+	# Accessibility: Add edge color for contrast
+	edge_color = '#000000'  # Black edges for accessibility
+	edge_width = 1.0
+	bar1 = plt.bar(sorted_bench_names, [x-float(options.bottom) for x in sorted_mins], bar_width, align='center',
+	               yerr=errs, color=options.color, ecolor=options.ecolor or '#000000',
+	               edgecolor=edge_color, linewidth=edge_width,
+	               label=options.zlabel, bottom=float(options.bottom))
+	plt.xticks(rotation=45, fontsize=FONT_SIZE_TICKS, ha='right')
+
 
 if options.xlabel:
-	plt.xlabel(options.xlabel, fontsize=9)
+	plt.xlabel(options.xlabel, fontsize=FONT_SIZE_AXIS_LABELS)
 if options.ylabel:
-	plt.ylabel(options.ylabel, fontsize=9)
+	plt.ylabel(options.ylabel, fontsize=FONT_SIZE_AXIS_LABELS)
 if options.title:
-	plt.title(options.title, fontsize=10, pad=10)
+	plt.title(options.title, fontsize=FONT_SIZE_TITLE, pad=15)
 
 # More conservative margins
 plt.margins(x=0.01, y=0.15)
@@ -165,34 +315,59 @@ plt.margins(x=0.01, y=0.15)
 # Refined subplot parameters
 plt.subplots_adjust(left=0.12, right=0.95, bottom=0.25, top=0.92)
 
-# Clean, readable axis labels
-plt.xticks(rotation=45, fontsize=8, ha='right')
-
 if options.refline:
-	plt.axhline(1.0, ls='dotted', color='gray', alpha=0.5)
-if options.geomean:
-	g = geomean(sorted_mins)
-	s = f"Geomean = {g:.2f}"
-	plt.text(0.02, 0.95, s, transform=plt.gca().transAxes, 
-			 verticalalignment='top', horizontalalignment='left',
-			 fontsize=8, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
-	
-	# Add the number of samples being plotted
-	n_samples = len(sorted_mins)
-	n_text = f"N = {n_samples}"
-	plt.text(0.02, 0.90, n_text, transform=plt.gca().transAxes, 
-			 verticalalignment='top', horizontalalignment='left',
-			 fontsize=8, bbox=dict(facecolor='white', alpha=0.8, edgecolor='none'))
+	# Accessibility: Use darker, higher contrast line
+	plt.axhline(1.0, ls='dashed', color='#333333', alpha=0.7, linewidth=1.5)
+# Always show geomean and sample count
+# Accessibility: High contrast text boxes
+g = geomean(sorted_mins)
+s = f"Geomean = {g:.2f}"
+y_pos = 0.95
+plt.text(0.02, y_pos, s, transform=plt.gca().transAxes, 
+		 verticalalignment='top', horizontalalignment='left',
+		 fontsize=FONT_SIZE_TICKS, color='black',
+		 bbox=dict(facecolor='white', alpha=0.95, edgecolor='black', linewidth=1.5))
+
+if has_second_dataset:
+	# Show geomean for second dataset
+	g2_vals = [x for x in sorted_mins2 if x is not None]
+	if len(g2_vals) > 0:
+		g2 = geomean(g2_vals)
+		s2 = f"Geomean ({options.group_label_2}) = {g2:.2f}"
+		y_pos -= 0.05
+		plt.text(0.02, y_pos, s2, transform=plt.gca().transAxes, 
+				 verticalalignment='top', horizontalalignment='left',
+				 fontsize=FONT_SIZE_TICKS, color='black',
+				 bbox=dict(facecolor='white', alpha=0.95, edgecolor='black', linewidth=1.5))
+
+# Add the number of samples being plotted
+n_samples = len(sorted_mins)
+n_text = f"N = {n_samples}"
+y_pos -= 0.05
+plt.text(0.02, y_pos, n_text, transform=plt.gca().transAxes, 
+		 verticalalignment='top', horizontalalignment='left',
+		 fontsize=FONT_SIZE_TICKS, color='black',
+		 bbox=dict(facecolor='white', alpha=0.95, edgecolor='black', linewidth=1.5))
 
 # Only show one set of bar labels to reduce clutter
 if options.bar_labels:
-	plt.bar_label(bar1, fmt='%.2f', label_type='edge', 
-				 rotation=45, fontsize=7,  # Rotated labels
-				 padding=5)  # Increased padding
+	if has_second_dataset:
+		plt.bar_label(bar1, labels=[f'{x:.2f}' for x in sorted_mins], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
+		plt.bar_label(bar2, labels=[f'{x:.2f}' if x is not None else '' for x in sorted_mins2], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
+	else:
+		plt.bar_label(bar1, labels=[f'{x:.2f}' for x in sorted_mins], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
 elif options.bar_values:  # Don't show both types of labels
-	plt.bar_label(bar1, fmt='%.2f', label_type='edge', 
-				 rotation=45, fontsize=7,
-				 padding=5)  # Increased padding
+	if has_second_dataset:
+		plt.bar_label(bar1, labels=[f'{x:.2f}' for x in sorted_mins], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
+		plt.bar_label(bar2, labels=[f'{x:.2f}' if x is not None else '' for x in sorted_mins2], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
+	else:
+		plt.bar_label(bar1, labels=[f'{x:.2f}' for x in sorted_mins], 
+					 label_type='edge', rotation=45, fontsize=FONT_SIZE_BAR_LABELS, padding=5)
 
 if options.log_scale:
 	plt.yscale('log')
@@ -200,7 +375,7 @@ if options.log_scale:
 plt.tight_layout()
 
 if options.output:
-	plt.savefig(options.output, bbox_inches='tight', dpi=300)  # High DPI for print
+	plt.savefig(options.output, bbox_inches='tight', dpi=100)  # Full HD resolution
 else:
 	plt.show()
 

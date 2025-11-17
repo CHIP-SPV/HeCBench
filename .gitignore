@@ -3,7 +3,6 @@
 *.bin
 *.o
 *.ppm
-*.csv
 *.bak
 *.traindata
 *.swp
@@ -19,4 +18,3 @@ cfd-*/momentum
 srad-*/image_out.pgm
 data
 *.png
-*.csv
