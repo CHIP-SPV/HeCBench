@@ -65,3 +65,6 @@ clean:
 
 run: $(program)
 	./$(program) $(DATAPARS) $(RANDPARS) $(ANALPARS) -o $(OUTFILE)
+
+smoke: $(program)
+	./$(program) -d ../tpacf-cuda/data/small/Datapnts.1 -p 4096 -r ../tpacf-cuda/data/small/Randompnts -n 5 -q 4096 -b 5 -l 1 -u 10000 -a -j 2 -o ./smoke.dat

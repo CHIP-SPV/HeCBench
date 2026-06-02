@@ -83,3 +83,6 @@ clean:
 
 run: $(program)
 	./$(program) $(DATAPARS) $(RANDPARS) $(ANALPARS) -o $(OUTFILE)
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 
