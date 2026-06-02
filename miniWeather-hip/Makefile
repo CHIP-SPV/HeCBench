@@ -60,3 +60,6 @@ clean:
 
 run: $(program)
 	mpiexec -n 1 ./$(program)
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) mpiexec -n 1 ./$(program)
