@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../mnist-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../mnist-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -51,4 +52,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2
+	$(LAUNCHER) ./$(program) 2
+
+smoke: $(program)
+	# MNIST_SMOKE_CAP truncates train/test sets so 1 epoch fits in 60s
+	MNIST_SMOKE_CAP=1024 $(LAUNCHER) ./$(program) 1

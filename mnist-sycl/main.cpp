@@ -1,4 +1,6 @@
 #include <cstdio>
+#include <cstdlib>
+#include <cmath>
 #include <chrono>
 #include <sycl/sycl.hpp>
 
@@ -16,6 +18,12 @@ static inline void loaddata()
       &train_set, &train_cnt);
   mnist_load("../data/t10k-images.idx3-ubyte", "../data/t10k-labels.idx1-ubyte",
       &test_set, &test_cnt);
+  // Optional cap for smoke tests via env var so a single short epoch fits.
+  if (const char *cap = std::getenv("MNIST_SMOKE_CAP")) {
+    unsigned int c = (unsigned int) std::atoi(cap);
+    if (c > 0 && c < train_cnt) train_cnt = c;
+    if (c > 0 && c < test_cnt) test_cnt = c;
+  }
 }
 
 // replace cublas function in the case n = 10

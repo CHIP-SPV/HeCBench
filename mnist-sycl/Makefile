@@ -74,3 +74,7 @@ clean:
 
 run: $(program)
 	./$(program) 2
+
+smoke: $(program)
+	# MNIST_SMOKE_CAP truncates train/test sets so 1 epoch fits in 60s
+	MNIST_SMOKE_CAP=1024 $(LAUNCHER) ./$(program) 1
