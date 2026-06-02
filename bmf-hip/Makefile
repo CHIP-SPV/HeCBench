@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 GPU       = yes
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -36,7 +37,7 @@ headers = \
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17
 
 # Linker Flags
 LDFLAGS = 
@@ -53,7 +54,8 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(GPU),yes)
-  CFLAGS +=-DUSE_GPU -Wall -DWARPSPERBLOCK=8 -fopenmp 
+  CFLAGS +=-DUSE_GPU -Wall -DWARPSPERBLOCK=8
+  LDFLAGS += -L/space/pvelesko/install/llvm/22.0-native-hecbench/lib/x86_64-unknown-linux-gnu -lgomp
 else
   CFLAGS += -x c++ -Wall -fopenmp
 endif
@@ -73,4 +75,7 @@ clean:
 
 # The dataset are available at https://github.com/Funatiq/cuBool 
 run: $(program)
-	./$(program) ../bmf-cuda/data/MNIST.in -r 8 -l 112 -i 10000 --seed 123 --stuck 10000
+	$(LAUNCHER) ./$(program) ../bmf-cuda/data/MNIST.in -r 8 -l 112 -i 3000 --seed 123 --stuck 3000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../bmf-cuda/data/MNIST.in -r 8 -l 112 -i 10 --seed 123 --stuck 10
