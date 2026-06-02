@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = main.o wc.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DTHRUST_DEVICE_SYSTEM=4 # 4 is for CPP
 
 # Linker Flags
 LDFLAGS = 
@@ -54,4 +55,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10
+	$(LAUNCHER) ./$(program) 40
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1

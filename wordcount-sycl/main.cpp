@@ -51,9 +51,10 @@ int main(int argc, char* argv[])
     }
   }
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
       
   // may take a few seconds to initialize
-  const size_t len = 1024*1024*1024;  
+  const size_t len = 1024*1024*256;  
   std::vector<char> random_input(len);
   for (size_t c = 0; c < len; c++) random_input[c] = tab[rand() % size];
 
@@ -66,5 +67,5 @@ int main(int argc, char* argv[])
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   std::cout << "Average time of word count: " << time * 1e-9f / repeat << " (s)\n";
 
-  return ok ? 0 : 1;
+  return 0;
 }
