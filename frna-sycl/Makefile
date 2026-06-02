@@ -87,3 +87,6 @@ test: $(program)
 
 run: $(program)
 	./$(program) ../prna-cuda/HIV1-NL43.seq  hiv1-nl43.out
+
+smoke: $(program)
+	DATAPATH=$(abspath ../prna-cuda/data_tables) ./$(program) ../frna-cuda/RD0260.seq rd0260.out

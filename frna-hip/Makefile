@@ -23,7 +23,7 @@ obj = $(c_source:.c=.o) $(cuda_source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -DINT -std=c++14 -x hip -D__HIP_PLATFORM_AMD__ -Wall -I. -I../frna-cuda
+CFLAGS := $(EXTRA_CFLAGS) -DINT -std=c++14 -x hip -Wall -I. -I../frna-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -67,3 +67,6 @@ test: $(program)
 
 run: $(program)
 	./$(program) ../prna-cuda/HIV1-NL43.seq  hiv1-nl43.out
+
+smoke: $(program)
+	DATAPATH=$(abspath ../prna-cuda/data_tables) ./$(program) ../frna-cuda/RD0260.seq rd0260.out
