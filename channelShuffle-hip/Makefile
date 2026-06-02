@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,10 +23,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../channelShuffle-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -45,11 +46,14 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../channelShuffle-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2 224 224 100
+	$(LAUNCHER) ./$(program) 2 224 224 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 2 224 224 100
