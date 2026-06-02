@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,12 +24,11 @@ obj = $(source:.cu=.o)
 
 # Standard Flags
 # Double precision the grid size is 32^4 
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 \
           -DMILC_COMPLEX \
           -DLDIM=32 \
           -DPRECISION=2 \
           -Wall \
-          -fopenmp \
           -I../include
 
 # Linker Flags
@@ -43,7 +43,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 
 #===============================================================================
@@ -60,5 +60,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 256
+	$(LAUNCHER) ./$(program) 256
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 256
 
