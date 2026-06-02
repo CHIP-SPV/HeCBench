@@ -20,7 +20,7 @@
 #include <sycl/sycl.hpp>
 #include "kernels.h"
 
-template<typename T>
+template<typename T, int V>
 void invokeAddBiasResidualLayerNorm(
     sycl::queue &q,
           T*     out,
@@ -32,21 +32,20 @@ void invokeAddBiasResidualLayerNorm(
     int          m,
     int          n)
 {
-  if (m >= 512 && (n == 768 || n == 1024)) {
+  if (V == 2) {
 
     sycl::range<1> gws (m * n / 8);
     sycl::range<1> lws (n / 8);
 
     q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<float, 1> shared(sycl::range<1>(32), cgh);
       sycl::local_accessor<float, 0> s_mean(cgh);
       sycl::local_accessor<float, 0> s_variance(cgh);
       cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item)
-        [[intel::reqd_sub_group_size(32)]] {
+        //[[intel::reqd_sub_group_size(32)]]
+       {
         addBiasResidualPostLayerNormV2<T>(
           out, input, bias, gamma, beta, layernorm_eps,
-          n, item, shared.get_pointer(),
-          s_mean, s_variance);
+          n, item, s_mean, s_variance);
       });
     });
   }
@@ -57,66 +56,68 @@ void invokeAddBiasResidualLayerNorm(
     int num_trips = (n + lws[0] - 1) / lws[0];
     if (num_trips == 1) {
       q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<float, 1> shared(sycl::range<1>(32), cgh);
         sycl::local_accessor<float, 0> s_mean(cgh);
         sycl::local_accessor<float, 0> s_variance(cgh);
 
         cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item)
-          [[intel::reqd_sub_group_size(32)]] {
+          //[[intel::reqd_sub_group_size(32)]]
+        {
           addBiasResidualPostLayerNorm<T, 1>(
             out, input, bias, gamma, beta, layernorm_eps,
-            n, item, shared.get_pointer(),
-            s_mean, s_variance);
+            n, item, s_mean, s_variance);
         });
       });
     }
     else if (num_trips == 2) {
       q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<float, 1> shared(sycl::range<1>(32), cgh);
         sycl::local_accessor<float, 0> s_mean(cgh);
         sycl::local_accessor<float, 0> s_variance(cgh);
 
         cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item)
-          [[intel::reqd_sub_group_size(32)]] {
+          //[[intel::reqd_sub_group_size(32)]]
+        {
           addBiasResidualPostLayerNorm<T, 2>(
             out, input, bias, gamma, beta, layernorm_eps,
-            n, item, shared.get_pointer(),
-            s_mean, s_variance);
+            n, item, s_mean, s_variance);
         });
       });
     }
     else {
       q.submit([&](sycl::handler &cgh) {
-        sycl::local_accessor<float, 1> shared(sycl::range<1>(32), cgh);
         sycl::local_accessor<float, 0> s_mean(cgh);
         sycl::local_accessor<float, 0> s_variance(cgh);
 
         cgh.parallel_for(sycl::nd_range<1>(gws, lws), [=](sycl::nd_item<1> item)
-          [[intel::reqd_sub_group_size(32)]] {
+          //[[intel::reqd_sub_group_size(32)]]
+        {
           generalAddBiasResidualPostLayerNorm<T>(
             out, input, bias, gamma, beta, layernorm_eps,
-            n, item, shared.get_pointer(),
-            s_mean, s_variance);
+            n, item, s_mean, s_variance);
         });
       });
     }
   }
 }
 
-template <typename T> void layer(int repeat) {
+template<typename T, int V>
+void layer(int repeat) {
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
 #else
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  std::mt19937 gen (19937);
-  std::uniform_real_distribution<float> dis(0.f, 1.f);
-
   const int m = 4096;  // batch size
 
-  // n-dimensional data
-  for (int n = 512; n <= 4096; n = n * 2) {
+  int dim[] = {256, 512, 1024, 2048, 4096, 8192};
+
+  for (int i = 0; i < sizeof(dim) / sizeof(int); i++) {
+
+    std::mt19937 gen (19937);
+    std::uniform_real_distribution<float> dis(0.f, 1.f);
+
+    // n-dimensional data
+    const int n = dim[i];
     const int input_size = m * n;
     const int output_size = m * n;
     const int input_size_bytes = input_size * sizeof(T);
@@ -161,20 +162,13 @@ template <typename T> void layer(int repeat) {
     auto start = std::chrono::steady_clock::now();
 
     for (int i = 0; i < repeat; i++) {
-      invokeAddBiasResidualLayerNorm(q,
-                                     d_output,
-                                     d_input,
-                                     d_bias,
-                                     d_gamma,
-                                     d_beta,
-                                     layernorm_eps,
-                                     m,
-                                     n);
+      invokeAddBiasResidualLayerNorm<T, V>(
+        q, d_output, d_input, d_bias, d_gamma, d_beta, layernorm_eps, m, n);
     }
     q.wait();
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("Average execution time of AddBiasResidualLayerNorm (%d x %d): %f (us)\n",
+    printf("(%d x %d) Average kernel execution time %f (us)\n",
            m, n, (time * 1e-3f) / repeat);
 
     q.memcpy(h_output, d_output, output_size_bytes).wait();
@@ -183,7 +177,7 @@ template <typename T> void layer(int repeat) {
     for (int i = 0; i < output_size; i++)
       s += float(h_output[i]);
 
-    printf("Checksum = %f\n", s / (n * n));
+    printf("Checksum = %f\n", s / (m * n));
 
     sycl::free(d_input, q);
     sycl::free(d_output, q);
@@ -207,7 +201,15 @@ int main(int argc, char* argv[])
   }
 
   const int repeat = atoi(argv[1]);
-  layer<sycl::half>(repeat);
+  printf("---------------- float16 (version 1) -------------\n");
+  layer<sycl::half, 1>(repeat);
+  printf("---------------- float16 (version 2) -------------\n");
+  layer<sycl::half, 2>(repeat);
+
+  printf("---------------- bfloat16 (version 1) -------------\n");
+  layer<sycl::ext::oneapi::bfloat16, 1>(repeat);
+  printf("---------------- bfloat16 (version 2) -------------\n");
+  layer<sycl::ext::oneapi::bfloat16, 2>(repeat);
 
   return 0;
 }
