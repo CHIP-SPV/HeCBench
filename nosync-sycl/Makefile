@@ -12,7 +12,7 @@ CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+GCC_TOOLCHAIN =
 
 #===============================================================================
 # Program name & source code list
@@ -29,9 +29,8 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++17 -Wall -fsycl \
-          --gcc-toolchain=$(GCC_TOOLCHAIN) \
-          -I./oneDPL/include -I./oneTBB/include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 # Linker Flags
 LDFLAGS = 

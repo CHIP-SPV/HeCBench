@@ -28,6 +28,8 @@ obj = $(source:.cu=.o)
 # The CUB include path, if using the CUDA device system (-I<thrust repo root>/dependencies/cub/)
 
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+# chipStar/vulkan: thrust CUDA backend needs CUB which is unavailable; use CPP backend.
+CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
 
 # Linker Flags
 LDFLAGS = 
@@ -57,3 +59,6 @@ clean:
 
 run: $(program)
 	./$(program) 268435456 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ./$(program) 268435456 100
