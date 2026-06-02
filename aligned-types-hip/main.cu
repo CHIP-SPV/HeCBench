@@ -190,7 +190,7 @@ template<class TData> int testCPU(
 ////////////////////////////////////////////////////////////////////////////////
 //Memory chunk size in bytes. Reused for test
 const int       MEM_SIZE = 50000000;
-const int NUM_ITERATIONS = 100;
+const int NUM_ITERATIONS = 10000;
 
 //CPU input data and instance of GPU output data
 unsigned char *h_idataCPU, *h_odataGPU;
@@ -230,7 +230,7 @@ template<class TData> int runTest(
   double gpuTime = (double)elapsed_seconds.count() / NUM_ITERATIONS;
 
   printf(
-      "Avg. time: %f ms / Copy throughput: %f GB/s.\n", gpuTime * 1000,
+      "Average kernel execution time %f (us) Copy throughput: %f GB/s.\n", gpuTime * 1e6,
       (double)totalMemSizeAligned / (gpuTime * 1073741824.0)
         );
 
