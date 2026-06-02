@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = divergence
+program = main
 
 
 #===============================================================================
@@ -19,7 +20,7 @@ program = divergence
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -54,4 +55,7 @@ clean:
 	rm -rf $(program) *.o
 
 run: $(program)
-	./$(program) input.txt 10000
+	$(LAUNCHER) ./$(program) input.txt 10000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) input.txt 10000

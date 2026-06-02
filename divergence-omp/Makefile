@@ -7,12 +7,13 @@ CC        = icpc
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = divergence
+program = main
 
 
 #===============================================================================
@@ -59,4 +60,4 @@ clean:
 	rm -rf $(program) *.o
 
 run: $(program)
-	./$(program) input.txt 10000
+	$(LAUNCHER) ./$(program) input.txt 10000
