@@ -6,13 +6,14 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -49,9 +50,12 @@ clean:
 	rm -rf $(program)
 
 run: $(program)
-	./multimat_FL 2000 2000
-	./multimat_F 2000 2000
-	./multimat 2000 2000
-	./multimat_FL 2000 2000 0.3 0.05 0.05
-	./multimat_F 2000 2000 0.3 0.05 0.05
-	./multimat 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./multimat_FL 2000 2000
+	$(LAUNCHER) ./multimat_F 2000 2000
+	$(LAUNCHER) ./multimat 2000 2000
+	$(LAUNCHER) ./multimat_FL 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./multimat_F 2000 2000 0.3 0.05 0.05
+	$(LAUNCHER) ./multimat 2000 2000 0.3 0.05 0.05
+
+smoke: $(program)
+	$(LAUNCHER) ./multimat_FL 1000 1000 0.3 0.05 0.05
