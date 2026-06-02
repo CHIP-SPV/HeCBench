@@ -61,4 +61,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
+	./$(program) -f ../rsc-cuda/input/vectors.csv -g 512 -m 8000
+
+smoke: $(program)
 	./$(program) -f ../rsc-cuda/input/vectors.csv -g 512
