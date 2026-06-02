@@ -25,7 +25,7 @@
 #define BLOCK_SIZE 256
 
 // 
-const int testIter   = 500;
+const int testIter   = 20000;
 double totalWallTime = 0.0;
 
 // 
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
   printf("// \n");
   printf("//------------ \n");
 
-  printf("\nWall time = %f seconds. \n", totalWallTime);
+  printf("\nMatvec Average kernel execution time %f (us)\n", totalWallTime * 1e6 / testIter);
 
 
   // Relax
@@ -102,7 +102,7 @@ int main(int argc, char *argv[])
   printf("// \n");
   printf("//------------ \n");
 
-  printf("\nTotal kernel time = %f seconds. \n", totalWallTime);
+  printf("\nRelax Average kernel execution time %f (us)\n", totalWallTime * 1e6 / testIter);
 
 
   // Axpy
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
   printf("// \n");
   printf("//------------ \n");
 
-  printf("\nWall time = %f seconds. \n", totalWallTime);
+  printf("\nAxpy Average kernel execution time %f (us)\n", totalWallTime * 1e6 / testIter);
 
 #ifdef _OPENMP
   t1 = omp_get_wtime();
