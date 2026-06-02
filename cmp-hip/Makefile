@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = main.o reference.o su_cdp.o su_gather.o su_trace.o log.o parser.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(inc)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I$(inc)
 
 # Linker Flags
 LDFLAGS = 
@@ -70,4 +71,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i ../cmp-cuda/data/simple-synthetic.su
+	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i ../cmp-cuda/data/simple-synthetic.su
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i ../cmp-cuda/data/simple-synthetic.su
