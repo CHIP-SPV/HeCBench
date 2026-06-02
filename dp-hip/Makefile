@@ -6,7 +6,9 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
+HIP_ARCH  = gfx90a
 #===============================================================================
 # Program name & source code list
 #===============================================================================
@@ -22,10 +24,13 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
+          -I/opt/rocm/include/hipblas \
+          --hipstdpar --hipstdpar-path=/opt/rocm/include/thrust/system/hip/hipstdpar \
+          --offload-arch=$(HIP_ARCH)
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS = -lhipblas
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -33,10 +38,9 @@ ifeq ($(DEBUG),yes)
   LDFLAGS  += -g
 endif
 
-
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -munsafe-fp-atomics
 endif
 
 #===============================================================================
@@ -53,4 +57,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 67108864 100
+	$(LAUNCHER) ./$(program) 268435456 1000
+
+smoke: $(program)
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) 268435456 1000

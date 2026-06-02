@@ -11,49 +11,53 @@
 
 // *********************************************************************
 // A simple demo application that implements a
-// vector dot product computation between 2 float arrays. 
+// vector dot product computation between two arrays.
 //
-// Runs computations with on the GPU device and then checks results 
-// against basic host CPU/C++ computation.
+// Runs computations with on the GPU device and then checks results
 // *********************************************************************
 
+#include <oneapi/dpl/execution>
+#include <oneapi/dpl/numeric>
 #include <stdio.h>
 #include <stdlib.h>
 #include <chrono>
+#include <cmath>
 #include <sycl/sycl.hpp>
+#include <oneapi/mkl.hpp>
 #include "shrUtils.h"
 
-// Forward Declarations
-void DotProductHost(const float* pfData1, const float* pfData2, float* pfResult, int iNumElements);
-
-int main(int argc, char **argv)
+template <typename T>
+void dot (const size_t iNumElements, const int iNumIterations)
 {
-  if (argc != 3) {
-    printf("Usage: %s <number of elements> <repeat>\n", argv[0]);
-    return 1;
-  }
-  const int iNumElements = atoi(argv[1]);
-  const int iNumIterations = atoi(argv[2]);
-
   // set and log Global and Local work size dimensions
-  const int szLocalWorkSize = 256;
-
+  int szLocalWorkSize = 256;
   // rounded up to the nearest multiple of the LocalWorkSize
-  const int szGlobalWorkSize = shrRoundUp((int)szLocalWorkSize, iNumElements);  
+  size_t szGlobalWorkSize = shrRoundUp(szLocalWorkSize, iNumElements);
 
-  const size_t src_size = szGlobalWorkSize * 4;
-  const size_t src_size_bytes = src_size * sizeof(float);
+  printf("Global Work Size \t\t= %zu\nLocal Work Size \t\t= %d\n",
+         szGlobalWorkSize, szLocalWorkSize);
 
-  const size_t dst_size = szGlobalWorkSize;
-  const size_t dst_size_bytes = dst_size * sizeof(float);
+  const size_t src_size = szGlobalWorkSize;
+  const size_t src_size_bytes = src_size * sizeof(T);
+
+  const size_t grid_size = shrRoundUp(szLocalWorkSize,
+                                      szGlobalWorkSize / (szLocalWorkSize * 4));
 
   // Allocate and initialize host arrays
-  float* srcA = (float*) malloc (src_size_bytes);
-  float* srcB = (float*) malloc (src_size_bytes);
-  float*  dst = (float*) malloc (dst_size_bytes);
-  float* Golden = (float*) malloc (sizeof(float) * iNumElements);
-  shrFillArray(srcA, 4 * iNumElements);
-  shrFillArray(srcB, 4 * iNumElements);
+  T* srcA = (T*) malloc (src_size_bytes);
+  T* srcB = (T*) malloc (src_size_bytes);
+  T  dst;
+
+  size_t i;
+  srand(123);
+  for (i = 0; i < iNumElements ; ++i)
+  {
+    srcA[i] = (i < iNumElements / 2) ? -1 : 1;
+    srcB[i] = -1;
+  }
+  for (i = iNumElements; i < src_size ; ++i) {
+    srcA[i] = srcB[i] = 0;
+  }
 
 #ifdef USE_GPU
   sycl::queue q(sycl::gpu_selector_v, sycl::property::queue::in_order());
@@ -61,33 +65,41 @@ int main(int argc, char **argv)
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  float *d_srcA = sycl::malloc_device<float>(src_size, q);
+  T *d_srcA = sycl::malloc_device<T>(src_size, q);
   q.memcpy(d_srcA, srcA, src_size_bytes);
 
-  float *d_srcB = sycl::malloc_device<float>(src_size, q);
+  T *d_srcB = sycl::malloc_device<T>(src_size, q);
   q.memcpy(d_srcB, srcB, src_size_bytes);
 
-  float *d_dst = sycl::malloc_device<float>(dst_size, q);
+  T *d_dst = sycl::malloc_device<T>(1, q);
 
-  printf("Global Work Size \t\t= %d\nLocal Work Size \t\t= %d\n# of Work Groups \t\t= %d\n\n", 
-           szGlobalWorkSize, szLocalWorkSize, (szGlobalWorkSize % szLocalWorkSize + szGlobalWorkSize/szLocalWorkSize)); 
-  sycl::range<1> gws (szGlobalWorkSize);
+  sycl::range<1> gws (grid_size * szLocalWorkSize);
   sycl::range<1> lws (szLocalWorkSize);
 
   q.wait();
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < iNumIterations; i++) {
+    q.memset(d_dst, 0, sizeof(T));
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class dot_product>(
+      cgh.parallel_for(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        int iGID = item.get_global_id(0);
-        if (iGID < iNumElements) {
-          int iInOffset = iGID << 2;
-          d_dst[iGID] = d_srcA[iInOffset    ] * d_srcB[iInOffset    ] +
-                        d_srcA[iInOffset + 1] * d_srcB[iInOffset + 1] +
-                        d_srcA[iInOffset + 2] * d_srcB[iInOffset + 2] +
-                        d_srcA[iInOffset + 3] * d_srcB[iInOffset + 3];
+        size_t iGID = item.get_global_id(0);
+        T sum = 0;
+        for(size_t idx = iGID; idx < src_size / 4;
+            idx += item.get_local_range(0) * item.get_group_range(0)) {
+          size_t iInOffset = idx * 4;
+          sum += d_srcA[iInOffset    ] * d_srcB[iInOffset    ] +
+                 d_srcA[iInOffset + 1] * d_srcB[iInOffset + 1] +
+                 d_srcA[iInOffset + 2] * d_srcB[iInOffset + 2] +
+                 d_srcA[iInOffset + 3] * d_srcB[iInOffset + 3];
+        }
+        T aggregate = sycl::reduce_over_group(item.get_group(), sum, std::plus<>());
+        if (item.get_local_id(0) == 0) {
+           sycl::atomic_ref<T, sycl::memory_order::relaxed,
+                            sycl::memory_scope::device,
+                            sycl::access::address_space::global_space> ao (d_dst[0]);
+           ao.fetch_add(aggregate);
         }
       });
     });
@@ -96,37 +108,56 @@ int main(int argc, char **argv)
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (s)\n", (time * 1e-9f) / iNumIterations);
+  printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+  q.memcpy(&dst, d_dst, sizeof(T)).wait();
+  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
 
-  q.memcpy(dst, d_dst, dst_size_bytes).wait();
+  start = std::chrono::steady_clock::now();
+
+  for (int i = 0; i < iNumIterations; i++) {
+    oneapi::mkl::blas::dot(q, iNumElements, d_srcA, 1, d_srcB, 1, d_dst);
+  }
+
+  q.wait();
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average oneMKL::dot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+  q.memcpy(&dst, d_dst, sizeof(T)).wait();
+  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
+
+  start = std::chrono::steady_clock::now();
+
+  for (int i = 0; i < iNumIterations; i++) {
+    dst = std::transform_reduce(oneapi::dpl::execution::make_device_policy(q),
+                                d_srcA, d_srcA + iNumElements, d_srcB, .0);
+  }
+
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average std::transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  exit(1);
+
   sycl::free(d_dst, q);
   sycl::free(d_srcA, q);
   sycl::free(d_srcB, q);
 
-  // Compute and compare results for golden-host and report errors and pass/fail
-  printf("Comparing against Host/C++ computation...\n\n"); 
-  DotProductHost ((const float*)srcA, (const float*)srcB, (float*)Golden, iNumElements);
-  shrBOOL bMatch = shrComparefet((const float*)Golden, (const float*)dst, (unsigned int)iNumElements, 0.0f, 0);
-  printf("\nGPU Result %s CPU Result\n", (bMatch == shrTRUE) ? "matches" : "DOESN'T match"); 
-
   free(srcA);
   free(srcB);
-  free(dst);
-  free(Golden);
-  return EXIT_SUCCESS;
 }
 
-// "Golden" Host processing dot product function for comparison purposes
-// *********************************************************************
-void DotProductHost(const float* pfData1, const float* pfData2, float* pfResult, int iNumElements)
+int main(int argc, char **argv)
 {
-    int i, j, k;
-    for (i = 0, j = 0; i < iNumElements; i++) 
-    {
-        pfResult[i] = 0.0f;
-        for (k = 0; k < 4; k++, j++) 
-        {
-            pfResult[i] += pfData1[j] * pfData2[j]; 
-        } 
-    }
+  if (argc != 3) {
+    printf("Usage: %s <number of elements> <repeat>\n", argv[0]);
+    return 1;
+  }
+  const size_t iNumElements = atol(argv[1]);
+  const int iNumIterations = atoi(argv[2]);
+
+  dot<float>(iNumElements, iNumIterations);
+  dot<double>(iNumElements, iNumIterations);
+  return EXIT_SUCCESS;
 }
