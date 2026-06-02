@@ -1,9 +1,10 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker flags
 LDFLAGS = -lm
@@ -44,8 +45,8 @@ bucketsort.o: bucketsort.cu \
 mergesort.o: mergesort.cu mergesort.h kernel_mergeSortPass.h
 	$(CC) $(CFLAGS) -o mergesort.o -c mergesort.cu
 
+run: main
+	$(LAUNCHER) ./main r
+
 clean:
 	rm -f *.o main
-
-run: main
-	./main r

@@ -2,6 +2,7 @@ CC          = icpc
 OPTIMIZE    = yes
 DEBUG       = no
 DEVICE      = gpu
+LAUNCHER    =
 
 
 
@@ -40,8 +41,8 @@ ifdef TIMER
 override TIMER = -DTIMER
 endif
 
-hybridsort: hybridsort.o bucketsort.o mergesort.o
-	$(CC) $(CFLAGS) -o hybridsort $(VERIFY) $(OUTPUT) $(TIMER) \
+main: hybridsort.o bucketsort.o mergesort.o
+	$(CC) $(CFLAGS) -o main $(VERIFY) $(OUTPUT) $(TIMER) \
 		hybridsort.o \
 		bucketsort.o \
                 mergesort.o \
@@ -60,8 +61,8 @@ bucketsort.o: bucketsort.c \
 mergesort.o: mergesort.c mergesort.h kernel_mergeSortPass.h
 	$(CC) $(CFLAGS) -o mergesort.o -c mergesort.c 
 
-run: hybridsort
-	./hybridsort r
+run: main
+	$(LAUNCHER) ./main r
 
 clean:
-	rm -f  *.o hybridsort
+	rm -f  *.o main

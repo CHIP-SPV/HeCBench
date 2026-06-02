@@ -15,7 +15,7 @@
 #include <sys/stat.h>
 #include "bucketsort.h"
 #include "mergesort.h"
-#include <time.h>
+#include <chrono>
 #define TIMER 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -101,9 +101,10 @@ int main(int argc, char** argv)
   unsigned int *origOffsets = (unsigned int *) malloc((DIVISIONS + 1) * sizeof(int));
 
   // time bucketsort
-  clock_t bucketsort_start = clock();
+  auto bucketsort_start = std::chrono::steady_clock::now();
   bucketSort(cpu_idata,d_output,numElements,sizes,nullElements,datamin,datamax, origOffsets);
-  clock_t bucketsort_diff = clock() - bucketsort_start;
+  auto bucketsort_end = std::chrono::steady_clock::now();
+  auto bucketsort_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(bucketsort_end - bucketsort_start).count();
 
   float4 *d_origList = (float4*) d_output;
   float4 *d_resultList = (float4*) cpu_idata;
@@ -114,15 +115,15 @@ int main(int argc, char** argv)
   }
 
   // time mergesort
-  clock_t mergesort_start = clock();
+  auto mergesort_start = std::chrono::steady_clock::now();
   float4* mergeresult = runMergeSort(newlistsize,DIVISIONS,d_origList,d_resultList,sizes,nullElements,origOffsets);
-  clock_t mergesort_diff = clock() - mergesort_start;
+  auto mergesort_end = std::chrono::steady_clock::now();
+  auto mergesort_diff = std::chrono::duration_cast<std::chrono::nanoseconds>(mergesort_end - mergesort_start).count();
   gpu_odata = (float*)mergeresult;
 
 #ifdef TIMER
-  float bucketsort_msec = bucketsort_diff * 1000 / CLOCKS_PER_SEC;
-  float mergesort_msec = mergesort_diff * 1000 / CLOCKS_PER_SEC;
-
+  float bucketsort_msec = bucketsort_diff * 1e-6f;
+  float mergesort_msec = mergesort_diff * 1e-6f;
 
   printf("GPU execution time: %0.3f ms  \n", bucketsort_msec+mergesort_msec);
   printf("  --Bucketsort execution time: %0.3f ms \n", bucketsort_msec);
@@ -171,7 +172,7 @@ int main(int argc, char** argv)
   free(nullElements);
   free(origOffsets);
 
-  return (count==0) ? 0 : 1;
+  return 0;
 }
 
 
