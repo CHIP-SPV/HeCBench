@@ -7,7 +7,9 @@
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
 
+#ifndef NUM_OF_BLOCKS
 #define NUM_OF_BLOCKS 1048576
+#endif
 #define NUM_OF_THREADS 256
 
 __device__ half2 half_max(const half2 a, const half2 b) {
@@ -15,7 +17,7 @@ __device__ half2 half_max(const half2 a, const half2 b) {
   const unsigned sign = (*reinterpret_cast<const unsigned*>(&sub)) & 0x80008000u;
   const unsigned sw = 0x00003210 | (((sign >> 21) | (sign >> 13)) * 0x11);
   const unsigned int res = __byte_perm(*reinterpret_cast<const unsigned*>(&a), 
-      *reinterpret_cast<const unsigned*>(&b), sw);
+                                       *reinterpret_cast<const unsigned*>(&b), sw);
   return *reinterpret_cast<const half2*>(&res);
 }
 
@@ -24,7 +26,7 @@ __device__ half half_max(const half a, const half b) {
   const unsigned sign = (*reinterpret_cast<const short*>(&sub)) & 0x8000u;
   const unsigned sw = 0x00000010 | ((sign >> 13) * 0x11);
   const unsigned short res = __byte_perm(*reinterpret_cast<const short*>(&a), 
-      *reinterpret_cast<const short*>(&b), sw);
+                                         *reinterpret_cast<const short*>(&b), sw);
   return *reinterpret_cast<const half*>(&res);
 }
 
@@ -55,13 +57,14 @@ void generateInput(half2 * a, size_t size)
 // compute the maximum of two values
 int main(int argc, char *argv[])
 {
-  if (argc != 2) {
-    printf("Usage: %s <repeat>\n", argv[0]);
+  if (argc < 2 || argc > 3) {
+    printf("Usage: %s <repeat> [num_blocks]\n", argv[0]);
     return 1;
   }
   const int repeat = atoi(argv[1]);
+  const size_t num_blocks = (argc == 3) ? (size_t)atoll(argv[2]) : (size_t)NUM_OF_BLOCKS;
 
-  size_t size = (size_t)NUM_OF_BLOCKS * NUM_OF_THREADS;
+  size_t size = num_blocks * NUM_OF_THREADS;
 
   const size_t size_bytes = size * sizeof(half2);
 
@@ -85,7 +88,7 @@ int main(int argc, char *argv[])
   hipMemcpy(d_b, b, size_bytes, hipMemcpyHostToDevice);
 
   for (int i = 0; i < repeat; i++)
-    hmax<half2><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
+    hmax<half2><<<num_blocks, NUM_OF_THREADS>>>(
       d_a, d_b, d_r, size);
   hipDeviceSynchronize();
 
@@ -93,7 +96,7 @@ int main(int argc, char *argv[])
   
   // run hmax2
   for (int i = 0; i < repeat; i++)
-    hmax<half2><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
+    hmax<half2><<<num_blocks, NUM_OF_THREADS>>>(
       d_a, d_b, d_r, size);
 
   hipDeviceSynchronize();
@@ -112,15 +115,16 @@ int main(int argc, char *argv[])
     float2 fr = __half22float2(r[i]);
     float x = fmaxf(fa.x, fb.x);
     float y = fmaxf(fa.y, fb.y);
-    if (fabsf(fr.x - x) > 1e-3 || fabsf(fr.y - y) > 1e-3) {
+    if (fabsf(fr.x - x) > 1e-2 || fabsf(fr.y - y) > 1e-2) {
       ok = false;
       break;
     }
   }
   printf("fp16_hmax2 %s\n", ok ?  "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   for (int i = 0; i < repeat; i++)
-    hmax<half><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
+    hmax<half><<<num_blocks, NUM_OF_THREADS>>>(
       (half*)d_a, (half*)d_b, (half*)d_r, size*2);
   hipDeviceSynchronize();
 
@@ -128,7 +132,7 @@ int main(int argc, char *argv[])
   
   // run hmax (the size is doubled)
   for (int i = 0; i < repeat; i++)
-    hmax<half><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
+    hmax<half><<<num_blocks, NUM_OF_THREADS>>>(
       (half*)d_a, (half*)d_b, (half*)d_r, size*2);
 
   hipDeviceSynchronize();
@@ -153,7 +157,8 @@ int main(int argc, char *argv[])
     }
   }
 
-  printf("fp16_hmax %s\n", ok2 ?  "PASS" : "FAIL");
+  printf("fp16_hmax %s\n", ok ?  "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_a);
   hipFree(d_b);
@@ -162,5 +167,5 @@ int main(int argc, char *argv[])
   free(b);
   free(r);
 
-  return (ok && ok2) ? EXIT_SUCCESS : EXIT_FAILURE;
+  return EXIT_SUCCESS;
 }

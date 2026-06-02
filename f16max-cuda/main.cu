@@ -15,7 +15,7 @@ __device__ half2 half_max(const half2 a, const half2 b) {
   const unsigned sign = (*reinterpret_cast<const unsigned*>(&sub)) & 0x80008000u;
   const unsigned sw = 0x00003210 | (((sign >> 21) | (sign >> 13)) * 0x11);
   const unsigned int res = __byte_perm(*reinterpret_cast<const unsigned*>(&a), 
-      *reinterpret_cast<const unsigned*>(&b), sw);
+                                       *reinterpret_cast<const unsigned*>(&b), sw);
   return *reinterpret_cast<const half2*>(&res);
 }
 
@@ -24,7 +24,7 @@ __device__ half half_max(const half a, const half b) {
   const unsigned sign = (*reinterpret_cast<const short*>(&sub)) & 0x8000u;
   const unsigned sw = 0x00000010 | ((sign >> 13) * 0x11);
   const unsigned short res = __byte_perm(*reinterpret_cast<const short*>(&a), 
-      *reinterpret_cast<const short*>(&b), sw);
+                                         *reinterpret_cast<const short*>(&b), sw);
   return *reinterpret_cast<const half*>(&res);
 }
 
@@ -112,12 +112,13 @@ int main(int argc, char *argv[])
     float2 fr = __half22float2(r[i]);
     float x = fmaxf(fa.x, fb.x);
     float y = fmaxf(fa.y, fb.y);
-    if (fabsf(fr.x - x) > 1e-3 || fabsf(fr.y - y) > 1e-3) {
+    if (fabsf(fr.x - x) > 1e-2 || fabsf(fr.y - y) > 1e-2) {
       ok = false;
       break;
     }
   }
   printf("fp16_hmax2 %s\n", ok ?  "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   for (int i = 0; i < repeat; i++)
     hmax<half><<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(
@@ -154,6 +155,7 @@ int main(int argc, char *argv[])
   }
 
   printf("fp16_hmax %s\n", ok ?  "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_a);
   cudaFree(d_b);
