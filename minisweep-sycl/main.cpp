@@ -404,11 +404,13 @@ int main( int argc, char** argv )
   double floprate_h = (time <= 0) ?  0 : flops / (time * 1e-6) / 1e9;
   double floprate_d = (ktime <= 0) ?  0 : flops / (ktime * 1e-6) / 1e9;
 
+  bool ok = (normsqdiff == (P)0);
   printf( "Normsq result: %.8e  diff: %.3e  verify: %s  host time: %.3f (s) kernel time: %.3f (s)\n",
           normsq,
           normsqdiff,
-          normsqdiff== (P)0 ? "PASS" : "FAIL",
+          ok ? "PASS" : "FAIL",
           time * 1e-6, ktime * 1e-6);
+  if (!ok) exit(1);
 
   printf( "GF/s (host): %.3f\nGF/s (device): %.3f\n", floprate_h, floprate_d );
 
@@ -434,6 +436,6 @@ int main( int argc, char** argv )
   free(faceyz);
   free(vslocal);
 
-  return (normsqdiff==(P)0) ? 0 : 1;
+  return 0;
 } /*---main---*/
 
