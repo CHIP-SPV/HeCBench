@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = page-rank
+program = main
 
 source = main.cu
 
@@ -22,10 +23,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../page-rank-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS = -fopenmp
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -46,11 +47,14 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../page-rank-cuda/reference.h Makefile 
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -n 20000 -i 100
+	$(LAUNCHER) ./$(program) -n 20000 -i 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -n 2000 -i 10
