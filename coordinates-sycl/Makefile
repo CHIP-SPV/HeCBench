@@ -6,6 +6,7 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
@@ -31,6 +32,11 @@ obj = $(source:.cpp=.o)
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
           -I./oneDPL/include -I./oneTBB/include -fsycl
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -74,4 +80,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000000 1000
+	$(LAUNCHER) ./$(program) 10000000 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10000000 1000
