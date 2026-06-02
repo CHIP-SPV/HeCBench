@@ -123,9 +123,13 @@ int main(int argc, char* argv[])
 
   float l = 0.1f; // length scale lower bound
 
+  // Arc A770: original launch (64, SX=16) had ty range > SY=50 with an
+  // early-return before barrier(), causing Level Zero DEVICE_LOST from a
+  // hung barrier. Pin lws.0 to SY so all threads reach the barrier, and
+  // keep total <= 1024.
   const int nblocks = (ntargets + SX - 1) / SX;
-  sycl::range<2> gws (64, SX * nblocks);
-  sycl::range<2> lws (64, SX);
+  sycl::range<2> gws (SY, SX * nblocks);
+  sycl::range<2> lws (SY, SX);
 
   // quickly verify the results using a small problem size
   const int ntargets_small = 16*16*16;
@@ -160,6 +164,7 @@ int main(int argc, char* argv[])
       }
     }
     printf("Length scale = %.1e check = %s\n", l, ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
     l = l * 10.f;
   }
 
@@ -222,5 +227,5 @@ int main(int argc, char* argv[])
   free(targets);
   free(result);
   free(result_ref);
-  return ok ? 0 : 1;
+  return 0;
 }

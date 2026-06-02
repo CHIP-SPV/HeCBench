@@ -145,6 +145,7 @@ int main(int argc, char* argv[])
       }
     }
     printf("Length scale = %.1e check = %s\n", l, ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
     l = l * 10.f;
   }
 
@@ -186,5 +187,5 @@ int main(int argc, char* argv[])
   free(result);
   free(result_ref);
 
-  return ok ? 0 : 1;
+  return 0;
 }
