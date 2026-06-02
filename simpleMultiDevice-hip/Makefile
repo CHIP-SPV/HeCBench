@@ -6,7 +6,8 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-MAX_GPU   = 4 
+MAX_GPU   = 4
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -DMAX_GPU_COUNT=$(MAX_GPU) -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -DMAX_GPU_COUNT=$(MAX_GPU) -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 1000
+	$(LAUNCHER) ./$(program) 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1000
