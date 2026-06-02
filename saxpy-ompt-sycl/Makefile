@@ -59,3 +59,6 @@ clean:
 
 run: $(program)
 	./$(program)
+
+smoke: $(program)
+	./$(program)

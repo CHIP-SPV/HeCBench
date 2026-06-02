@@ -63,3 +63,6 @@ clean:
 
 run: $(program)
 	./$(program)
+
+smoke: $(program)
+	CHIP_BE=level0 ./$(program)
