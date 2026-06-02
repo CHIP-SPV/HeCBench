@@ -60,3 +60,6 @@ clean:
 
 run: $(program)
 	cd ../mcmd-cuda/dataset && ../../mcmd-hip/$(program) mcmd.inp && cd ../../mcmd-hip
+
+smoke: $(program)
+	cd ../mcmd-cuda/dataset && $(LAUNCHER) ../../mcmd-hip/$(program) mcmd.inp

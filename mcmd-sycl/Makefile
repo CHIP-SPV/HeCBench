@@ -83,3 +83,6 @@ clean:
 
 run: $(program)
 	cd ../mcmd-cuda/dataset && ../../mcmd-sycl/$(program) mcmd.inp && cd ../../mcmd-sycl
+
+smoke: $(program)
+	cd ../mcmd-cuda/dataset && $(LAUNCHER) ../../mcmd-sycl/$(program) mcmd.inp
