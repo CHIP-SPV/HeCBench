@@ -212,10 +212,12 @@ int main(int argc, char** argv) {
   bool check = verify(out, keys, threads, N);
   if (check)
     printf("PASS\n");
-  else
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   free(keys);
   free(out);
-  return check ? 0 : 1;
+  return 0;
 }
