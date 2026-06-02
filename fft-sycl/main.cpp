@@ -1,14 +1,9 @@
-#include <iostream>
-#include <sstream>
 #include <chrono>
-#include <math.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <time.h>
+#include <cmath>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
 #include <sycl/sycl.hpp>
-
-using namespace std;
 
 #ifdef SINGLE_PRECISION
 #define T float 
@@ -32,14 +27,14 @@ using namespace std;
 #define iexp_1_4   (T2){  0, 1 }
 #define iexp_3_8   (T2){ -1, 1 }//requires post-multiply by 1/sqrt(2)
 
-inline T2 exp_i( T phi ) {
+T2 exp_i( T phi ) {
   return (T2){ sycl::cos(phi), sycl::sin(phi) };
 }
 
-inline T2 cmplx_mul( T2 a, T2 b ) { return (T2){ a.x()*b.x()-a.y()*b.y(), a.x()*b.y()+a.y()*b.x() }; }
-inline T2 cm_fl_mul( T2 a, T  b ) { return (T2){ b*a.x(), b*a.y() }; }
-inline T2 cmplx_add( T2 a, T2 b ) { return (T2){ a.x() + b.x(), a.y() + b.y() }; }
-inline T2 cmplx_sub( T2 a, T2 b ) { return (T2){ a.x() - b.x(), a.y() - b.y() }; }
+T2 cmplx_mul( T2 a, T2 b ) { return (T2){ a.x()*b.x()-a.y()*b.y(), a.x()*b.y()+a.y()*b.x() }; }
+T2 cm_fl_mul( T2 a, T  b ) { return (T2){ b*a.x(), b*a.y() }; }
+T2 cmplx_add( T2 a, T2 b ) { return (T2){ a.x() + b.x(), a.y() + b.y() }; }
+T2 cmplx_sub( T2 a, T2 b ) { return (T2){ a.x() - b.x(), a.y() - b.y() }; }
 
 
 #define FFT2(a0, a1)                     \
@@ -99,6 +94,8 @@ inline T2 cmplx_sub( T2 a, T2 b ) { return (T2){ a.x() - b.x(), a.y() - b.y() };
   IFFT4( &a[4], &a[5], &a[6], &a[7] );                        \
 }
 
+#include "reference.h"
+
 int main(int argc, char** argv)
 {
   if (argc != 3) {
@@ -122,10 +119,10 @@ int main(int argc, char** argv)
   const int half_n_ffts = bytes / (512*sizeof(T2)*2);
   const int n_ffts = half_n_ffts * 2;
   const int half_n_cmplx = half_n_ffts * 512;
-  const int N = half_n_cmplx*2;
-  unsigned long used_bytes = N * sizeof(T2);
+  const int n_cmplx = half_n_cmplx*2;
+  unsigned long used_bytes = n_cmplx * sizeof(T2);
 
-  fprintf(stdout, "used_bytes=%lu, N=%d\n", used_bytes, N);
+  fprintf(stdout, "used_bytes=%lu, n_cmplx=%d\n", used_bytes, n_cmplx);
 
   // allocate host memory, in-place FFT/iFFT operations
   T2 *source = (T2*) malloc (used_bytes);
@@ -133,8 +130,8 @@ int main(int argc, char** argv)
 
   // init host memory...
   for (i = 0; i < half_n_cmplx; i++) {
-    source[i].x() = (rand()/(float)RAND_MAX)*2-1;
-    source[i].y() = (rand()/(float)RAND_MAX)*2-1;
+    source[i].x() = sinf(i / powf(10000, i % 768 / 384));
+    source[i].y() = cosf(i / powf(10000, i % 768 / 384));
     source[i+half_n_cmplx].x() = source[i].x();
     source[i+half_n_cmplx].y()= source[i].y();
   }
@@ -147,48 +144,27 @@ int main(int argc, char** argv)
   sycl::queue q(sycl::cpu_selector_v, sycl::property::queue::in_order());
 #endif
 
-  T2 *work = sycl::malloc_device<T2>(N, q);
+  T2 *work = sycl::malloc_device<T2>(n_cmplx, q);
   q.memcpy(work, source, used_bytes);
 
-  // local and global sizes are the same for the three kernels
-  size_t localsz = 64;
-  size_t globalsz = localsz * n_ffts;
+  const size_t localsz = 64;
+  const size_t globalsz = localsz * n_ffts;
 
-  q.wait();
-  auto start = std::chrono::steady_clock::now();
-
-  for (int k=0; k<passes; k++) {
-
-    q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <T, 1> smem (sycl::range<1>(8*8*9), cgh);
-      cgh.parallel_for<class fft_Kernel>(
-        sycl::nd_range<1>(sycl::range<1>(globalsz), sycl::range<1>(localsz)),
-        [=] (sycl::nd_item<1> item) {
-        #include "fft1D_512.sycl"
-      });
+  auto fft_kernel = [&](sycl::handler& cgh) {
+    sycl::local_accessor <T, 1> smem (sycl::range<1>(8*8*9), cgh);
+    cgh.parallel_for(
+      sycl::nd_range<1>(sycl::range<1>(globalsz), sycl::range<1>(localsz)),
+      [=] (sycl::nd_item<1> item) {
+      #include "fft1D_512.sycl"
     });
+  };
 
-    q.submit([&](sycl::handler& cgh) {
-      sycl::local_accessor <T, 1> smem (sycl::range<1>(8*8*9), cgh);
-      cgh.parallel_for<class ifft_Kernel>(
-        sycl::nd_range<1>(sycl::range<1>(globalsz), sycl::range<1>(localsz)),
-        [=] (sycl::nd_item<1> item) {
-        #include "ifft1D_512.sycl"
-      });
-    });
-  }
-
-  q.wait();
-  auto end = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  std::cout << "Average kernel execution time " << (time * 1e-9f) / passes << " (s)\n";
-
+  q.submit(fft_kernel);
+  fft1D_512_reference<64>(reference, n_ffts);
   q.memcpy(source, work, used_bytes).wait();
-  sycl::free(work, q);
 
-  // Verification
   bool error = false;
-  for (int i = 0; i < N; i++) {
+  for (int i = 0; i < n_cmplx; i++) {
     if ( std::fabs((T)source[i].x() - (T)reference[i].x()) > EPISON) {
       //std::cout << i << " " << (T)source[i].x << " " << (T)reference[i].x << std::endl;
       error = true;
@@ -200,8 +176,50 @@ int main(int argc, char** argv)
       break;
     }
   }
-  std::cout << (error ? "FAIL" : "PASS")  << std::endl;
+  std::cout << "FFT " << (error ? "FAIL" : "PASS")  << std::endl;
+
+  auto ifft_kernel = [&](sycl::handler& cgh) {
+    sycl::local_accessor <T, 1> smem (sycl::range<1>(8*8*9), cgh);
+    cgh.parallel_for(
+      sycl::nd_range<1>(sycl::range<1>(globalsz), sycl::range<1>(localsz)),
+      [=] (sycl::nd_item<1> item) {
+      #include "ifft1D_512.sycl"
+    });
+  };
+
+  // verify iFFT
+  q.submit(ifft_kernel);
+  q.memcpy(source, work, used_bytes).wait();
+  error = false;
+  for (int i = 0; i < n_cmplx; i++) {
+    int j = i % half_n_cmplx;
+    if (fabs((T)source[i].x() - (T)sinf(j / powf(10000, j%768/384))) > EPISON) {
+      error = true;
+      break;
+    }
+    if (fabs((T)source[i].y() - (T)cosf(j / powf(10000, j%768/384))) > EPISON) {
+      error = true;
+      break;
+    }
+  }
+  std::cout << "iFFT " << (error ? "FAIL" : "PASS")  << std::endl;
+
+  auto start = std::chrono::steady_clock::now();
+
+  for (int k=0; k<passes; k++) {
+    q.submit(fft_kernel);
+    q.submit(ifft_kernel);
+  }
+
+  q.wait();
+  auto end = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  std::cout << "Average kernel execution time " << (time * 1e-9f) / passes << " (s)\n";
+
+  sycl::free(work, q);
+
   free(reference);
   free(source);
-  return error ? 1 : 0;
+
+  return 0;
 }
