@@ -114,6 +114,7 @@
 #include <iomanip>
 #include <chrono>
 #include <vector>
+#include <array>
 #include <algorithm>
 #include <stdlib.h>
 #include <hip/hip_runtime.h>
