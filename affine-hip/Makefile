@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../affine-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../affine-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj) result.raw
 
 run: $(program)
-	./$(program) data/CT-MONO2-16-brain.raw result.raw 1000000
+	$(LAUNCHER) ./$(program) data/CT-MONO2-16-brain.raw result.raw 2500000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) data/CT-MONO2-16-brain.raw result.raw 1
