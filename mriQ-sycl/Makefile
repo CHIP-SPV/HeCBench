@@ -77,3 +77,6 @@ clean:
 
 run: $(program)
 	./$(program) ../mriQ-cuda/datasets/128x128x128/input/128x128x128.bin output_128
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../mriQ-cuda/datasets/128x128x128/input/128x128x128.bin output_128
