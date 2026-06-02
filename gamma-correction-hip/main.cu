@@ -95,16 +95,13 @@ int main(int argc, char* argv[]) {
   hipMemcpy(image2.data(), pixel, sizeof(ImgPixel) * image2.width() * image2.height(), hipMemcpyDeviceToHost);
 
   // check correctness
-  if (check(image.begin(), image.end(), image2.begin())) {
-    std::cout << "PASS\n";
-  } else {
-    std::cout << "FAIL\n";
-  }
+  bool ok = check(image.begin(), image.end(), image2.begin());
+  std::cout << (ok ? "PASS\n" : "FAIL\n");
 
 #ifdef DEBUG
   image.write("fractal_gamma_parallel.bmp");
 #endif
-  hipFree(pixel); 
+  hipFree(pixel);
 
-  return 0;
+  return ok ? 0 : 1;
 }

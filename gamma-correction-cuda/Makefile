@@ -7,12 +7,13 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = gamma-correction
+program = main
 
 source = main.cu
 
@@ -53,4 +54,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 7680 4320 256 100
+	$(LAUNCHER) ./$(program) 7680 4320 256 100

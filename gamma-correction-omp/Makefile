@@ -7,13 +7,14 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = gamma-correction
+program = main
 
 source = main.cpp
 
@@ -59,4 +60,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 7680 4320 256 100
+	$(LAUNCHER) ./$(program) 7680 4320 256 100
