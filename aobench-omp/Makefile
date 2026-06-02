@@ -7,12 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = ao
+program = main
 
 source = ao.cpp
 
@@ -58,4 +59,4 @@ clean:
 	rm -rf $(program) $(obj) ao.ppm
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 100

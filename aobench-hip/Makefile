@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = ao
+program = main
 
 source = ao.cu
 
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14  -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17  -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -53,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj) ao.ppm
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 30000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1

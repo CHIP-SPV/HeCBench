@@ -7,12 +7,13 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = ao
+program = main
 
 source = ao.cu
 
@@ -54,4 +55,4 @@ clean:
 	rm -rf $(program) $(obj) ao.ppm
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 100
