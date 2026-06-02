@@ -53,3 +53,6 @@ clean:
 run: $(program)
 	./$(program) 0 100000
 	./$(program) 1 100000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 0 1000
