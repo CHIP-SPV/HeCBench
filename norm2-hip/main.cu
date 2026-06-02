@@ -92,11 +92,14 @@ int main (int argc, char* argv[]){
 
     // snrm2 results match across all iterations
     for (j = 0; j < repeat; j++) 
-      if (fabsf((float)gold - result[j]) > 1e-1f) {
+      // Relative tolerance: float32 sum-of-squares accumulation drifts ~1e-6
+      // per accumulator element; for n=64M the gold vs actual differ in the
+      // 6th significant figure even though gold itself is float-cast.
+      if (fabsf((float)gold - result[j]) > 1e-4f * fabsf((float)gold) + 1e-1f) {
         printf("FAIL at iteration %d: gold=%f actual=%f for %d elements\n",
                j, (float)gold, result[j], i);
         ok = false;
-        break;
+        exit(1);
       }
 
     free(a);
