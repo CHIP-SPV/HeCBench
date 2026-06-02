@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../depixel-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../depixel-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -51,4 +52,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2048 2048 10
+	$(LAUNCHER) ./$(program) 2048 2048 50
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 2048 2048 10

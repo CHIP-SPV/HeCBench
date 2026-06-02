@@ -10,7 +10,7 @@
 int main(int argc, char** argv) {
 
   if (argc != 4) {
-    printf("Usage: %s <width> <height> <repeat>\n", argv[0]);
+    printf("Usage: %s <image width> <image height> <repeat>\n", argv[0]);
     return 1;
   }
 
@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   int height = atoi(argv[2]);
   int repeat = atoi(argv[3]);
 
-  size_t size = width * height;
+  int size = width * height;
   size_t size_output_bytes = size * sizeof(uint);
   size_t size_image_bytes = size * sizeof(sycl::float3);
 
@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
 
   for (int n = 0; n < repeat; n++) {
 
-    for (size_t i = 0; i < size; i++) {
+    for (int i = 0; i < size; i++) {
       h_img[i].x() = dis(gen);
       h_img[i].y() = dis(gen);
       h_img[i].z() = dis(gen);
@@ -83,8 +83,8 @@ int main(int argc, char** argv) {
     q.memcpy(h_out, d_out, size_output_bytes).wait();
 
     float lsum = 0;
-    for (size_t i = 0; i < size; i++)
-      lsum += (h_out[i] & 0xff) / 256.f + 
+    for (int i = 0; i < size; i++)
+      lsum += (h_out[i] & 0xff) / 256.f +
              ((h_out[i] >> 8) & 0xff) / 256.f + 
              ((h_out[i] >> 16) & 0xff) / 256.f + 
              ((h_out[i] >> 24) & 0xff) / 256.f;
