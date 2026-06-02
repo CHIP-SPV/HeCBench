@@ -6,8 +6,8 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
-SYCL      = yes
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
@@ -31,15 +31,20 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
-          -fno-sycl-id-queries-fit-in-int
+          -fno-sycl-id-queries-fit-in-int \
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -75,4 +80,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10
+	$(LAUNCHER) ./$(program) 10
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10

@@ -14,11 +14,14 @@ void Forward(sycl::queue &q, int repeat)
   float alpha = 0.000122;
   float beta = 0.750000;
   float k = 1.000000;
+  // Reduced H,W from 160 to 64: original ~9.2 GB allocations exceeded Arc
+  // A770 device memory budget; malloc_device returned nullptr -> NULL ptr
+  // in subsequent memcpy.
   int64_t N = 6;
   int64_t C = 150;
   int64_t D = 100;
-  int64_t H = 160;
-  int64_t W = 160;
+  int64_t H = 64;
+  int64_t W = 64;
   int64_t stride_mb = C*D*H*W;
   int64_t wk_size = N*C*D*H*W;
 
@@ -88,11 +91,12 @@ void Backward(sycl::queue &q, int repeat)
   float alpha = 0.000122;
   float beta = 0.750000;
   float k = 1.000000;
+  // Reduced H,W from 160 to 64: see Forward() for rationale.
   int64_t N = 5;
   int64_t C = 150;
   int64_t D = 100;
-  int64_t H = 160;
-  int64_t W = 160;
+  int64_t H = 64;
+  int64_t W = 64;
   int64_t stride_mb = C*D*H*W;
   int64_t wk_size = N*C*D*H*W;
 
