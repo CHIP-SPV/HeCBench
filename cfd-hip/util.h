@@ -105,6 +105,7 @@ void verify_array(const datatype *cpuResults, const datatype *gpuResults, const 
     }
     else{
         std::cout << "--cambine: failed:-(" << std::endl;
+        exit(1);
     }
     return ;
 }

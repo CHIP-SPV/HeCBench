@@ -105,6 +105,7 @@ void verify_array(const datatype *cpuResults, const datatype *gpuResults, const 
     }
     else{
         std::cout << "--cambine: failed:-(" << std::endl;
+        exit(1);
     }
     return ;
 }
@@ -123,6 +124,7 @@ void compare_results(const datatype *cpu_results, const datatype *gpu_results, c
     }
     else{
         std::cout << "--cambine: failed:-(" << std::endl;
+        exit(1);
     }
     return ;
 }
