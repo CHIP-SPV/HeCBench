@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -46,11 +47,12 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu GSimulationKernels.hpp GSimulation.hpp Particle.hpp type.hpp Makefile
+%.o: %.cu GSimulationKernels.hpp GSimulationReference.hpp GSimulation.hpp \
+          Particle.hpp type.hpp Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 16000 10
+	$(LAUNCHER) ./$(program) 16000 10

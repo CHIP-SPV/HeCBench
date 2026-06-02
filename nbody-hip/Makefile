@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../nbody-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -45,11 +46,15 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu GSimulationKernels.hpp GSimulation.hpp Particle.hpp type.hpp Makefile
+%.o: %.cu GSimulationKernels.hpp ../nbody-cuda/GSimulationReference.hpp \
+          GSimulation.hpp Particle.hpp type.hpp Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 16000 10
+	$(LAUNCHER) ./$(program) 16000 10
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 16000 10
