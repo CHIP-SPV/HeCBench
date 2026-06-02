@@ -84,3 +84,6 @@ clean:
 
 run: $(program)
 	./$(program) ../sw4ck-cuda/sw4ck.in 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../sw4ck-cuda/sw4ck.in 5

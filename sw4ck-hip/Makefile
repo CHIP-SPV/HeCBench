@@ -62,4 +62,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../sw4ck-cuda/sw4ck.in 100
+	./$(program) ../sw4ck-cuda/sw4ck.in 3
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../sw4ck-cuda/sw4ck.in 5
