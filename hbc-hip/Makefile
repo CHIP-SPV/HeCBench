@@ -65,3 +65,6 @@ clean:
 
 run: $(program)
 	./$(program) -i ../hbc-cuda/graphs/breast_coexpress.txt -v --printscores=output.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -i ../hbc-cuda/graphs/breast_coexpress.txt
