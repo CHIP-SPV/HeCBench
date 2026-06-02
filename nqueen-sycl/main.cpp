@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <cmath>
 #include <chrono>
 #include <sycl/sycl.hpp>
 
@@ -258,6 +259,7 @@ int main(int argc, char *argv[])
       printf("PASS\n");
     else
       printf("FAIL\n");
+  exit(1);
   }
 
   free(root_prefixes_h);
