@@ -8,6 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,7 @@ build: $(program)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include
 
 # Linker Flags
 LDFLAGS = 
@@ -67,4 +68,4 @@ clean:
 	rm -rf $(program) fileio.o fluid.o geometry.o *.csv
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)

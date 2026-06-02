@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -21,7 +22,7 @@ build: $(program)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -57,4 +58,7 @@ clean:
 	rm -rf $(program) fileio.o fluid.o geometry.o *.csv
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10

@@ -451,6 +451,8 @@ int main(int argc, char *argv[])
     fluid_particle *fluid_particles = NULL;
     boundary_particle *boundary_particles = NULL;
     initParams(&water_volume, &boundary_volume, &params);
+    // Allow overriding step count from CLI for smoke runs
+    if (argc > 1) params.number_steps = atoi(argv[1]);
 
     initParticles(&fluid_particles, &boundary_particles, &water_volume,
                   &boundary_volume, &params);
