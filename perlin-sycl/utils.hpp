@@ -4,8 +4,8 @@
 #include <cmath>
 #include <sycl/sycl.hpp>
 
-const uint64_t WIN_WIDTH  = 61440;
-const uint64_t WIN_HEIGHT = 34560;
+const uint64_t WIN_WIDTH  = 7680;
+const uint64_t WIN_HEIGHT = 4320;
 
 #define CHECK(x)                                                               \
   do {                                                                         \
