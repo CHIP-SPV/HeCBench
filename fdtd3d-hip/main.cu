@@ -33,10 +33,12 @@ int main(int argc, char **argv)
   bool bTestResult = runTest(argc, (const char **)argv);
 
   // Finish
-  if (bTestResult == true)
+  if (bTestResult == true) {
     printf("PASS\n");
-  else
+  } else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   return 0;
 }

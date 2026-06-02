@@ -33,10 +33,12 @@ int main(int argc, char **argv)
   bool bTestResult = runTest(argc, (const char **)argv);
 
   // Finish
-  if (bTestResult == true)
+  if (bTestResult == true) {
     printf("PASS\n");
-  else
+  } else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   return 0;
 }
@@ -45,17 +47,29 @@ void showHelp(const int argc, const char **argv)
 {
   if (argc > 0)
     std::cout << std::endl << argv[0] << std::endl;
+  exit(1);
   std::cout << std::endl << "Syntax:" << std::endl;
+  exit(1);
   std::cout << std::left;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--dimx=<N>" << "Specify number of elements in x direction (excluding halo)" << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--dimy=<N>" << "Specify number of elements in y direction (excluding halo)" << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--dimz=<N>" << "Specify number of elements in z direction (excluding halo)" << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--radius=<N>" << "Specify radius of stencil" << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--timesteps=<N>" << "Specify number of timesteps" << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--work-group-size=<N>" << "Specify work group size" << std::endl;
+  exit(1);
   std::cout << std::endl;
+  exit(1);
   std::cout << "    " << std::setw(20) << "--noprompt" << "Skip prompt before exit" << std::endl;
+  exit(1);
   std::cout << std::endl;
+  exit(1);
 }
 
 bool runTest(int argc, const char **argv)
