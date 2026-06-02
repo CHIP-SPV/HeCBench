@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,9 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../scan2-hip
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../scan2-hip
+# chipStar/vulkan: thrust CUDA backend needs CUB which is unavailable; use CPP backend.
+CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +55,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 1000 33554432
+	$(LAUNCHER) ./$(program) 1000 33554432
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1000 33554432
