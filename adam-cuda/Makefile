@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -36,7 +37,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3 --use_fast_math
+  CFLAGS += -O3 #--use_fast_math
 endif
 #===============================================================================
 # Targets to Build
@@ -52,4 +53,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000 200 100
+	$(LAUNCHER) ./$(program) 10000 200 100
