@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../che-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../che-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,6 +54,11 @@ clean:
 	rm -rf $(program) $(obj) out
 
 run: $(program)
-	rm -rf out;
+	$(LAUNCHER) rm -rf out;
+	mkdir out
+	./$(program) 1000
+
+smoke: $(program)
+	$(LAUNCHER) rm -rf out;
 	mkdir out
 	./$(program) 1000
