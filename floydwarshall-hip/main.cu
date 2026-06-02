@@ -140,6 +140,11 @@ int main(int argc, char** argv) {
   unsigned int numIterations = atoi(argv[2]);
   unsigned int blockSize = atoi(argv[3]);
 
+  // numNodes is a multiple of blockSize
+  if(numNodes % blockSize != 0) {
+    numNodes = (numNodes / blockSize + 1) * blockSize;
+  }
+
   // allocate and init memory used by host
   unsigned int* pathMatrix = NULL;
   unsigned int* pathDistanceMatrix = NULL;
@@ -196,7 +201,6 @@ int main(int argc, char** argv) {
 
   unsigned int numPasses = numNodes;
 
-  // assume numNodes is a multiple of blockSize
   unsigned int globalThreads[2] = {numNodes, numNodes};
   unsigned int localThreads[2] = {blockSize, blockSize};
 
@@ -237,8 +241,7 @@ int main(int argc, char** argv) {
      * path goes for each pair of nodes.
      */
 
-    hipMemcpyAsync(pathDistanceBuffer, pathDistanceMatrix, 
-        matrixSizeBytes, hipMemcpyHostToDevice, 0);
+    hipMemcpy(pathDistanceBuffer, pathDistanceMatrix, matrixSizeBytes, hipMemcpyHostToDevice);
 
     hipDeviceSynchronize();
     auto start = std::chrono::steady_clock::now();
@@ -270,6 +273,7 @@ int main(int argc, char** argv) {
   else
   {
     printf("FAIL\n");
+  exit(1);
     if (numNodes <= 8) 
     {
       for (unsigned int i = 0; i < numNodes; i++) {
@@ -289,5 +293,5 @@ int main(int argc, char** argv) {
   free(pathMatrix);
   free(verificationPathDistanceMatrix);
   free(verificationPathMatrix);
-  return (verify==0) ? 0 : 1;
+  return 0;
 }

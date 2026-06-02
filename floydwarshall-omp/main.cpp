@@ -121,6 +121,11 @@ int main(int argc, char** argv) {
   unsigned int numIterations = atoi(argv[2]);
   unsigned int blockSize = atoi(argv[3]);
 
+  // numNodes is a multiple of blockSize
+  if(numNodes % blockSize != 0) {
+    numNodes = (numNodes / blockSize + 1) * blockSize;
+  }
+
   // allocate and init memory used by host
   unsigned int* pathMatrix = NULL;
   unsigned int* pathDistanceMatrix = NULL;
@@ -227,6 +232,7 @@ int main(int argc, char** argv) {
           }
         }
       }
+      #pragma omp taskwait
 
       auto end = std::chrono::steady_clock::now();
       auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -249,6 +255,7 @@ int main(int argc, char** argv) {
   else
   {
     printf("FAIL\n");
+  exit(1);
     if (numNodes <= 8) 
     {
       for (unsigned int i = 0; i < numNodes; i++) {
