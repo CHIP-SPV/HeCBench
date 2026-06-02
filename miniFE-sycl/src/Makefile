@@ -57,3 +57,8 @@ LIBS=
 # such as the one on my cygwin machine.
 
 include make_targets
+
+program = miniFE.x
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -nx 16 -ny 16 -nz 16

@@ -48,3 +48,8 @@ CC=hipcc
 #CC=xlc
 
 include make_targets
+
+program = miniFE.x
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -nx 16 -ny 16 -nz 16
