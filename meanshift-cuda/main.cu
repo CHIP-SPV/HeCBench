@@ -7,7 +7,7 @@
 
 namespace mean_shift::gpu {
   __global__ void mean_shift(const float *data, float *data_next) {
-    size_t tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    size_t tid = blockIdx.x * blockDim.x + threadIdx.x;
     if (tid < N) {
       size_t row = tid * D;
       float new_position[D] = {0.f};
@@ -38,26 +38,27 @@ namespace mean_shift::gpu {
     __shared__ float local_data[TILE_WIDTH * D];
     __shared__ float valid_data[TILE_WIDTH];
     // A few convenient variables
-    int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
+    int lid = threadIdx.x;
+    int tid = blockIdx.x * blockDim.x + lid;
     int row = tid * D;
-    int local_row = threadIdx.x * D;
+    int local_row = lid * D;
     float new_position[D] = {0.f};
     float tot_weight = 0.f;
     // Load data in shared memory
     for (int t = 0; t < BLOCKS; ++t) {
-      int tid_in_tile = t * TILE_WIDTH + threadIdx.x;
+      int tid_in_tile = t * TILE_WIDTH + lid;
       if (tid_in_tile < N) {
         int row_in_tile = tid_in_tile * D;
         for (int j = 0; j < D; ++j) {
           local_data[local_row + j] = data[row_in_tile + j];
         }
-        valid_data[threadIdx.x] = 1;
+        valid_data[lid] = 1;
       }
       else {
         for (int j = 0; j < D; ++j) {
           local_data[local_row + j] = 0;
-          valid_data[threadIdx.x] = 0;
         }
+        valid_data[lid] = 0;
       }
       __syncthreads();
       for (int i = 0; i < TILE_WIDTH; ++i) {
@@ -136,10 +137,14 @@ int main(int argc, char* argv[]) {
   // Verify these centroids are sufficiently close to real ones
   cudaMemcpy(result.data(), d_data, data_bytes, cudaMemcpyDeviceToHost);
   auto centroids = mean_shift::gpu::utils::reduce_to_centroids<N, D>(result, mean_shift::gpu::MIN_DISTANCE);
-  assert(centroids.size() == M);
   bool are_close = mean_shift::gpu::utils::are_close_to_real<M, D>(centroids, real, DIST_TO_REAL);
-  assert(are_close);
-  std::cout << "PASS\n";
+  bool ok = (centroids.size() == M && are_close);
+  if (ok)
+     std::cout << "PASS\n";
+  else {
+     std::cout << "FAIL\n";
+     exit(1);
+  }
 
   // Reset device data
   cudaMemcpy(d_data, data.data(), data_bytes, cudaMemcpyHostToDevice);
@@ -157,11 +162,13 @@ int main(int argc, char* argv[]) {
 
   // Verify these centroids are sufficiently close to real ones
   cudaMemcpy(result.data(), d_data, data_bytes, cudaMemcpyDeviceToHost);
+
   centroids = mean_shift::gpu::utils::reduce_to_centroids<N, D>(result, mean_shift::gpu::MIN_DISTANCE);
-  assert(centroids.size() == M);
   are_close = mean_shift::gpu::utils::are_close_to_real<M, D>(centroids, real, DIST_TO_REAL);
-  assert(are_close);
-  std::cout << "PASS\n";
+  if (centroids.size() == M && are_close)
+     std::cout << "PASS\n";
+  else
+     std::cout << "FAIL\n";
 
   cudaFree(d_data);
   cudaFree(d_data_next);

@@ -62,8 +62,8 @@ namespace mean_shift::gpu {
           else {
             for (int j = 0; j < D; ++j) {
               local_data[local_row + j] = 0;
-              valid_data[lid] = 0;
             }
+            valid_data[lid] = 0;
           }
           #pragma omp barrier
           for (int i = 0; i < TILE_WIDTH; ++i) {
@@ -141,10 +141,12 @@ int main(int argc, char* argv[]) {
     // Verify these centroids are sufficiently close to real ones
     #pragma omp target update from (d_data[0:N*D])
     auto centroids = mean_shift::gpu::utils::reduce_to_centroids<N, D>(result, mean_shift::gpu::MIN_DISTANCE);
-    assert(centroids.size() == M);
     bool are_close = mean_shift::gpu::utils::are_close_to_real<M, D>(centroids, real, DIST_TO_REAL);
-    assert(are_close);
-    std::cout << "PASS\n";
+    if (centroids.size() == M && are_close)
+       std::cout << "PASS\n";
+    else
+       std::cout << "FAIL\n";
+    exit(1);
 
     // Reset device data
     result = data;
@@ -163,10 +165,12 @@ int main(int argc, char* argv[]) {
     // Verify these centroids are sufficiently close to real ones
     #pragma omp target update from (d_data[0:N*D])
     centroids = mean_shift::gpu::utils::reduce_to_centroids<N, D>(result, mean_shift::gpu::MIN_DISTANCE);
-    assert(centroids.size() == M);
     are_close = mean_shift::gpu::utils::are_close_to_real<M, D>(centroids, real, DIST_TO_REAL);
-    assert(are_close);
-    std::cout << "PASS\n";
+    if (centroids.size() == M && are_close)
+       std::cout << "PASS\n";
+    else
+       std::cout << "FAIL\n";
+    exit(1);
   }
 
   free(d_data_next);

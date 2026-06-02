@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -35,7 +36,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 #===============================================================================
 # Targets to Build
@@ -51,4 +52,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../meanshift-cuda/dataset/data.csv ../meanshift-cuda/dataset/centroids.csv
+	$(LAUNCHER) ./$(program) ../meanshift-cuda/dataset/data.csv ../meanshift-cuda/dataset/centroids.csv
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../meanshift-cuda/dataset/data.csv ../meanshift-cuda/dataset/centroids.csv
