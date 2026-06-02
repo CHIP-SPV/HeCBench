@@ -30,18 +30,9 @@ float gammafunction(unsigned int n)
   return x;
 }
 
-
-// naive 
 inline unsigned int popcount (unsigned int x)
 {
-  // return __builtin_popcount(v);
-  unsigned count = 0;
-  for (char i = 0; i < 32; i++)
-  {
-    count += (x & 0x1);
-    x = x >> 1;
-  }
-  return count;
+  return __builtin_popcount(x);
 }
 #pragma omp end declare target
 
@@ -331,6 +322,7 @@ int main(int argc, char **argv)
   
   bool ok = (p1 == p2) && (fabsf(scores[p1] - scores_ref[p2]) < 1e-3f);
   std::cout << (ok ? "PASS" : "FAIL") << std::endl;
+  if (!ok) exit(1);
 
   mem_free(bin_data_zeros);
   mem_free(bin_data_ones);
