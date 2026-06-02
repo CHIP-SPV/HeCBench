@@ -3,11 +3,8 @@
 #===============================================================================
 
 # Compiler can be set below, or via environment variable
-ifeq ($(VENDOR), codeplay)
-CC        = compute++
-else
 CC        = clang++
-endif
+LAUNCHER=
 
 OPTIMIZE  = yes
 DEBUG     = no
@@ -18,7 +15,7 @@ CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -35,26 +32,19 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
 
-ifeq ($(VENDOR), codeplay)
-CFLAGS += -I$(HOME)/computecpp/ComputeCpp-CE-2.7.0-x86_64-linux-gnu/include/ \
-          -no-serial-memop -sycl -sycl-driver
-else
-CFLAGS += -fsycl
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
 endif
 
 # Linker Flags
 LDFLAGS = 
 
-ifeq ($(VENDOR), codeplay)
-LDFLAGS += -lComputeCpp
-endif
-
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -147,6 +137,9 @@ clean:
 		./util/file/*.o \
 		./util/timer/*.o 
 
-
 run: main
-	./main 104
+	$(LAUNCHER) ./main 104
+
+smoke: main
+	$(LAUNCHER) ./main 1
+

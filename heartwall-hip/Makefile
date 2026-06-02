@@ -2,6 +2,7 @@ CC          = hipcc
 OPTIMIZE    = yes
 DUMP        = yes
 DEBUG       = no
+LAUNCHER    =
 
 
 # Standard flags
@@ -90,6 +91,8 @@ main:	./main.o \
 		-o ./util/timer/timer.o \
 		-c ./util/timer/timer.c
 
+run: main
+	$(LAUNCHER) ./main 104
 
 clean:
 	rm	-rf *.o main \
@@ -98,5 +101,5 @@ clean:
 		./util/file/*.o \
 		./util/timer/*.o 
 
-run: main
-	./main 104
+smoke: $(program)
+	$(LAUNCHER) ./main 1

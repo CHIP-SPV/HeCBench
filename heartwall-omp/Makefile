@@ -1,8 +1,9 @@
-CC        = icpc
+CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DUMP      = yes
 DEVICE    = gpu
+LAUNCHER  =
 
 
 
@@ -28,14 +29,14 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(DEVICE),gpu)
-  CFLAGS +=-qnextgen -fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
+  CFLAGS +=-fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
 else
   CFLAGS +=-qopenmp
 endif
 
 
 
-heartwall:	./main.o \
+main:	./main.o \
 	    ./kernel/kernel.o \
 			./util/avi/avilib.o \
 			./util/avi/avimod.o \
@@ -47,7 +48,7 @@ heartwall:	./main.o \
 			./util/avi/avimod.o \
 			./util/file/file.o \
 			./util/timer/timer.o \
-			$(LDFLAGS) -o heartwall
+			$(LDFLAGS) -o main
 
 # ======================================================================================================================================================150
 #	MAIN FUNCTION
@@ -102,11 +103,11 @@ heartwall:	./main.o \
 			-c \
 			-o ./util/timer/timer.o 
 
-run: heartwall
-	./heartwall 104
+run: main
+	$(LAUNCHER) ./main 104
 
 clean:
-	rm	-rf *.o heartwall \
+	rm	-rf *.o main \
 		./kernel/*.o \
 		./util/avi/*.o \
 		./util/file/*.o \
