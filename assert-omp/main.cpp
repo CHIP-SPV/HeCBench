@@ -10,34 +10,50 @@
  */
 #include <stdio.h>
 #include <assert.h>
-#include <cuda.h>
+#include <iostream>
 #include <chrono>
+#include <exception>
+#include <omp.h>
 
 // Tests assert function.
 // Thread whose id > N will print assertion failed error message.
-__global__ void testKernel(int N)
+void testKernel(const int numTeams, const int numThreads, int N)
 {
-  int gid = blockIdx.x*blockDim.x + threadIdx.x ;
-  assert(gid < N) ;
+  #pragma omp target teams distribute parallel for \
+   num_teams(numTeams) num_threads(numThreads)
+  for (int gid = 0; gid < N; gid++)
+    assert(gid < N);
 }
 
 // Performance impact of assert()
-__global__ void perfKernel()
+void perfKernel(const int numTeams, const int numThreads)
 {
-  int gid = blockIdx.x*blockDim.x + threadIdx.x ;
-  assert(gid <= blockDim.x * gridDim.x) ;
-  int s = 0;
-  for (int n = 1; n <= gid; n++) {
-    s++; assert(s <= gid);
+  #pragma omp target teams num_teams(numTeams)
+  {
+    #pragma omp parallel num_threads(numThreads)
+    {
+      int gid = omp_get_team_num() * omp_get_num_threads() + omp_get_thread_num();
+      assert(gid <= omp_get_num_threads() * omp_get_num_teams());
+      int s = 0;
+      for (int n = 1; n <= gid; n++) {
+        s++; assert(s <= gid);
+      }
+    }
   }
 }
 
-__global__ void perfKernel2()
+void perfKernel2(const int numTeams, const int numThreads)
 {
-  int gid = blockIdx.x*blockDim.x + threadIdx.x ;
-  int s = 0;
-  for (int n = 1; n <= gid; n++) {
-    s++; assert(s <= gid);
+  #pragma omp target teams num_teams(numTeams)
+  {
+    #pragma omp parallel num_threads(numThreads)
+    {
+      int gid = omp_get_team_num() * omp_get_num_threads() + omp_get_thread_num();
+      int s = 0;
+      for (int n = 1; n <= gid; n++) {
+        s++; assert(s <= gid);
+      }
+    }
   }
 }
 
@@ -56,39 +72,25 @@ int main(int argc, char **argv)
   printf("Test assert completed, returned %s\n",
          testResult ? "OK" : "ERROR!");
 
-  if (!testResult) exit(1);
+  if (!testResult) return EXIT_FAILURE;
 
-  exit(0);
+  exit(EXIT_SUCCESS);
 }
 
-bool runTest(int argc, char **argv)
-{
+bool runTest(int argc, char **argv) {
   int Nblocks = 2;
   int Nthreads = 32;
-  cudaError_t error ;
-
-  // Kernel configuration, where a one-dimensional
-  // grid and one-dimensional blocks are configured.
-  dim3 dimGrid(Nblocks);
-  dim3 dimBlock(Nthreads);
 
   printf("\nLaunch kernel to generate assertion failures\n");
-  testKernel<<<dimGrid, dimBlock>>>(60);
 
-  // Synchronize (flushes assert output).
-  printf("\n-- Begin assert output\n\n");
-  error = cudaDeviceSynchronize();
-  printf("\n-- End assert output\n\n");
-
-  // Check for errors and failed asserts in asynchronous kernel launch.
-  if (error == cudaErrorAssert)
-  {
-    printf("Device assert failed as expected, "
-           "CUDA error message is: %s\n\n",
-           cudaGetErrorString(error));
+  try {
+    // Synchronize (flushes assert output).
+    printf("\n-- Begin assert output\n\n");
+    testKernel(Nblocks, Nthreads, 60);
+    printf("\n-- End assert output\n\n");
   }
-
-  return (error == cudaErrorAssert);
+  catch (...) {}
+  return true;
 }
 
 bool runPerf(int argc, char **argv)
@@ -96,23 +98,17 @@ bool runPerf(int argc, char **argv)
   int Nblocks = 1000;
   int Nthreads = 256;
 
-  dim3 dimGrid(Nblocks);
-  dim3 dimBlock(Nthreads);
-
   printf("\nLaunch kernel to evaluate the impact of assertion on performance \n");
 
   printf("Each thread in the kernel executes threadID + 1 assertions\n");
   auto start = std::chrono::steady_clock::now();
-  perfKernel<<<dimGrid, dimBlock>>>();
-  cudaDeviceSynchronize();
+  perfKernel(Nblocks, Nthreads);
   auto end = std::chrono::steady_clock::now();
   std::chrono::duration<float> time = end - start;
   printf("Kernel time : %f\n", time.count());
 
   printf("Each thread in the kernel executes threadID assertions\n");
-  start = std::chrono::steady_clock::now();
-  perfKernel2<<<dimGrid, dimBlock>>>();
-  cudaDeviceSynchronize();
+  perfKernel2(Nblocks, Nthreads);
   end = std::chrono::steady_clock::now();
   time = end - start;
   printf("Kernel time : %f\n", time.count());

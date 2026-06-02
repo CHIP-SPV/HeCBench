@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = no
 DEBUG     = yes
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -51,5 +52,9 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
 
+
+smoke: $(program)
+	# assert benchmark intentionally triggers device assertion -> non-zero exit expected
+	! $(LAUNCHER) ./$(program)
