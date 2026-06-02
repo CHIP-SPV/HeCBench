@@ -27,12 +27,12 @@
 // - Same logic applies until we reach the last step.
 // - Step n: at this last step, we have one bitonic sequence of size 2**n. The
 // elements in the sequence are swapped until we have a sequence in increasing
-// oder.
+// order.
 //
 // In this implementation, a randomized sequence of size 2**n is given (n is a
-// positive number). Unified Shared Memory (USM) is used for data management. At
-// each stage, a part of step, the host redefines the ordered sequenes and sends
-// data to the kernel. The kernel swaps the elements accordingly in parallel.
+// positive number). At each stage, a part of step, the host redefines the
+// ordered sequenes and sends data to the kernel. The kernel swaps the elements
+// accordingly in parallel.
 //
 #include <math.h>
 #include <string.h>
@@ -171,8 +171,9 @@ void Usage(std::string prog_name, int exponent) {
                "The number of element in\n";
   std::cout << "    the array must be power of 2 (e.g., 1, 2, 4, ...). Please "
                "enter the corresponding\n";
-  std::cout << "    exponent betwwen 0 and " << exponent - 1 << ".\n";
+  std::cout << "    exponent between 0 and " << exponent - 1 << ".\n";
   std::cout << " k: Seed used to generate a random sequence.\n";
+  exit(1);
 }
 
 int main(int argc, char *argv[]) {
@@ -221,19 +222,13 @@ int main(int argc, char *argv[]) {
 #endif
   
   std::cout << "Bitonic sort (parallel)..\n";
-  auto start = std::chrono::steady_clock::now();
-
   ParallelBitonicSort(data_gpu, n, q);
-
-  auto end = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  std::cout << "Total execution time " << (time * 1e-9f) << " (s)\n";
 
   std::cout << "Bitonic sort (serial)..\n";
   BitonicSort(data_cpu, n);
 
   // Verify
-  bool unequal = memcmp(data_gpu, data_cpu, size_bytes);
+  int unequal = memcmp(data_gpu, data_cpu, size_bytes);
   std::cout << (unequal ? "FAIL" : "PASS") << std::endl;
   if (unequal) exit(1);
 
