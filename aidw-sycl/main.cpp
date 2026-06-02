@@ -44,35 +44,35 @@ void AIDW_Kernel(
 
 {
   int tid = item.get_global_id(0);
-  if(tid < inum) {
-    float sum = 0.f, dist = 0.f, t = 0.f, z = 0.f, alpha = 1.f;
+  if (tid >= inum) return;
 
-    float r_obs = avg_dist[tid];                // The observed average nearest neighbor distance
-    float r_exp = 0.5f / sycl::sqrt(dnum / area); // The expected nearest neighbor distance for a random pattern
-    float R_S0 = r_obs / r_exp;                 // The nearest neighbor statistic
+  float sum = 0.f, dist = 0.f, t = 0.f, z = 0.f, alpha = 1.f;
 
-    // Normalize the R(S0) measure such that it is bounded by 0 and 1 by a fuzzy membership function 
-    float u_R = 0.f;
-    if(R_S0 >= R_min) u_R = 0.5f-0.5f * sycl::cos(3.1415926f / R_max * (R_S0 - R_min));
-    if(R_S0 >= R_max) u_R = 1.f;
+  float r_obs = avg_dist[tid];                // The observed average nearest neighbor distance
+  float r_exp = 0.5f / sycl::sqrt(dnum / area); // The expected nearest neighbor distance for a random pattern
+  float R_S0 = r_obs / r_exp;                 // The nearest neighbor statistic
 
-    // Determine the appropriate distance-decay parameter alpha by a triangular membership function
-    // Adaptive power parameter: a (alpha)
-    if(u_R>= 0.f && u_R<=0.1f)  alpha = a1; 
-    if(u_R>0.1f && u_R<=0.3f)  alpha = a1*(1.f-5.f*(u_R-0.1f)) + a2*5.f*(u_R-0.1f);
-    if(u_R>0.3f && u_R<=0.5f)  alpha = a3*5.f*(u_R-0.3f) + a1*(1.f-5.f*(u_R-0.3f));
-    if(u_R>0.5f && u_R<=0.7f)  alpha = a3*(1.f-5.f*(u_R-0.5f)) + a4*5.f*(u_R-0.5f);
-    if(u_R>0.7f && u_R<=0.9f)  alpha = a5*5.f*(u_R-0.7f) + a4*(1.f-5.f*(u_R-0.7f));
-    if(u_R>0.9f && u_R<=1.f)  alpha = a5;
-    alpha *= 0.5f; // Half of the power
+  // Normalize the R(S0) measure such that it is bounded by 0 and 1 by a fuzzy membership function 
+  float u_R = 0.f;
+  if(R_S0 >= R_min) u_R = 0.5f-0.5f * sycl::cos(3.1415926f / R_max * (R_S0 - R_min));
+  if(R_S0 >= R_max) u_R = 1.f;
 
-    // Weighted average
-    for(int j = 0; j < dnum; j++) {
-      dist = (ix[tid] - dx[j]) * (ix[tid] - dx[j]) + (iy[tid] - dy[j]) * (iy[tid] - dy[j]) ;
-      t = 1.f / sycl::pow(dist, alpha);  sum += t;  z += dz[j] * t;
-    }
-    iz[tid] = z / sum;
+  // Determine the appropriate distance-decay parameter alpha by a triangular membership function
+  // Adaptive power parameter: a (alpha)
+  if(u_R>= 0.f && u_R<=0.1f)  alpha = a1; 
+  if(u_R>0.1f && u_R<=0.3f)  alpha = a1*(1.f-5.f*(u_R-0.1f)) + a2*5.f*(u_R-0.1f);
+  if(u_R>0.3f && u_R<=0.5f)  alpha = a3*5.f*(u_R-0.3f) + a1*(1.f-5.f*(u_R-0.3f));
+  if(u_R>0.5f && u_R<=0.7f)  alpha = a3*(1.f-5.f*(u_R-0.5f)) + a4*5.f*(u_R-0.5f);
+  if(u_R>0.7f && u_R<=0.9f)  alpha = a5*5.f*(u_R-0.7f) + a4*(1.f-5.f*(u_R-0.7f));
+  if(u_R>0.9f && u_R<=1.f)  alpha = a5;
+  alpha *= 0.5f; // Half of the power
+
+  // Weighted average
+  for(int j = 0; j < dnum; j++) {
+    dist = (ix[tid] - dx[j]) * (ix[tid] - dx[j]) + (iy[tid] - dy[j]) * (iy[tid] - dy[j]) ;
+    t = 1.f / sycl::pow(dist, alpha);  sum += t;  z += dz[j] * t;
   }
+  iz[tid] = z / sum;
 }
 
 // Calculate the power parameter, and then weighted interpolating
@@ -141,6 +141,7 @@ void AIDW_Kernel_Tiled(
       dist = (six_s * six_s + siy_s * siy_s);
       t = 1.f / (sycl::pow(dist, alpha));  sum_dn += t;  sum_up += t * sdz[e];
     }
+    item.barrier(sycl::access::fence_space::local_space);
   }
   iz[tid] = sum_up / sum_dn;
 }
@@ -260,14 +261,71 @@ int main(int argc, char *argv[])
     if (!ok) exit(1);
   }
 
+  q.submit([&] (sycl::handler &cgh) {
+    sycl::local_accessor<float, 1> sdx(sycl::range<1>(BLOCK_SIZE), cgh);
+    sycl::local_accessor<float, 1> sdy(sycl::range<1>(BLOCK_SIZE), cgh);
+    sycl::local_accessor<float, 1> sdz(sycl::range<1>(BLOCK_SIZE), cgh);
+    cgh.parallel_for<class aidw_tiled>(
+      sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+      AIDW_Kernel_Tiled(d_dx, 
+                        d_dy,
+                        d_dz,
+                        dnum,
+                        d_ix,
+                        d_iy,
+                        d_iz,
+                        inum,
+                        area,
+                        d_avg_dist,
+                        sdx.get_pointer(),
+                        sdy.get_pointer(),
+                        sdz.get_pointer(),
+                        item);
+    });
+  });
+  
+  q.memcpy(iz.data(), d_iz, inum_bytes).wait();
+  if (check) {
+    bool ok = verify (iz.data(), h_iz.data(), inum, EPS);
+    printf("%s\n", ok ? "PASS" : "FAIL");
+    if (!ok) exit(1);
+  }
+
+  q.wait();
   auto start = std::chrono::steady_clock::now();
+
+  for (int i = 0; i < iterations; i++) {
+    q.submit([&] (sycl::handler &cgh) {
+      cgh.parallel_for(
+        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+        AIDW_Kernel(d_dx,
+                    d_dy,
+                    d_dz,
+                    dnum,
+                    d_ix,
+                    d_iy,
+                    d_iz,
+                    inum,
+                    area,
+                    d_avg_dist,
+                    item);
+      });
+    });
+  }
+
+  q.wait();
+  auto end = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("AIDW_Kernel       Average kernel execution time %f (us)\n", (time * 1e-3f) / iterations);
+
+  start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < iterations; i++) {
     q.submit([&] (sycl::handler &cgh) {
       sycl::local_accessor<float, 1> sdx(sycl::range<1>(BLOCK_SIZE), cgh);
       sycl::local_accessor<float, 1> sdy(sycl::range<1>(BLOCK_SIZE), cgh);
       sycl::local_accessor<float, 1> sdz(sycl::range<1>(BLOCK_SIZE), cgh);
-      cgh.parallel_for<class aidw_tiled>(
+      cgh.parallel_for(
         sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
         AIDW_Kernel_Tiled(d_dx, 
                           d_dy,
@@ -288,9 +346,9 @@ int main(int argc, char *argv[])
   }
 
   q.wait();
-  auto end = std::chrono::steady_clock::now();
-  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (s)\n", (time * 1e-9f) / iterations);
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("AIDW_Kernel_Tiled Average kernel execution time %f (us)\n", (time * 1e-3f) / iterations);
 
   sycl::free(d_dx, q);
   sycl::free(d_dy, q);
