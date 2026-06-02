@@ -224,7 +224,10 @@ int main(int argc, char** argv)
       break;
     }
   }
-  if (error) printf("FAIL\n");
+  if (error) {
+    printf("FAIL\n");
+    exit(1);
+  }
   else printf("SUCCESS\n");
 
   for (uint32_t i = 0; i < numKeys; i++) {
