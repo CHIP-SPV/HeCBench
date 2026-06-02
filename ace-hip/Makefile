@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 VERIFY    = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -18,12 +19,15 @@ source = main.cu
 
 obj = $(source:.cu=.o)
 
+ifeq ($(VERIFY),yes)
+  obj += verify.o
+endif
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../ace-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../ace-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -40,7 +44,7 @@ ifeq ($(OPTIMIZE),yes)
 endif
 
 ifeq ($(VERIFY),yes)
-  CFLAGS += -DVERIFY -fopenmp
+  CFLAGS += -DVERIFY
 endif
 #===============================================================================
 # Targets to Build
@@ -52,9 +56,17 @@ $(program): $(obj) Makefile
 %.o: %.cu ../ace-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
+verify.o: verify.cpp ../ace-cuda/reference.h Makefile
+	g++ -O3 -fopenmp -std=c++17 -c $< -o $@
+
+LDFLAGS += $(if $(filter yes,$(VERIFY)),-lgomp)
+
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 5
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1
 
