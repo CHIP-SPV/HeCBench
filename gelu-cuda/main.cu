@@ -2,8 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <chrono>
+#include <cmath>
 #include <cuda.h>
 #include <cuda_fp16.h>
+#include "reference.h"
 
 /*
  * Copyright (c) 2020-2021, NVIDIA CORPORATION.  All rights reserved.
@@ -24,25 +26,38 @@
 // width is hidden_dim and height is seq_len
 __global__ void gelu_bias_loop(__half* src, const __half* bias, int width, int height)
 {
-  int batch = blockIdx.x;
-  int x     = blockIdx.y;  // seq length
+  int x     = blockIdx.x;  // seq length
   int y     = threadIdx.x * 2;
+  int batch = blockIdx.y;
 
   if (x < height) {
     int    index = batch * width * height + x * width;
-    half2  v_src;
-    half2  v_bias;
-    half2  v;
-    float2 t;
     for (; y < width; y = y + blockDim.x * 2) {
-      v_bias = ((half2*)bias)[y >> 1];
-      v_src  = ((half2*)src)[(index + y) >> 1];
-      v      = __hadd2(v_src, v_bias);
-      t      = __half22float2(v);
+      auto v_bias = ((half2*)bias)[y >> 1];
+      auto v_src  = ((half2*)src)[(index + y) >> 1];
+      auto v      = __hadd2(v_src, v_bias);
+      auto t      = __half22float2(v);
       t.x    = (0.5f * t.x * (1.0f + tanhf(0.79788456f * (t.x + 0.044715f * t.x * t.x * t.x))));
       t.y    = (0.5f * t.y * (1.0f + tanhf(0.79788456f * (t.y + 0.044715f * t.y * t.y * t.y))));
-
       ((half2*)src)[(index + y) >> 1] = __float22half2_rn(t);
+    }
+  }
+}
+
+__global__ void gelu_bias_loop_base(__half* src, const __half* bias, int width, int height)
+{
+  int x     = blockIdx.x;  // seq length
+  int batch = blockIdx.y;
+
+  if (x < height) {
+    int   index = batch * width * height + x * width;
+    for (int y = threadIdx.x; y < width; y = y + blockDim.x) {
+      auto v_bias = bias[y];
+      auto v_src  = src[index + y];
+      auto v      = v_src + v_bias;
+      auto t      = __half2float(v);
+      t      = (0.5f * t * (1.0f + tanhf(0.79788456f * (t + 0.044715f * t * t * t))));
+      src[index + y] = __float2half_rn(t);
     }
   }
 }
@@ -51,6 +66,7 @@ int main(int argc, char* argv[])
 {
   if (argc != 5) {
     printf("Usage: %s <batch> <sequence length> <hidden dimension> <repeat>\n", argv[0]);
+    printf("The hidden dimension is a multiple of two\n");
     return 1;
   }
 
@@ -65,9 +81,11 @@ int main(int argc, char* argv[])
   const int bias_size_bytes = hidden_dim * sizeof(__half);
 
   srand(123);
+  __half* input = (__half*) malloc (src_size_bytes);
   __half* output = (__half*) malloc (src_size_bytes);
+  __half* output_ref = (__half*) malloc (src_size_bytes);
   for (size_t i = 0; i < src_size; i++) {
-    output[i] = __float2half(rand() / (float)RAND_MAX);
+    output_ref[i] = input[i] = __float2half(rand() / (float)RAND_MAX);
   }
 
   __half* bias = (__half*) malloc (bias_size_bytes);
@@ -77,14 +95,52 @@ int main(int argc, char* argv[])
 
   __half* d_output;
   cudaMalloc((void**)&d_output, src_size_bytes);
-  cudaMemcpy(d_output, output, src_size_bytes, cudaMemcpyHostToDevice);
 
   __half* d_bias;
   cudaMalloc((void**)&d_bias, bias_size_bytes);
   cudaMemcpy(d_bias, bias, bias_size_bytes, cudaMemcpyHostToDevice);
   
-  dim3 block(1024, 1);
-  dim3 grid(batch_size, seq_len);
+  int block_size;
+  if (hidden_dim >= 4096)
+    block_size = 512;
+  else if (hidden_dim >= 2048)
+    block_size = 256;
+  else
+    block_size = 128;
+ 
+  dim3 block(block_size, 1);
+  dim3 grid(seq_len, batch_size);
+
+  // warmup and verify
+  gelu_bias_loop_cpu (output_ref, bias, batch_size, hidden_dim, seq_len);
+
+  cudaMemcpy(d_output, input, src_size_bytes, cudaMemcpyHostToDevice);
+  gelu_bias_loop_base <<<grid, block>>> (d_output, d_bias, hidden_dim, seq_len);
+  cudaMemcpy(output, d_output, src_size_bytes, cudaMemcpyDeviceToHost);
+
+  bool ok = true;
+  for (size_t i = 0; i < src_size; i++) {
+    if (fabsf(__half2float(output_ref[i]) - __half2float(output[i])) > 1e-3f) {
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
+
+  cudaMemcpy(d_output, input, src_size_bytes, cudaMemcpyHostToDevice);
+  gelu_bias_loop <<<grid, block>>> (d_output, d_bias, hidden_dim, seq_len);
+  cudaMemcpy(output, d_output, src_size_bytes, cudaMemcpyDeviceToHost);
+
+  ok = true;
+  for (size_t i = 0; i < src_size; i++) {
+    if (fabsf(__half2float(output_ref[i]) - __half2float(output[i])) > 1e-3f) {
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
@@ -96,19 +152,24 @@ int main(int argc, char* argv[])
   cudaDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / repeat);
+  printf("Average execution time of vectorized kernel %f (ms)\n", (time * 1e-6f) / repeat);
 
-  cudaMemcpy(output, d_output, src_size_bytes, cudaMemcpyDeviceToHost);
+  start = std::chrono::steady_clock::now();
 
-  float sum = 0;
-  for (size_t i = 0; i < src_size; i++) {
-    sum += __half2float(output[i]);
+  for (int i = 0; i < repeat; i++) {
+    gelu_bias_loop_base <<<grid, block>>> (d_output, d_bias, hidden_dim, seq_len);
   }
-  printf("Checksum = %f\n", sum / src_size);
-  
+
+  cudaDeviceSynchronize();
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average execution time of baseline kernel %f (ms)\n", (time * 1e-6f) / repeat);
+
   cudaFree(d_output);
   cudaFree(d_bias);
+  free(input);
   free(output);
+  free(output_ref);
   free(bias);
 
   return 0;

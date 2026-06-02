@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <chrono>
+#include <cmath>
 #include <sycl/sycl.hpp>
+#include "reference.h"
 
 /*
  * Copyright (c) 2020-2021, NVIDIA CORPORATION.  All rights reserved.
@@ -24,25 +26,41 @@
 void gelu_bias_loop(sycl::half *src, const sycl::half *bias, int width,
                     int height, sycl::nd_item<2> &item)
 {
-  int batch = item.get_group(1);
-  int x = item.get_group(0); // seq length
+  int x = item.get_group(1); // seq length
   int y = item.get_local_id(1) * 2;
+  int batch = item.get_group(0);
 
   if (x < height) {
     int    index = batch * width * height + x * width;
-    sycl::half2 v_src;
-    sycl::half2 v_bias;
-    sycl::half2 v;
-    sycl::float2 t;
     for (; y < width; y = y + item.get_local_range(1) * 2) {
-      v_bias = ((sycl::half2 *)bias)[y >> 1];
-      v_src = ((sycl::half2 *)src)[(index + y) >> 1];
-      v = v_src + v_bias;
-      t = v.convert<float, sycl::rounding_mode::automatic>();
+      sycl::half2 v_bias = ((sycl::half2 *)bias)[y >> 1];
+      sycl::half2 v_src = ((sycl::half2 *)src)[(index + y) >> 1];
+      sycl::half2 v = v_src + v_bias;
+      sycl::float2 t = v.convert<float, sycl::rounding_mode::automatic>();
       t.x() = (0.5f * t.x() * (1.0f + sycl::tanh(0.79788456f * (t.x() + 0.044715f * t.x() * t.x() * t.x()))));
       t.y() = (0.5f * t.y() * (1.0f + sycl::tanh(0.79788456f * (t.y() + 0.044715f * t.y() * t.y() * t.y()))));
-
       ((sycl::half2 *)src)[(index + y) >> 1] = t.convert<sycl::half, sycl::rounding_mode::rte>();
+    }
+  }
+}
+
+void gelu_bias_loop_base(sycl::half *src, const sycl::half *bias, int width,
+                    int height, sycl::nd_item<2> &item)
+{
+  int x = item.get_group(1); // seq length
+  int batch = item.get_group(0);
+
+  if (x < height) {
+    int    index = batch * width * height + x * width;
+    for (int y = item.get_local_id(1); y < width; y = y + item.get_local_range(1)) {
+      auto v_bias = bias[y];
+      auto v_src = src[index + y];
+      auto v = v_src + v_bias;
+      auto t = sycl::vec<sycl::half, 1>(v)
+                   .convert<float, sycl::rounding_mode::automatic>()[0];
+      t = (0.5f * t * (1.0f + sycl::tanh(0.79788456f * (t + 0.044715f * t * t * t))));
+      src[index + y] = sycl::vec<float, 1>(t)
+                           .convert<sycl::half, sycl::rounding_mode::rte>()[0];
     }
   }
 }
@@ -51,6 +69,7 @@ int main(int argc, char* argv[])
 {
   if (argc != 5) {
     printf("Usage: %s <batch> <sequence length> <hidden dimension> <repeat>\n", argv[0]);
+    printf("The hidden dimension is a multiple of two\n");
     return 1;
   }
 
@@ -65,9 +84,11 @@ int main(int argc, char* argv[])
   const int bias_size_bytes = hidden_dim * sizeof(sycl::half);
 
   srand(123);
+  sycl::half *input = (sycl::half *)malloc(src_size_bytes);
   sycl::half *output = (sycl::half *)malloc(src_size_bytes);
+  sycl::half *output_ref = (sycl::half *)malloc(src_size_bytes);
   for (size_t i = 0; i < src_size; i++) {
-    output[i] = sycl::vec<float, 1>{rand() / (float)RAND_MAX}
+    output_ref[i] = input[i] = sycl::vec<float, 1>{rand() / (float)RAND_MAX}
                     .convert<sycl::half, sycl::rounding_mode::automatic>()[0];
   }
 
@@ -85,21 +106,75 @@ int main(int argc, char* argv[])
 
   sycl::half *d_output;
   d_output = (sycl::half *)sycl::malloc_device(src_size_bytes, q);
-  q.memcpy(d_output, output, src_size_bytes);
 
   sycl::half *d_bias;
   d_bias = (sycl::half *)sycl::malloc_device(bias_size_bytes, q);
   q.memcpy(d_bias, bias, bias_size_bytes);
 
-  sycl::range<2> lws (1, 1024);
-  sycl::range<2> gws (seq_len, batch_size * 1024);
+  int block_size;
+  if (hidden_dim >= 4096)
+    block_size = 512;
+  else if (hidden_dim >= 2048)
+    block_size = 256;
+  else
+    block_size = 128;
+
+  sycl::range<2> lws (1, block_size);
+  sycl::range<2> gws (batch_size, seq_len * block_size);
+
+  // warmup and verify
+  gelu_bias_loop_cpu (output_ref, bias, batch_size, hidden_dim, seq_len);
+
+  q.memcpy(d_output, input, src_size_bytes).wait();
+  q.submit([&] (sycl::handler &cgh) {
+    cgh.parallel_for(
+      sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
+      gelu_bias_loop_base(d_output, d_bias, hidden_dim, seq_len, item);
+    });
+  });
+  q.memcpy(output, d_output, src_size_bytes).wait();
+
+  bool ok = true;
+  for (size_t i = 0; i < src_size; i++) {
+    if (fabsf(sycl::vec<sycl::half, 1>{output[i]}.
+              convert<float, sycl::rounding_mode::automatic>()[0] -
+              sycl::vec<sycl::half, 1>{output_ref[i]}.
+              convert<float, sycl::rounding_mode::automatic>()[0]) > 1e-3f) {
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
+
+  ok = true;
+  q.memcpy(d_output, input, src_size_bytes).wait();
+  q.submit([&] (sycl::handler &cgh) {
+    cgh.parallel_for(
+      sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
+      gelu_bias_loop(d_output, d_bias, hidden_dim, seq_len, item);
+    });
+  });
+  q.memcpy(output, d_output, src_size_bytes).wait();
+
+  for (size_t i = 0; i < src_size; i++) {
+    if (fabsf(sycl::vec<sycl::half, 1>{output[i]}.
+              convert<float, sycl::rounding_mode::automatic>()[0] -
+              sycl::vec<sycl::half, 1>{output_ref[i]}.
+              convert<float, sycl::rounding_mode::automatic>()[0]) > 1e-3f) {
+      ok = false;
+      break;
+    }
+  }
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   q.wait(); 
   auto start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < repeat; i++) {
     q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class gelu>(
+      cgh.parallel_for(
         sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
         gelu_bias_loop(d_output, d_bias, hidden_dim, seq_len, item);
       });
@@ -109,20 +184,29 @@ int main(int argc, char* argv[])
   q.wait();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / repeat);
+  printf("Average execution time of vectorized kernel %f (ms)\n", (time * 1e-6f) / repeat);
 
-  q.memcpy(output, d_output, src_size_bytes).wait();
+  start = std::chrono::steady_clock::now();
 
-  float sum = 0;
-  for (size_t i = 0; i < src_size; i++) {
-    sum += sycl::vec<sycl::half, 1>{output[i]}
-               .convert<float, sycl::rounding_mode::automatic>()[0];
+  for (int i = 0; i < repeat; i++) {
+    q.submit([&] (sycl::handler &cgh) {
+      cgh.parallel_for(
+        sycl::nd_range<2>(gws, lws), [=] (sycl::nd_item<2> item) {
+        gelu_bias_loop_base(d_output, d_bias, hidden_dim, seq_len, item);
+      });
+    });
   }
-  printf("Checksum = %f\n", sum / src_size);
+
+  q.wait();
+  end = std::chrono::steady_clock::now();
+  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  printf("Average execution time of baseline kernel %f (ms)\n", (time * 1e-6f) / repeat);
 
   sycl::free(d_output, q);
   sycl::free(d_bias, q);
+  free(input);
   free(output);
+  free(output_ref);
   free(bias);
 
   return 0;
