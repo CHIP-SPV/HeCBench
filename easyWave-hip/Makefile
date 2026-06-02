@@ -65,3 +65,6 @@ clean:
 run: $(program)
 	./$(program) -grid ../easyWave-omp/data/grids/e2Asean.grd -source ../easyWave-omp/data/faults/BengkuluSept2007.flt -time 120 
 
+smoke: $(program)
+	./$(program) -grid ../easyWave-omp/data/grids/e2Asean.grd -source ../easyWave-omp/data/faults/BengkuluSept2007.flt -time 120 
+
