@@ -6,13 +6,14 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -30,15 +31,20 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -DREFDATA_TWOJ=14 -I. -I../testSNAP-omp \
+          --gcc-toolchain=$(GCC_TOOLCHAIN) \
           -std=c++17 -Wall -fsycl
 
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
+
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -73,5 +79,11 @@ $(program): $(obj)
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	./$(program) --nsteps 100
+../testSNAP-omp/refdata_2J14_W.h: ../testSNAP-omp/refdata.tar.gz
+	cd ../testSNAP-omp && tar xzf refdata.tar.gz
+
+run: $(program) ../testSNAP-omp/refdata_2J14_W.h
+	$(LAUNCHER) ./$(program) --nsteps 100
+
+smoke: $(program) ../testSNAP-omp/refdata_2J14_W.h
+	$(LAUNCHER) ./$(program) --nsteps 5

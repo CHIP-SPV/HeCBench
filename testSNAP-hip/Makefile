@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I. -I../testSNAP-omp \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I. -I../testSNAP-omp \
           -DREFDATA_TWOJ=14
 
 # Linker Flags
@@ -52,5 +53,11 @@ $(program): $(obj)
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	./$(program) --nsteps 100
+../testSNAP-omp/refdata_2J14_W.h: ../testSNAP-omp/refdata.tar.gz
+	cd ../testSNAP-omp && tar xzf refdata.tar.gz
+
+run: $(program) ../testSNAP-omp/refdata_2J14_W.h
+	$(LAUNCHER) ./$(program) --nsteps 15
+
+smoke: $(program) ../testSNAP-omp/refdata_2J14_W.h
+	$(LAUNCHER) ./$(program) --nsteps 5
