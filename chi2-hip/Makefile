@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -13,16 +14,17 @@ DEBUG     = no
 
 program = main
 
-source = chi2.cu
+source = chi2.cu reference.cpp
 
 obj = $(source:.cu=.o)
+obj := $(obj:.cpp=.o)
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../chi2-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../chi2-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -46,11 +48,17 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../chi2-cuda/reference.h Makefile
-	$(CC) $(CFLAGS) -c $< -o $@
+chi2.o: chi2.cu reference.h Makefile
+	$(CC) $(CFLAGS) -c chi2.cu -o $@
+
+reference.o: reference.cpp reference.h Makefile
+	$(CC) $(CFLAGS) -c reference.cpp -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../chi2-cuda/traindata 4000 400000 2000 2000 256 1000
+	$(LAUNCHER) ./$(program) 4000 400000 2000 2000 256 300
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 4000 400000 2000 2000 256 1000

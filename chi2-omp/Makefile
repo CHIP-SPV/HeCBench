@@ -7,12 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = chi2
+program = main
 
 source = chi2.cpp
 
@@ -60,4 +61,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../chi2-cuda/traindata 4000 400000 2000 2000 256 1000
+	$(LAUNCHER) ./$(program) 4000 400000 2000 2000 256 1000
