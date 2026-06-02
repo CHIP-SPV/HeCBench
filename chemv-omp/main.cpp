@@ -113,11 +113,10 @@ void chemv_gpu(float alpha_re, float alpha_im, float beta_re, float beta_im,
   {
     auto start = std::chrono::steady_clock::now();
 
-    for (int n = 0; n < REPEAT; n++)
-      kernel0(AT, X, Y, alpha_im, alpha_re, beta_im, beta_re);
-
-    for (int n = 0; n < REPEAT; n++)
-      kernel1(AT, X, Y, alpha_im, alpha_re);
+    for (int n = 0; n < REPEAT; n++) {
+      chemv_kernel0(AT, X, Y, alpha_im, alpha_re, beta_im, beta_re);
+      chemv_kernel1(AT, X, Y, alpha_im, alpha_re);
+    }
 
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -153,10 +152,11 @@ int main() {
         (fabs(Y_cpu[i * INCY + 0].Im - Y_gpu[i * INCY + 0].Im) > 1e-3))
     {
       printf("%d %f %f\n", i, Y_cpu[i * INCY + 0].Re,Y_gpu[i * INCY + 0].Re);
-      printf("FAILED\n");
+      printf("FAIL\n");
+  exit(1);
       return EXIT_FAILURE;
     }
-  printf("PASSED\n");
+  printf("PASS\n");
   return EXIT_SUCCESS;
 }
 
