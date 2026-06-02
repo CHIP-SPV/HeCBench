@@ -6,6 +6,9 @@
 #include <vector>
 #include <chrono>
 #include <hip/hip_runtime.h>
+#include <thrust/sort.h>
+#include <thrust/functional.h>
+#include <thrust/device_vector.h>
 
 typedef unsigned int T;
 typedef uint4 VECTYPE;
@@ -32,10 +35,9 @@ void verifySort(const T *keys, const size_t size)
   }
   if (passed)
     std::cout << "PASS" << std::endl;
-  else {
+else
     std::cout << "FAIL" << std::endl;
     exit(1);
-  }
 }
 
 int main(int argc, char** argv) 
@@ -93,9 +95,7 @@ int main(int argc, char** argv)
   hipMalloc((void**)&d_odata, size * sizeof(T));
   hipMalloc((void**)&d_isums, num_work_groups * num_digits * sizeof(T));
 
-  T* d_in;
-  T* d_out;
-
+  T *d_in, *d_out;
   double time = 0.0;
 
   for (int k = 0; k < passes; k++)
@@ -117,9 +117,9 @@ int main(int argc, char** argv)
       d_in = even ? d_idata : d_odata;
       d_out = even ? d_odata : d_idata;
 
-      hipLaunchKernelGGL(reduce, num_work_groups, local_wsize, 0, 0, d_in, d_isums, size, shift);
-      hipLaunchKernelGGL(top_scan, 1, local_wsize, 0, 0, d_isums, num_work_groups);
-      hipLaunchKernelGGL(bottom_scan, num_work_groups, local_wsize, 0, 0, d_out, d_in, d_isums, size, shift);
+      reduce<<<num_work_groups, local_wsize>>> (d_in, d_isums, size, shift);
+      top_scan<<<1, local_wsize>>>(d_isums, num_work_groups);
+      bottom_scan<<<num_work_groups, local_wsize>>>(d_out, d_in, d_isums, size, shift);
     }
 
     hipDeviceSynchronize();
@@ -127,14 +127,31 @@ int main(int argc, char** argv)
     time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   }  // passes
 
-  printf("Average elapsed time per pass %lf (s)\n", time * 1e-9 / passes);
+  printf("Average elapsed time of sort: %lf (s)\n", time * 1e-9 / passes);
 
   hipMemcpy(h_odata, d_out, size * sizeof(T), hipMemcpyDeviceToHost);
+  verifySort(h_odata, size);
+
+  // reference sort
+  time = 0.0;
+  for (int k = 0; k < passes; k++) {
+    hipMemcpy(d_odata, h_idata, size * sizeof(T), hipMemcpyHostToDevice);
+    hipDeviceSynchronize();
+    auto start = std::chrono::steady_clock::now();
+    thrust::device_ptr<T> d_out_ptr (d_odata);
+    thrust::sort(d_out_ptr, d_out_ptr + size, thrust::less<T>());
+    hipDeviceSynchronize();
+    auto end = std::chrono::steady_clock::now();
+    time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+  }
+  printf("Average elapsed time of Thrust::sort: %lf (s)\n", time * 1e-9 / passes);
+
+  hipMemcpy(h_odata, d_odata, size * sizeof(T), hipMemcpyDeviceToHost);
+  verifySort(h_odata, size);
+
   hipFree(d_idata);
   hipFree(d_odata);
   hipFree(d_isums);
-
-  verifySort(h_odata, size);
 
   free(h_idata);
   free(h_odata);
