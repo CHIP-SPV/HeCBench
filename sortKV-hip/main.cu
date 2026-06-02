@@ -55,7 +55,7 @@ void sort_key_value (int n, int repeat, bool verify) {
       }
     }
     printf("%s\n", ok ? "PASS" : "FAIL");
-    if (!ok) exit(1);
+  if (!ok) exit(1);
   }
 }
 
