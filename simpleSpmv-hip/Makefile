@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,10 +23,10 @@ obj = main.o kernels.o utils.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../simpleSpmv-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../simpleSpmv-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -57,4 +58,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 16777216 10240 100
+	$(LAUNCHER) ./$(program) 16777216 10240 300
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 16777216 10240 100
