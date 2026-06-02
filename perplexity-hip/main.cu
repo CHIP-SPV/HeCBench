@@ -160,8 +160,9 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   
   hipFree(d_distance);
   hipFree(d_data);
-  return ok ? 0 : 1;
+  return 0;
 }
