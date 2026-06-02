@@ -3,11 +3,8 @@
 #===============================================================================
 
 # Compiler can be set below, or via environment variable
-ifeq ($(VENDOR), codeplay)
-CC        = compute++
-else
 CC        = clang++
-endif
+LAUNCHER=
 
 OPTIMIZE  = yes
 DEBUG     = no
@@ -17,7 +14,7 @@ CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -29,31 +26,26 @@ GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I. -I./util/num -I./util/timer -I./kernel
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -fsycl -Wall \
+          -I. -I./util/num -I./util/timer -I./kernel \
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
 
-ifeq ($(VENDOR), codeplay)
-CFLAGS += -I$(HOME)/computecpp/ComputeCpp-CE-2.7.0-x86_64-linux-gnu/include/ \
-          -no-serial-memop -sycl -sycl-driver
-else
-CFLAGS += -fsycl
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
 endif
 
 # Linker Flags
-LDFLAGS = 
-
-ifeq ($(VENDOR), codeplay)
-LDFLAGS += -lComputeCpp
-endif
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
   CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
-	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
+	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH)
 endif
 
 # Debug Flags
@@ -132,4 +124,7 @@ clean:
 		./util/num/*.o \
 		output.txt
 run: main
-	./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt

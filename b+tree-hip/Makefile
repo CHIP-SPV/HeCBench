@@ -6,13 +6,14 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -98,4 +99,7 @@ clean:
     output.txt
 
 run: main
-	./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt

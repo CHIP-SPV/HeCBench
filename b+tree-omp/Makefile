@@ -2,10 +2,11 @@ CC        = icpc
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker flags
 LDFLAGS = -lm
@@ -28,18 +29,18 @@ else
 endif
 
 
-b+tree.out:	./main.o \
+main:	./main.o \
 		./kernel/kernel_wrapper.o \
 		./kernel/kernel2_wrapper.o \
 		./util/timer/timer.o \
-		./util/num/num.o 
+		./util/num/num.o
 	$(CC) $(CFLAGS)	./main.o \
 			./kernel/kernel_wrapper.o \
 			./kernel/kernel2_wrapper.o \
 			./util/timer/timer.o \
 			./util/num/num.o \
 			$(LDFLAGS) \
-	                -o b+tree.out
+	                -o main
 # ========================================================================================================================================================================================================200
 #	OBJECTS (COMPILE SOURCE FILES INTO OBJECTS)
 # ========================================================================================================================================================================================================200
@@ -96,15 +97,15 @@ main.o:	./common.h \
 #	END
 # ======================================================================================================================================================150
 #
-run: b+tree.out
-	./b+tree.out file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
+run: main
+	$(LAUNCHER) ./main file ../data/b+tree/mil.txt command ../data/b+tree/command.txt
 
 # ========================================================================================================================================================================================================200
 #	DELETE
 # ========================================================================================================================================================================================================200
 
 clean:
-	rm -f	*.o *.out \
+	rm -f	*.o main \
 		./kernel/*.o \
 		./util/timer/*.o \
 		./util/num/*.o \
