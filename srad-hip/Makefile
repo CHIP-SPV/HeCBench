@@ -55,4 +55,7 @@ clean:
 	rm -f *.o $(program) *pgm
 
 run: $(program)
+	./$(program) 40000 0.5 502 458
+
+smoke: $(program)
 	./$(program) 1000 0.5 502 458

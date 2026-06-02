@@ -120,3 +120,6 @@ clean:
 
 run: main
 	./main 1000 0.5 502 458
+
+smoke: $(program)
+	./main 1000 0.5 502 458
