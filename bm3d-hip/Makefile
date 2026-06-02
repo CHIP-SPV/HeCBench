@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../bm3d-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../bm3d-cuda
 
 # Linker Flags
 LDFLAGS = -lpthread
@@ -53,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../bm3d-cuda/noised-bufferfly-20.png denoised.png 20 color ../bm3d-cuda/bufferfly.png
+	$(LAUNCHER) ./$(program) ../bm3d-cuda/noised-bufferfly-20.png denoised.png 20 color ../bm3d-cuda/bufferfly.png
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../bm3d-cuda/noised-bufferfly-20.ppm denoised.ppm 20 color ../bm3d-cuda/bufferfly.ppm
