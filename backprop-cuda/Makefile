@@ -8,6 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
 DUMP      = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -51,12 +52,12 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu backprop.h bpnn_adjust_weights.h bpnn_layerforward.h Makefile
+%.o: %.cu reference.h backprop.h bpnn_adjust_weights.h bpnn_layerforward.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 65536
+	$(LAUNCHER) ./$(program) 65536
 

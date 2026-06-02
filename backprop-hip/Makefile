@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 DUMP      = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../backprop-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../backprop-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -50,12 +51,15 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cu ../backprop-cuda/backprop.h ../backprop-cuda/bpnn_adjust_weights.h \
-          ../backprop-cuda/bpnn_layerforward.h Makefile
+          ../backprop-cuda/bpnn_layerforward.h ../backprop-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 65536
+	$(LAUNCHER) ./$(program) 20971520
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 4096
