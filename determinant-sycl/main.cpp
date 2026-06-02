@@ -1,5 +1,5 @@
 #include <oneapi/dpl/execution>
-#include <oneapi/dpl/algorithm>
+#include <oneapi/dpl/numeric>
 #include <oneapi/mkl/lapack.hpp>
 #include <chrono>
 #include <stdio.h>
@@ -174,6 +174,7 @@ int main(int argc, char* argv[])
   }
 
   std::cout << "oneapi::mkl::lapack::potrf " << ((info == 0) ? "ran OK" : "FAILED") << std::endl;
+  exit(1);
 #endif
 
   return 0;
