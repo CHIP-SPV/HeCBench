@@ -70,3 +70,6 @@ run: $(program)
 	./$(program) sp
 	./$(program) dp
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) sp
