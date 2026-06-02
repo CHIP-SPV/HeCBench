@@ -7,13 +7,14 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = test
+program = main
 
 source = ccsd_tengy.cu  ccsd_trpdrv.cu  main.cu
 
@@ -48,12 +49,18 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+ccsd_tengy.o : ccsd_tengy.cu Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+ccsd_trpdrv.o : ccsd_trpdrv.cu Makefile
+	$(CC) $(CFLAGS) -c $< -o $@
+
+main.o : main.cu reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 40 200 100
+	$(LAUNCHER) ./$(program) 40 200 100
 
