@@ -147,3 +147,6 @@ test: $(program)
 run: $(program)
 	./$(program) blastx -q long.fastq.gz -d ARDB -o long_cur.m8 --tmpdir /dev/shm -p1
 
+smoke: $(program)
+	./$(program) blastx -q short.fastq.gz -d ARDB -o short_cur.m8 --tmpdir /dev/shm -p1
+

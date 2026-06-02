@@ -12,7 +12,7 @@ DMND_PATH   = ../diamond-sycl
 # Program name & source code list
 #===============================================================================
 
-program = diamond
+program = main
 
 c_src = \
   $(DMND_PATH)/src/blast/sm_blosum45.c \
@@ -132,4 +132,7 @@ test: $(program)
 
 run: $(program)
 	./$(program) blastx -q $(DMND_PATH)/long.fastq.gz -d $(DMND_PATH)/ARDB.dmnd -o long_cur.m8 --tmpdir /dev/shm -p1
+
+smoke: $(program)
+	./$(program) blastx -q $(DMND_PATH)/short.fastq.gz -d $(DMND_PATH)/ARDB.dmnd -o short_cur.m8 --tmpdir /dev/shm -p1
 
