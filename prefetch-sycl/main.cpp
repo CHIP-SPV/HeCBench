@@ -22,7 +22,7 @@
 #include <chrono>
 #include <sycl/sycl.hpp>
 
-constexpr int MEM_ADVISE_READ_MOSTLY = PI_MEM_ADVICE_CUDA_SET_READ_MOSTLY;
+//constexpr int MEM_ADVISE_READ_MOSTLY = PI_MEM_ADVICE_CUDA_SET_READ_MOSTLY;
 
 void add(int n, const float *x, float *y, sycl::nd_item<3> &item)
 {
@@ -57,7 +57,7 @@ void prefetch(sycl::queue &q, const int numElements, const int repeat)
 
   for (int i = 0; i < repeat; i++) {
 
-    q.mem_advise(A, numElements * sizeof(float), MEM_ADVISE_READ_MOSTLY);
+    //q.mem_advise(A, numElements * sizeof(float), MEM_ADVISE_READ_MOSTLY);
 
     q.prefetch(A, numElements * sizeof(float));
     q.prefetch(B, numElements * sizeof(float));
@@ -67,23 +67,24 @@ void prefetch(sycl::queue &q, const int numElements, const int repeat)
         sycl::nd_range<3>(gws, lws), [=] (sycl::nd_item<3> item) {
         add(numElements, A, B, item);
       });
-    });
+    }).wait();
 
-    q.prefetch(B, numElements * sizeof(float)).wait();
+    //q.prefetch(B, numElements * sizeof(float)).wait();
   }
-
-  for (int i = 0; i < numElements; i++)
-    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
 
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time: %f (ms)\n", time * 1e-6f / repeat);
+
+  for (int i = 0; i < numElements; i++)
+    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
 
   sycl::free(A, q);
   sycl::free(B, q);
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 void naive(sycl::queue &q, const int numElements, const int repeat)
@@ -118,18 +119,19 @@ void naive(sycl::queue &q, const int numElements, const int repeat)
     }).wait();
   }
 
-  for (int i = 0; i < numElements; i++)
-    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
-
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time: %f (ms)\n", time * 1e-6f / repeat);
 
-  free(A, q);
-  free(B, q);
+  for (int i = 0; i < numElements; i++)
+    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
+
+  sycl::free(A, q);
+  sycl::free(B, q);
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!testResult) exit(1);
 }
 
 int main(int argc, char *argv[])
@@ -155,16 +157,12 @@ int main(int argc, char *argv[])
 
   const int numElements = 64 * 1024 * 1024;
 
-  printf("------------\n");
-  printf("   Warmup   \n");
-  printf("------------\n");
-  prefetch(q, numElements, repeat);
-  naive(q, numElements, repeat);
-  printf("------------\n");
-  printf("   Done     \n");
-  printf("------------\n");
+  for (int i = 0; i < 10; i++) {
+    prefetch(q, numElements, repeat);
+  }
 
-  prefetch(q, numElements, repeat);
-  naive(q, numElements, repeat);
+  for (int i = 0; i < 10; i++) {
+    naive(q, numElements, repeat);
+  }
   return 0;
 }

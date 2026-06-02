@@ -66,28 +66,29 @@ void prefetch (const int gpuDeviceId, const int numElements, const int repeat)
 
   for (int i = 0; i < repeat; i++) {
 
-    CUDACHECK(cudaMemAdvise(A, numElements*sizeof(float), cudaMemAdviseSetReadMostly, cudaCpuDeviceId));
+    //CUDACHECK(cudaMemAdvise(A, numElements*sizeof(float), cudaMemAdviseSetReadMostly, cudaCpuDeviceId));
     CUDACHECK(cudaMemPrefetchAsync(A, numElements*sizeof(float), gpuDeviceId));
     CUDACHECK(cudaMemPrefetchAsync(B, numElements*sizeof(float), gpuDeviceId));
 
     add <<< dimGrid, dimBlock >>> (numElements, A, B);
 
-    CUDACHECK(cudaMemPrefetchAsync(B, numElements*sizeof(float), cudaCpuDeviceId));
+    //CUDACHECK(cudaMemPrefetchAsync(B, numElements*sizeof(float), cudaCpuDeviceId));
     CUDACHECK(cudaDeviceSynchronize());
   }
-
-  for (int i = 0; i < numElements; i++)
-    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
 
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time: %f (ms)\n", time * 1e-6f / repeat);
+
+  for (int i = 0; i < numElements; i++)
+    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
 
   CUDACHECK(cudaFree(A));
   CUDACHECK(cudaFree(B));
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 void naive (const int numElements, const int repeat)
@@ -121,18 +122,19 @@ void naive (const int numElements, const int repeat)
     CUDACHECK(cudaDeviceSynchronize());
   }
 
-  for (int i = 0; i < numElements; i++)
-    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
-
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   printf("Average execution time: %f (ms)\n", time * 1e-6f / repeat);
+
+  for (int i = 0; i < numElements; i++)
+    maxError = fmaxf(maxError, fabsf(B[i]-(repeat+2)));
 
   CUDACHECK(cudaFree(A));
   CUDACHECK(cudaFree(B));
 
   bool testResult = (maxError == 0.0f);
   printf("%s\n", testResult ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char *argv[])
@@ -158,16 +160,12 @@ int main(int argc, char *argv[])
 
   const int numElements = 64 * 1024 * 1024;
 
-  printf("------------\n");
-  printf("   Warmup   \n");
-  printf("------------\n");
-  prefetch(p_gpuDevice, numElements, repeat);
-  naive(numElements, repeat);
-  printf("------------\n");
-  printf("   Done     \n");
-  printf("------------\n");
+  for (int i = 0; i < 10; i++) {
+    prefetch(p_gpuDevice, numElements, repeat);
+  }
 
-  prefetch(p_gpuDevice, numElements, repeat);
-  naive(numElements, repeat);
+  for (int i = 0; i < 10; i++) {
+    naive(numElements, repeat);
+  }
   return 0;
 }
