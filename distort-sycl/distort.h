@@ -1,7 +1,8 @@
 #ifndef DISTORTION_H
 #define DISTORTION_H
 
-#include "common.h"
+#include <sycl/sycl.hpp>
+using namespace sycl;
 
 struct Properties{
   float K;
