@@ -55,3 +55,6 @@ clean:
 
 run: $(program)
 	./$(program) 90112 165
+
+smoke: $(program)
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) 9024 16

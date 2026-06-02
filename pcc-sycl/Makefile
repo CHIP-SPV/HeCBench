@@ -90,3 +90,6 @@ clean:
 
 run: $(program)
 	./$(program) 90112 165
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 9024 16
