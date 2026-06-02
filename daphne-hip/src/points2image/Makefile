@@ -8,6 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 SHARED_DATA_PATH = ../../../daphne-cuda/data
 SHARED_SRC_PATH = ../../../daphne-cuda/src
+LAUNCHER        =
 
 #===============================================================================
 # Program name & source code list
@@ -24,7 +25,7 @@ obj = main.o kernel.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
           -I$(SHARED_SRC_PATH)/include \
           -I$(SHARED_SRC_PATH)/points2image
 
@@ -70,4 +71,4 @@ clean:
 
 # TODO: when p > 1, results mismatch
 run: $(program)
-	./$(program) -p 1
+	$(LAUNCHER) ./$(program) -p 1
