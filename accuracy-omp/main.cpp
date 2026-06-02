@@ -77,9 +77,10 @@ int main(int argc, char* argv[])
       auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
       printf("Average execution time of accuracy kernel: %f (us)\n", (time * 1e-3f) / repeat);
 
-      #pragma omp target update from (count[0:1]) 
+      #pragma omp target update from (count[0:1])
       bool ok = (count[0] == count_ref);
       printf("%s\n", ok ? "PASS" : "FAIL");
+      if (!ok) exit(1);
       // printf("Accuracy = %f\n", (float)count / nrows);
     }
   }
