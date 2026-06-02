@@ -17,10 +17,10 @@
 #include "timer.h"
 
 /** Problem size along one side; total number of cells is this squared */
-#define NUM 512
+#define NUM 1024
 
 // block size
-#define BLOCK_SIZE 128
+#define BLOCK_SIZE 256
 
 #define Real float
 #define ZERO 0.0f
@@ -29,6 +29,8 @@
 
 /** SOR relaxation parameter */
 const Real omega = 1.85f;
+
+#include "reference.h"
 
 /** Function to evaluate coefficient matrix and right-hand side vector.
  * 
@@ -134,6 +136,7 @@ int main (void) {
   // allocate memory
   Real *aP, *aW, *aE, *aS, *aN, *b;
   Real *temp_red, *temp_black;
+  Real *temp_red_ref, *temp_black_ref;
 
   // arrays of coefficients
   aP = (Real *) calloc (size, sizeof(Real));
@@ -148,6 +151,8 @@ int main (void) {
   // temperature arrays
   temp_red = (Real *) calloc (size_temp, sizeof(Real));
   temp_black = (Real *) calloc (size_temp, sizeof(Real));
+  temp_red_ref = (Real *) calloc (size_temp, sizeof(Real));
+  temp_black_ref = (Real *) calloc (size_temp, sizeof(Real));
 
   // set coefficients
   fill_coeffs (NUM, NUM, th_cond, dx, dy, width, TN, aP, aW, aE, aS, aN, b);
@@ -182,7 +187,7 @@ int main (void) {
   
       Real norm_L2 = ZERO;
   
-      #pragma omp target teams distribute parallel for collapse(2)
+      #pragma omp target teams distribute parallel for collapse(2) num_threads(BLOCK_SIZE)
       for (int row = 1; row <= NUM/2; row++) {
         for (int col = 1; col <= NUM; col++) {
           int ind_red = col * ((NUM >> 1) + 2) + row;  					// local (red) index
@@ -203,14 +208,13 @@ int main (void) {
           bl_norm_L2[ind_red] = res * res;
         }
       }
-      #pragma omp target update from (bl_norm_L2[0:size_norm])
-  
       // add red cell contributions to residual
+      #pragma omp target teams distribute parallel for reduction(+:norm_L2)
       for (int i = 0; i < size_norm; ++i) {
         norm_L2 += bl_norm_L2[i];
       }
   
-      #pragma omp target teams distribute parallel for collapse(2)
+      #pragma omp target teams distribute parallel for collapse(2) num_threads(BLOCK_SIZE)
       for (int row = 1; row <= NUM/2; row++) {
         for (int col = 1; col <= NUM; col++) {
           int ind_black = col * ((NUM >> 1) + 2) + row; // local (black) index
@@ -231,11 +235,10 @@ int main (void) {
           bl_norm_L2[ind_black] = res * res;
         }
       }
-      #pragma omp target update from (bl_norm_L2[0:size_norm])
-  
-      // transfer residual value(s) back to CPU and 
       // add black cell contributions to residual
-      for (int i = 0; i < size_norm; ++i) norm_L2 += bl_norm_L2[i];
+      #pragma omp target teams distribute parallel for reduction(+:norm_L2)
+      for (int i = 0; i < size_norm; ++i)
+        norm_L2 += bl_norm_L2[i];
   
       // calculate residual
       norm_L2 = sqrt(norm_L2 / ((Real)size));
@@ -248,6 +251,17 @@ int main (void) {
   
     double runtime = GetTimer();
     printf("Total time for %i iterations: %f s\n", iter, runtime / 1000.0);
+  }
+
+  // Reference
+  int count = 0;
+
+  for (iter = 1; iter <= it_max; ++iter) {
+    Real norm_L2;
+    norm_L2 = red_ref(aP, aW, aE, aS, aN, b, temp_black_ref, temp_red_ref);
+    norm_L2 += black_ref (aP, aW, aE, aS, aN, b, temp_red_ref, temp_black_ref);
+    norm_L2 = sqrt(norm_L2 / ((Real)size));
+    if (norm_L2 < tol) break;
   }
 
   // print temperature data to file
@@ -266,17 +280,22 @@ int main (void) {
         if ((row + col) % 2 == 0) {
           // even, so red cell
           int ind = col * num_rows + (row + (col % 2)) / 2;
+          if ((temp_red[ind] - temp_red_ref[ind]) >= 1e-3f) count++;
           fprintf(pfile, "%f\t%f\t%f\n", x_pos, y_pos, temp_red[ind]);
         } else {
           // odd, so black cell
           int ind = col * num_rows + (row + ((col + 1) % 2)) / 2;
+          if ((temp_black[ind] - temp_black_ref[ind]) >= 1e-3f) count++;
           fprintf(pfile, "%f\t%f\t%f\n", x_pos, y_pos, temp_black[ind]);
         }	
       }
       fprintf(pfile, "\n");
     }
   }
+
   fclose(pfile);
+  printf("%s\n", count == 0 ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(aP);
   free(aW);
@@ -286,6 +305,8 @@ int main (void) {
   free(b);
   free(temp_red);
   free(temp_black);
+  free(temp_red_ref);
+  free(temp_black_ref);
   free(bl_norm_L2);
 
   return 0;
