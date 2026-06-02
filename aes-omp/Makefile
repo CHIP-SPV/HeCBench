@@ -7,6 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 
 #===============================================================================
@@ -35,7 +36,6 @@ ifeq ($(DEBUG),yes)
   LDFLAGS  += -g
 endif
 
-
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
@@ -61,6 +61,5 @@ clean:
 
 # reuse the image
 run: $(program)
-	./$(program) 100 0 ../urng-sycl/URNG_Input.bmp
-	./$(program) 100 1 ../urng-sycl/URNG_Input.bmp
-
+	$(LAUNCHER) ./$(program) 100 0 ../urng-sycl/URNG_Input.bmp
+	$(LAUNCHER) ./$(program) 100 1 ../urng-sycl/URNG_Input.bmp

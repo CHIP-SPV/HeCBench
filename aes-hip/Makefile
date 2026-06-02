@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include
 
 # Linker Flags
 LDFLAGS = 
@@ -54,6 +55,7 @@ clean:
 
 # reuse the image
 run: $(program)
-	./$(program) 100 0 ../urng-sycl/URNG_Input.bmp
-	./$(program) 100 1 ../urng-sycl/URNG_Input.bmp
+	$(LAUNCHER) ./$(program) 30000 0 ../urng-sycl/URNG_Input.bmp
 
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1 0 ../urng-sycl/URNG_Input.bmp

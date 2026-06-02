@@ -6,12 +6,14 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -28,7 +30,13 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl -I../include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
+          --gcc-toolchain=$(GCC_TOOLCHAIN) -I../include
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -72,5 +80,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100 0 ../urng-sycl/URNG_Input.bmp
-	./$(program) 100 1 ../urng-sycl/URNG_Input.bmp
+	$(LAUNCHER) ./$(program) 60000 0 ../urng-sycl/URNG_Input.bmp
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1 0 ../urng-sycl/URNG_Input.bmp
