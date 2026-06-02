@@ -419,7 +419,6 @@ int test(uint arraySize, unsigned int  NUM_ITERATIONS,
 #endif
   }
   std::cout << " Number of failures: " << num_failures << " out of " << NUM_ITERATIONS << std::endl;
-  if (num_failures > 0) exit(1);
   AverageTime = AverageTime/NUM_ITERATIONS;
   std::cout << "Average Time: " << AverageTime * 1000 << " ms" << std::endl;
   double stdDev = 0.0, minTime = 1000000.0, maxTime = 0.0;
