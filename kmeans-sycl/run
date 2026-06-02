@@ -1,2 +1,0 @@
-#!/bin/bash
-./main -o -i ../data/kmeans/kdd_cup "$@"

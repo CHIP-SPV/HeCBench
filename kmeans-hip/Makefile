@@ -1,9 +1,10 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++11 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 
 # Debug Flags
@@ -37,4 +38,7 @@ clean:
 	rm -f *.o *~ main *.linkinfo
 
 run: main
-	./main -r -n 5 -m 15 -l 10 -o -i ../data/kmeans/kdd_cup
+	$(LAUNCHER) ./main -r -n 5 -m 15 -l 5 -o -i ../data/kmeans/kdd_cup
+
+smoke: main
+	$(LAUNCHER) ./main -r -n 5 -m 15 -l 10 -o -i ../data/kmeans/204800.txt
