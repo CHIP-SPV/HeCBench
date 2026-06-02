@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cuda.h>
 #include "utils.h"
+#include "reference.h"
 
 __global__ void 
 L2_norm(const float *x, float* l2_norm, int n)
@@ -34,11 +35,11 @@ compute (
     }
 
     // compute objective 
-    float v = logf(1+expf(-1*A_y_label[i]*xp)) ;
+    float v = logf(1.f + expf(-xp * A_y_label[i]));
     atomicAdd(total_obj_val, v);
 
     // compute errors
-    float prediction = 1.f/(1.f + expf(-xp));
+    float prediction = 1.f / (1.f + expf(-xp));
     int t = (prediction >= 0.5f) ? 1 : -1;
     if (A_y_label[i] == t) atomicAdd(correct, 1);
 
@@ -46,14 +47,15 @@ compute (
     float accum = expf(-A_y_label[i] * xp);
     accum = accum / (1.f + accum);
     for(int j = A_row_ptr[i]; j < A_row_ptr[i+1]; ++j){
-      float temp = -accum*A_value[j]*A_y_label[i];
+      float temp = -accum * A_value[j] * A_y_label[i];
       atomicAdd(&grad[A_col_index[j]], temp);
     }
   }
 }
 
 __global__ void
-update(float * __restrict__ x, float * __restrict__ grad, 
+update(float * __restrict__ x,
+       const float * __restrict__ grad,
        int m, int n, float lambda, float alpha) 
 {
   int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -179,8 +181,9 @@ int main(int argc, const char *argv[]) {
   printf("Training time takes %lf (s) for %d iterations\n\n",
          (train_end - train_start) * 1e-6, iters);
 
-  // After 100 iterations, the expected obj_val and train_error are 0.3358405828 and 0.07433331013
   printf("object value = %f train_error = %f\n", obj_val, train_error);
+
+  reference(A, x, grad, m, n, iters, alpha, lambda, obj_val, train_error);
 
   cudaFree(d_row_ptr);
   cudaFree(d_col_index);

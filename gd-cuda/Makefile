@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -14,9 +15,7 @@ ARCH      = sm_60
 
 program = main
 
-source = main.cu utils.cu
-
-obj = $(source:.cu=.o)
+obj = main.o utils.o
 
 #===============================================================================
 # Sets Flags
@@ -47,11 +46,14 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu utils.h
+utils.o: utils.cpp utils.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+main.o: main.cu utils.h reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) gisette_scale 0.0001 10 100  
+	$(LAUNCHER) ./$(program) gisette_scale 0.0001 10 100  

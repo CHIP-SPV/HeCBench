@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sycl/sycl.hpp>
 #include "utils.h"
+#include "reference.h"
 
 template <typename T>
 inline T atomicAdd(T *val, T operand)
@@ -105,11 +106,11 @@ int main(int argc, const char *argv[]) {
           }
 
           // compute objective 
-          float v = sycl::log(1+sycl::exp(-1*d_y_label[i]*xp));
+          float v = sycl::log(1.f + sycl::exp(-xp * d_y_label[i]));
           atomicAdd(d_total_obj_val, v);
 
           // compute errors
-          float prediction = 1.f/(1.f + sycl::exp(-xp));
+          float prediction = 1.f / (1.f + expf(-xp));
           int t = (prediction >= 0.5f) ? 1 : -1;
           if (d_y_label[i] == t) {
             atomicAdd(d_correct, 1);
@@ -119,7 +120,7 @@ int main(int argc, const char *argv[]) {
           float accum = sycl::exp(-d_y_label[i] * xp);
           accum = accum / (1.f + accum);
           for(int j = d_row_ptr[i]; j < d_row_ptr[i+1]; ++j){
-            float temp = -accum*d_value[j]*d_y_label[i];
+            float temp = -accum * d_value[j] * d_y_label[i];
             atomicAdd(d_grad+d_col_index[j], temp);
           }
         }
@@ -164,8 +165,9 @@ int main(int argc, const char *argv[]) {
   printf("Training time takes %lf (s) for %d iterations\n\n", 
          (train_end - train_start) * 1e-6, iters);
 
-  // After 100 iterations, the expected obj_val and train_error are 0.3358405828 and 0.07433331013
   printf("object value = %f train_error = %f\n", obj_val, train_error);
+
+  reference(A, x, grad, m, n, iters, alpha, lambda, obj_val, train_error);
 
   sycl::free(d_row_ptr, q);
   sycl::free(d_col_index, q);

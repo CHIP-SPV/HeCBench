@@ -6,14 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
 program = main
-
-source = main.cu ../gd-cuda/utils.cu
 
 obj = main.o utils.o
 
@@ -22,7 +21,7 @@ obj = main.o utils.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../gd-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gd-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -36,7 +35,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -munsafe-fp-atomics
 endif
 
 #===============================================================================
@@ -46,14 +45,17 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-main.o: main.cu ../gd-cuda/utils.h
+main.o: main.cu ../gd-cuda/utils.h ../gd-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-utils.o: ../gd-cuda/utils.cu ../gd-cuda/utils.h
+utils.o: ../gd-cuda/utils.cpp ../gd-cuda/utils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) gisette_scale 0.0001 10 100  
+	$(LAUNCHER) ./$(program) gisette_scale 0.0001 10 100  
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../gd-cuda/gisette_scale 0.0001 10 5

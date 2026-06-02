@@ -7,14 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
 program = main
-
-source = main.cpp ../gd-sycl/utils.cpp
 
 obj = main.o utils.o 
 
@@ -23,7 +22,7 @@ obj = main.o utils.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gd-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -52,14 +51,14 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-utils.o: ../gd-sycl/utils.cpp ../gd-sycl/utils.h
+utils.o: ../gd-cuda/utils.cpp ../gd-cuda/utils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-main.o: main.cpp  ../gd-sycl/utils.h
+main.o: main.cpp  ../gd-cuda/utils.h ../gd-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) gisette_scale 0.0001 10 100  
+	$(LAUNCHER) ./$(program) gisette_scale 0.0001 10 100  
