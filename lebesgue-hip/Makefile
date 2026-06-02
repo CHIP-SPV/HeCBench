@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -21,7 +22,7 @@ obj = main.o utils.o kernels.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
 
 # Linker Flags
 LDFLAGS = 
@@ -44,7 +45,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-main.o: $(inc)/main.cpp $(inc)/lebesgue.h
+main.o: $(inc)/main.cpp $(inc)/lebesgue.h $(inc)/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 utils.o: $(inc)/utils.cpp $(inc)/lebesgue.h
@@ -60,4 +61,7 @@ test: $(program)
 	./$(program) 501 2
 
 run: $(program)
-	./$(program) 1000000 2
+	$(LAUNCHER) ./$(program) 1000000 2
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1000000 2

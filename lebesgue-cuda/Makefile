@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -47,7 +48,7 @@ $(program): $(obj) Makefile
 %.o: %.cu Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.cpp lebesgue.h Makefile
+%.o: %.cpp reference.h lebesgue.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
@@ -57,4 +58,4 @@ test: $(program)
 	./$(program) 501 2
 
 run: $(program)
-	./$(program) 1000000 2
+	$(LAUNCHER) ./$(program) 1000000 2

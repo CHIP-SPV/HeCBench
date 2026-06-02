@@ -4,6 +4,7 @@
 #include <time.h>
 #include <chrono>
 #include "lebesgue.h"
+#include "reference.h"
 
 //
 // The expected test results are shown in
@@ -28,6 +29,7 @@ void test01 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -41,10 +43,14 @@ void test01 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Chebyshev1 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -53,9 +59,10 @@ void test01 ( sycl::queue &q, int nfun  )
   n = 11;
   x = chebyshev1 ( n );
   r8vec_print ( n, x, "  Chebyshev1 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -77,6 +84,7 @@ void test02 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -90,10 +98,14 @@ void test02 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Chebyshev2 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -102,9 +114,10 @@ void test02 ( sycl::queue &q, int nfun  )
   n = 11;
   x = chebyshev2 ( n );
   r8vec_print ( n, x, "  Chebyshev2 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -126,6 +139,7 @@ void test03 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -139,10 +153,14 @@ void test03 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Chebyshev3 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -151,9 +169,10 @@ void test03 ( sycl::queue &q, int nfun  )
   n = 11;
   x = chebyshev3 ( n );
   r8vec_print ( n, x, "  Chebyshev3 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -175,6 +194,7 @@ void test04 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -188,10 +208,14 @@ void test04 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Chebyshev4 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -200,9 +224,10 @@ void test04 ( sycl::queue &q, int nfun  )
   n = 11;
   x = chebyshev4 ( n );
   r8vec_print ( n, x, "  Chebyshev4 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -224,6 +249,7 @@ void test05 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -237,10 +263,14 @@ void test05 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Equidistant1 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -249,9 +279,10 @@ void test05 ( sycl::queue &q, int nfun  )
   n = 11;
   x = equidistant1 ( n );
   r8vec_print ( n, x, "  Equidistant1 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -273,6 +304,7 @@ void test06 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -286,10 +318,14 @@ void test06 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Equidistant2 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -298,9 +334,10 @@ void test06 ( sycl::queue &q, int nfun  )
   n = 11;
   x = equidistant2 ( n );
   r8vec_print ( n, x, "  Equidistant2 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -322,6 +359,7 @@ void test07 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -335,10 +373,14 @@ void test07 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Equidistant3 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -347,9 +389,10 @@ void test07 ( sycl::queue &q, int nfun  )
   n = 11;
   x = equidistant3 ( n );
   r8vec_print ( n, x, "  Equidistant3 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -371,6 +414,7 @@ void test08 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -384,10 +428,14 @@ void test08 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Fejer1 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -396,9 +444,10 @@ void test08 ( sycl::queue &q, int nfun  )
   n = 11;
   x = fejer1 ( n );
   r8vec_print ( n, x, "  Fejer1 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
@@ -420,6 +469,7 @@ void test09 ( sycl::queue &q, int nfun  )
   l = ( double * ) malloc ( n_max * sizeof ( double ) );
 
   float total_time = 0.f;
+  bool ok = true;
 
   for ( n = 1; n <= n_max; n++ )
   {
@@ -433,10 +483,14 @@ void test09 ( sycl::queue &q, int nfun  )
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     total_time += time;
 
+    ok &= verify(l[n-1], n, x, nfun, xfun);
     free ( x );
   }
   printf ( "  Total kernel execution time %f (s)\n", total_time * 1e-9f);
+  printf ( "  %s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
+#ifdef DEBUG
   r8vec_print ( n_max, l,
     "  Fejer2 Lebesgue constants for N = 1 to 11:" );
 /*
@@ -445,9 +499,10 @@ void test09 ( sycl::queue &q, int nfun  )
   n = 11;
   x = fejer2 ( n );
   r8vec_print ( n, x, "  Fejer2 points for N = 11" );
+  free ( x );
+#endif
 
   free ( l );
-  free ( x );
   free ( xfun );
 }
 
