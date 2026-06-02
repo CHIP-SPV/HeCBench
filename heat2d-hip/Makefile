@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -fopenmp
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -45,14 +46,14 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu io.c lapl_ss.c Makefile
+%.o: %.cu Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
-data.txt: mkinit.py
-	python2 mkinit.py 4096 8192 data.txt
+run: $(program)
+	$(LAUNCHER) ./$(program) 4096 4096 1000
 
-run: $(program) data.txt
-	./$(program) 4096 8192 1000 data.txt
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 256 256 1
