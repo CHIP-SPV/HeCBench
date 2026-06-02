@@ -13,6 +13,7 @@ CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
 GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -31,12 +32,14 @@ obj = $(source:.cpp=.o)
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I${MKLROOT}/include -DMKL_ILP64 -fsycl
 
+ifeq ($(VENDOR), AdaptiveCpp)
+CFLAGS := $(filter-out -fsycl,$(CFLAGS))
+endif
+
 # Linker Flags
-LDFLAGS = ${MKLROOT}/lib/intel64/libmkl_sycl.a -fsycl-device-code-split=per_kernel \
-          -Wl,-export-dynamic -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a \
-          ${MKLROOT}/lib/intel64/libmkl_tbb_thread.a \
-          ${MKLROOT}/lib/intel64/libmkl_core.a \
-          -Wl,--end-group -ltbb -lsycl -lOpenCL -lpthread -lm -ldl 
+LDFLAGS = -L${MKLROOT}/lib -lmkl_sycl -lmkl_intel_ilp64 -lmkl_tbb_thread -lmkl_core \
+          -fsycl-device-code-split=per_kernel \
+          -ltbb -lsycl -lOpenCL -lpthread -lm -ldl
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -77,4 +80,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 100

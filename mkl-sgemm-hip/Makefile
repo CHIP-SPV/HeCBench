@@ -8,6 +8,7 @@ HIPBLAS_ROOT=/opt/rocm/hipblas
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -24,7 +25,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(HIPBLAS_ROOT)/include
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I$(HIPBLAS_ROOT)/include
 
 # Linker Flags
 LDFLAGS = -L$(HIPBLAS_ROOT)/lib -lhipblas
@@ -55,4 +56,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 50000
+
+smoke: $(program)
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) 100
