@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "is.h"
@@ -424,6 +426,7 @@ int main(int argc, char** argv){
   /* the final printout  */
   if(passed_verification != 5*MAX_ITERATIONS+1) {passed_verification = 0;}
   printf("%s\n", passed_verification ? "PASS" : "FAIL");
+  if (!passed_verification) exit(1);
 
   sycl::free(key_array_device, q);
   sycl::free(key_buff1_device, q);
@@ -434,5 +437,5 @@ int main(int argc, char** argv){
   sycl::free(passed_verification_device, q);
   sycl::free(sum_device, q);
 
-  return passed_verification ? 0 : 1;
+  return 0;
 }
