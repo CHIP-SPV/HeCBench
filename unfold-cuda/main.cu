@@ -140,7 +140,8 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
- 
+  if (!ok) exit(1);
+
   cudaFree(d_grad_in);
   cudaFree(d_grad_out);
   cudaFree(d_idx_dim);
