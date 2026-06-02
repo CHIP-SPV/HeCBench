@@ -6,38 +6,44 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
+UPATH = ../boxfilter-sycl
+SPATH = ../medianfilter-cuda
 
 program = main
 
-source = main.cpp shrUtils.cpp MedianFilterHost.cpp
-
-obj = $(source:.cpp=.o)
+obj = main.o shrUtils.o MedianFilterHost.o
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
+          -I$(UPATH) -I$(SPATH) --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -66,17 +72,20 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+main.o: main.cpp MedianFilter.cpp $(UPATH)/shrUtils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-main.o: main.cpp MedianFilter.cpp shrUtils.h
+MedianFilterHost.o : $(SPATH)/MedianFilterHost.cpp 
+	$(CC) $(CFLAGS) -c $< -o $@
 
-MedianFilterHost.o : MedianFilterHost.cpp 
-
-shrUtils.o : shrUtils.cpp shrUtils.h 
+shrUtils.o : $(UPATH)/shrUtils.cpp $(UPATH)/shrUtils.h 
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ./data/SierrasRGB.ppm 1000
+	$(LAUNCHER) ./$(program) ./data/SierrasRGB.ppm 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ./data/SierrasRGB.ppm 1000

@@ -7,23 +7,24 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
+SPATH = ../boxfilter-sycl
 
 program = main
 
-source = main.cu shrUtils.cu MedianFilterHost.cu
-
-obj = $(source:.cu=.o)
+obj = main.o shrUtils.o MedianFilterHost.o
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Xcompiler -Wall -arch=$(ARCH)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Xcompiler -Wall -arch=$(ARCH) \
+          -I$(SPATH)
 
 # Linker Flags
 LDFLAGS = 
@@ -46,17 +47,17 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-main.o: main.cu MedianFilter.cu shrUtils.h
+main.o: main.cu MedianFilter.cu $(SPATH)/shrUtils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-MedianFilterHost.o : MedianFilterHost.cu 
+MedianFilterHost.o : MedianFilterHost.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-shrUtils.o : shrUtils.cu shrUtils.h 
+shrUtils.o : $(SPATH)/shrUtils.cpp $(SPATH)/shrUtils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../medianfilter-sycl/data/SierrasRGB.ppm 1000
+	$(LAUNCHER) ./$(program) ../medianfilter-sycl/data/SierrasRGB.ppm 1000
