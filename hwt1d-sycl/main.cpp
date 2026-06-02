@@ -1,5 +1,5 @@
 /**********************************************************************
-  Copyright ©2013 Advanced Micro Devices, Inc. All rights reserved.
+  Copyright 2013 Advanced Micro Devices, Inc. All rights reserved.
 
   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
@@ -118,8 +118,10 @@ int main(int argc, char * argv[])
 
   if(ok)
     std::cout << "PASS" << std::endl;
-  else
+  else {
     std::cout << "FAIL" << std::endl;
+    exit(1);
+  }
 
-  return ok ? 0 : 1;
+  return 0;
 }
