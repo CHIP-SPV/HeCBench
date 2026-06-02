@@ -103,25 +103,27 @@ __global__ void get_num_of_occurrences(
     const int*__restrict__ min_sad,
           int*__restrict__ num_occurrences)
 {
+  // Every thread in the block must reach every __syncthreads(). The original
+  // code wrapped both barriers in `if (gid < sad_array_size)`, so threads with
+  // gid >= sad_array_size skipped them — deadlocks on Intel GPUs. Hoist the
+  // barriers outside the guard; OOB threads participate but skip the
+  // value-dependent work.
   unsigned int gid = threadIdx.x + blockIdx.x * blockDim.x;
 
   __shared__ int s;
 
-  if (gid < sad_array_size) {
+  if (threadIdx.x == 0) s = 0;
 
-    if (threadIdx.x == 0) s = 0;
+  __syncthreads();
 
-    __syncthreads();
+  if (gid < sad_array_size && sad_array[gid] == *min_sad)
+    atomicAdd(&s, 1);
 
-    if (sad_array[gid] == *min_sad)
-      atomicAdd(&s, 1);
+  __syncthreads();
 
-    __syncthreads();
-
-    // Update global occurance for each block
-    if (threadIdx.x == 0)
-      atomicAdd(num_occurrences, s);
-  }
+  // Update global occurrence for each block
+  if (threadIdx.x == 0)
+    atomicAdd(num_occurrences, s);
 }
 
 int main(int argc, char* argv[]) {

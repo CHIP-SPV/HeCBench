@@ -7,6 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -52,11 +53,11 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../sad-cuda/bitmap_image.hpp
+%.o: %.cpp ../sad-cuda/bitmap_image.hpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../sad-cuda/coins.bmp ../sad-cuda/coin.bmp 100
+	$(LAUNCHER) ./$(program) ../sad-cuda/coins.bmp ../sad-cuda/coin.bmp 100
