@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../scel-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../scel-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -35,7 +36,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 #===============================================================================
 # Targets to Build
@@ -51,4 +52,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2048 50176 100
+	$(LAUNCHER) ./$(program) 2048 50176 300
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 2048 50176 100
