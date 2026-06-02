@@ -3,16 +3,17 @@
 #===============================================================================
 
 # Compiler can be set below, or via environment variable
-CC    = nvcc
+CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = rsbench
+program = main
 
 source = \
 main.cu \
@@ -59,4 +60,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -s large -m event
+	$(LAUNCHER) ./$(program) -s large -m event
