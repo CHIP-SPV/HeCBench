@@ -125,6 +125,7 @@ int main(int argc, char * argv[])
 
   if (fail)
     std::cout << "FAIL\n";
+  exit(1);
   else
     std::cout << "PASS\n";
 
@@ -170,6 +171,7 @@ int main(int argc, char * argv[])
 
   if (fail)
     std::cout << "FAIL\n";
+  exit(1);
   else
     std::cout << "PASS\n";
 

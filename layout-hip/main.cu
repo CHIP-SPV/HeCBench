@@ -35,9 +35,9 @@ struct ApplesOnTrees
   int trees[TREE_NUM];
 };
 
-template<int treeSize>
+template <int treeSize>
 __global__
-void AoSKernel(const AppleTree *__restrict__ trees, 
+void AoSKernel(const AppleTree *__restrict__ trees,
                int *__restrict__ outBuf)
 {
   uint gid = blockIdx.x * blockDim.x + threadIdx.x;
@@ -49,7 +49,7 @@ void AoSKernel(const AppleTree *__restrict__ trees,
   outBuf[gid] = res;
 }
 
-template<int treeSize>
+template <int treeSize>
 __global__
 void SoAKernel(const ApplesOnTrees *__restrict__ applesOnTrees,
                int *__restrict__ outBuf)
@@ -128,9 +128,8 @@ int main(int argc, char * argv[])
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
-  auto AoSK = AoSKernel<treeSize>;
   for (int i = 0; i < iterations; i++)
-    hipLaunchKernelGGL(AoSK, grid, block, 0, 0, (AppleTree*)inputBuffer, outputBuffer);
+    AoSKernel<treeSize><<<grid, block>>>((AppleTree*)inputBuffer, outputBuffer);
 
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
@@ -152,8 +151,9 @@ int main(int argc, char * argv[])
   if (fail) {
     std::cout << "FAIL\n";
     exit(1);
-  } else
+  } else {
     std::cout << "PASS\n";
+  }
 
   //initialize soa data
   for (int i = 0; i < treeNumber; i++)
@@ -165,9 +165,8 @@ int main(int argc, char * argv[])
   hipDeviceSynchronize();
   start = std::chrono::steady_clock::now();
 
-  auto SoAK = SoAKernel<treeSize>;
   for (int i = 0; i < iterations; i++)
-    hipLaunchKernelGGL(SoAK, grid, block, 0, 0, (ApplesOnTrees*)inputBuffer, outputBuffer);
+    SoAKernel<treeSize><<<grid, block>>>((ApplesOnTrees*)inputBuffer, outputBuffer);
 
   hipDeviceSynchronize();
   end = std::chrono::steady_clock::now();
@@ -189,9 +188,10 @@ int main(int argc, char * argv[])
   if (fail) {
     std::cout << "FAIL\n";
     exit(1);
-  } else
+  } else {
     std::cout << "PASS\n";
-  
+  }
+
   hipFree(inputBuffer);
   hipFree(outputBuffer);
   free(deviceResult);
