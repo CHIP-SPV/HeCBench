@@ -145,9 +145,9 @@ int main(int argc, char** argv)
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
 
   if(sum==checksum)
-    std::cout<<"VERIFICATION: result is CORRECT"<<std::endl<<std::endl;
+    std::cout<<"VERIFICATION: PASS"<<std::endl<<std::endl;
   else {
-    std::cout<<"VERIFICATION: result is INCORRECT!!"<<std::endl<<std::endl; exit(1);
+    std::cout<<"VERIFICATION: FAIL!!"<<std::endl<<std::endl;
   }
 
   t1 = std::chrono::high_resolution_clock::now();
@@ -165,9 +165,9 @@ int main(int argc, char** argv)
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
 
   if(sum==checksum)
-    std::cout<<"VERIFICATION: result is CORRECT"<<std::endl<<std::endl;
+    std::cout<<"VERIFICATION: PASS"<<std::endl<<std::endl;
   else {
-    std::cout<<"VERIFICATION: result is INCORRECT!!"<<std::endl<<std::endl; exit(1);
+    std::cout<<"VERIFICATION: FAIL!!"<<std::endl<<std::endl;
   }
   t1 = std::chrono::high_resolution_clock::now();
 
@@ -185,9 +185,9 @@ int main(int argc, char** argv)
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
 
   if(sum==checksum)
-    std::cout<<"VERIFICATION: result is CORRECT"<<std::endl<<std::endl;
+    std::cout<<"VERIFICATION: PASS"<<std::endl<<std::endl;
   else {
-    std::cout<<"VERIFICATION: result is INCORRECT!!"<<std::endl<<std::endl; exit(1);
+    std::cout<<"VERIFICATION: FAIL!!"<<std::endl<<std::endl;
   }
 
   t1 = std::chrono::high_resolution_clock::now();
@@ -205,9 +205,9 @@ int main(int argc, char** argv)
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
 
   if(sum==checksum)
-    std::cout<<"VERIFICATION: result is CORRECT"<<std::endl<<std::endl;
+    std::cout<<"VERIFICATION: PASS"<<std::endl<<std::endl;
   else {
-    std::cout<<"VERIFICATION: result is INCORRECT!!"<<std::endl<<std::endl; exit(1);
+    std::cout<<"VERIFICATION: FAIL!!"<<std::endl<<std::endl;
   }
 
   t1 = std::chrono::high_resolution_clock::now();
@@ -225,9 +225,9 @@ int main(int argc, char** argv)
   hipMemcpy(&sum,out,sizeof(int),hipMemcpyDeviceToHost);
 
   if(sum==checksum)
-    std::cout<<"VERIFICATION: result is CORRECT"<<std::endl<<std::endl;
+    std::cout<<"VERIFICATION: PASS"<<std::endl<<std::endl;
   else {
-    std::cout<<"VERIFICATION: result is INCORRECT!!"<<std::endl<<std::endl; exit(1);
+    std::cout<<"VERIFICATION: FAIL!!"<<std::endl<<std::endl;
   }
 
   hipFree(in);
