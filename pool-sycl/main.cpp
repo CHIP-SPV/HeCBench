@@ -232,6 +232,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] input;
   delete[] output;
@@ -242,5 +243,5 @@ int main(int argc, char* argv[])
   sycl::free(d_input_grad, q);
   sycl::free(d_output, q);
   sycl::free(d_output_grad, q);
-  return ok ? 0 : 1;
+  return 0;
 }

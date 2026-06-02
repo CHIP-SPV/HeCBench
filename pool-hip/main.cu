@@ -29,13 +29,13 @@ class MaxPoolGrad {
 #include "reference.h"
 
 template <typename PoolProcess, typename T,
-	  int ksize_height,
-	  int ksize_width,
-	  int stride_height,
-	  int stride_width,
-	  int padding_height,
-	  int padding_width,
-	  bool exclusive>
+          int ksize_height,
+          int ksize_width,
+          int stride_height,
+          int stride_width,
+          int padding_height,
+          int padding_width,
+          bool exclusive>
 __global__ void KernelPool2DGrad(
     const int nthreads,
     const T*__restrict__ input_data,
@@ -185,14 +185,14 @@ int main(int argc, char* argv[])
   hipDeviceSynchronize();
   auto start = std::chrono::steady_clock::now();
 
-  for (int i = 0; i < repeat; i++)
-    KernelPool2DGrad<AvgPoolGrad<float>, float, ksize_height,
-		     ksize_width, stride_height, stride_width, padding_height,
-		     padding_width, exclusive>
-      <<<grid, threads, 0, 0>>>(
+  for (int i = 0; i < repeat; i++) {
+    KernelPool2DGrad<AvgPoolGrad<float>, float, ksize_height, ksize_width,
+                     stride_height, stride_width, padding_height, padding_width,
+                     exclusive><<<grid, threads, 0, 0>>>(
         nthreads, input_data, output_data, output_grad_data, input_channels,
-        input_height, input_width, output_height, output_width,
-        pool_process, input_grad_data, channel_last);
+        input_height, input_width, output_height, output_width, pool_process,
+        input_grad_data, channel_last);
+  }
 
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
@@ -216,6 +216,7 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   delete[] input;
   delete[] output;
@@ -226,5 +227,5 @@ int main(int argc, char* argv[])
   hipFree(input_grad_data);
   hipFree(output_data);
   hipFree(output_grad_data);
-  return ok ? 0 : 1;
+  return 0;
 }
