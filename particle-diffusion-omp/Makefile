@@ -7,12 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = motionsim
+program = main
 
 source = motionsim.cpp
 
@@ -23,7 +24,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14  -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../particle-diffusion-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -51,11 +52,11 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp ../particle-diffusion-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2000 100
+	$(LAUNCHER) ./$(program) 2000 100

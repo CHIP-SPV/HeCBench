@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = motionsim
+program = main
 
 source = motionsim.cu
 
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../particle-diffusion-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -46,11 +47,14 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu ../particle-diffusion-cuda/reference.h Makefile 
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2000 100
+	$(LAUNCHER) ./$(program) 2000 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 2000 100
