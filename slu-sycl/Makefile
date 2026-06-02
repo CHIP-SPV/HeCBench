@@ -106,3 +106,6 @@ test: $(program)
 
 run: $(program)
 	./$(program) -i $(SLU_PATH)/nicslu/demo/ASIC_100k.mtx
+
+smoke: $(program)
+	./$(program) -i $(SLU_PATH)/nicslu/demo/ASIC_100k.mtx
