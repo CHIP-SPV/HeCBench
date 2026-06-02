@@ -7,7 +7,7 @@ NVCC_FLAGS = --std=c++14 -O3 -arch=sm_$(ARCH) -Xcompiler="-pthread"
 INC_DIR = include
 SRC_DIR = src
 OBJ_DIR = bin
-EXEC_NAME = demo
+EXEC_NAME = main
 
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cc)
 CU_SRC_FILES := $(wildcard $(SRC_DIR)/*.cu)
@@ -30,4 +30,4 @@ clean:
 	rm -f $(RM_FLAGS) $(OBJ_DIR)/$(EXEC_NAME)
 
 run: $(OBJ_DIR)/$(EXEC_NAME)
-	./$(OBJ_DIR)/$(EXEC_NAME) 10
+	$(LAUNCHER) ./$(OBJ_DIR)/$(EXEC_NAME) 10

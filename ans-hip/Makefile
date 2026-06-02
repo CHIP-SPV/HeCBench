@@ -2,12 +2,12 @@ ARCH = gfx908
 
 NVCC = hipcc
 NVCC_ARCH =
-NVCC_FLAGS = --std=c++14 -O3 -pthread
+NVCC_FLAGS = --std=c++17 -O3 -pthread
 
 INC_DIR = include
 SRC_DIR = src
 OBJ_DIR = bin
-EXEC_NAME = demo
+EXEC_NAME = main
 
 SRC_FILES := $(wildcard $(SRC_DIR)/*.cc)
 CU_SRC_FILES := $(wildcard $(SRC_DIR)/*.cu)
@@ -30,4 +30,7 @@ clean:
 	rm -f $(RM_FLAGS) $(OBJ_DIR)/$(EXEC_NAME)
 
 run: $(OBJ_DIR)/$(EXEC_NAME)
-	./$(OBJ_DIR)/$(EXEC_NAME) 10
+	$(LAUNCHER) ./$(OBJ_DIR)/$(EXEC_NAME) 10
+
+smoke: $(OBJ_DIR)/$(EXEC_NAME)
+	$(LAUNCHER) ./$(OBJ_DIR)/$(EXEC_NAME) 1
