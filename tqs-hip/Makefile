@@ -57,3 +57,6 @@ clean:
 
 run: $(program)
 	./$(program) -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
