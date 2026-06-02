@@ -560,6 +560,7 @@ int main( int argc, char * argv[] )
   }
   if (error)
     printf("Fail\n");
+  exit(1);
   else
     printf("Success\n");
 
