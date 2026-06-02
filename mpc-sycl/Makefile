@@ -6,6 +6,7 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
@@ -31,11 +32,16 @@ obj = $(source:.cpp=.o)
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include -I../mpc-cuda -fsycl
 
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
+
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
-  CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda-sycldevice \
+  CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
             --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
@@ -73,6 +79,6 @@ clean:
 	rm -rf $(program) $(obj) *.mpc *.org
 
 run: $(program)
-	./$(program) ../mpc-cuda/msg_sp.trace.out 1
+	$(LAUNCHER) ./$(program) ../mpc-cuda/msg_sp.trace.out 1
 	./$(program) ../mpc-cuda/msg_sp.trace.out.mpc 
 	diff ../mpc-cuda/msg_sp.trace.out msg_sp.trace.out.mpc.org
