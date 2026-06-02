@@ -54,7 +54,9 @@ int main(int argc, char* argv[])
 
   int s = 0;
   for (unsigned int i = 0; i < memSize; i++) s += srcImg[i];
-  printf("%s\n", s == WHITE ? "PASS" : "FAIL");
+  bool ok = (s == WHITE);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(img_d);
   hipFree(tmp_d);
