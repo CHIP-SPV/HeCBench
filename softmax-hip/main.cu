@@ -96,12 +96,13 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(input);
   free(output_cpu);
   free(output_gpu);
   hipFree(d_input);
   hipFree(d_output);
-  return ok ? 0 : 1;
+  return 0;
 }
 

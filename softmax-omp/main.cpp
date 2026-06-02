@@ -9,7 +9,7 @@
 void softMax_cpu(const int numSlice, const int sliceSize, const float* src, float* dest) {
   for (int i = 0; i < numSlice; i++) {
     float max_ = src[i * sliceSize];
-    for (int j = 0; j < sliceSize; j++) {
+    for (int j = 1; j < sliceSize; j++) {
       max_ = (max_ < src[i * sliceSize + j]) ? src[i * sliceSize + j] : max_;
     }
     float sum = 0;
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]) {
       #pragma omp target teams distribute parallel for simd thread_limit(BLOCK_SIZE)
       for (int i = 0; i < numSlice; i++) {
         float max_ = input[i * sliceSize];
-        for (int j = 0; j < sliceSize; j++) {
+        for (int j = 1; j < sliceSize; j++) {
           max_ = (max_ < input[i * sliceSize + j]) ? input[i * sliceSize + j] : max_;
         }
         float sum = 0;
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
   
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-    printf("Average kernel execution time: %f (s)\n", (time * 1e-9f) / repeat);
+    printf("Average kernel execution time: %f (ms)\n", (time * 1e-6f) / repeat);
   }
 
   // verification
@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(input);
   free(output_cpu);
