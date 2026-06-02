@@ -46,3 +46,9 @@ p2p-sycl
 tensorT-sycl
 quicksort-sycl
 bsw-hip
+
+# adv-sycl: throws sycl::exception "level_zero backend failed with error: 29
+# (UR_RESULT_ERROR_INVALID_KERNEL_NAME)" on Intel Arc A770 — kernel JIT/lookup fails
+# even with N=7 cubN=15 small inputs. adv-hip works on chipStar (both L0 and OpenCL)
+# despite a misleading hipErrorLaunchFailure printed at init.
+adv-sycl
