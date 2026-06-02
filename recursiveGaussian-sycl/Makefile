@@ -6,38 +6,42 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-
 program = main
 
-source = main.cpp RecursiveGaussianHost.cpp shrUtils.cpp    
-
-obj = $(source:.cpp=.o)
+obj = main.o RecursiveGaussianHost.o shrUtils.o    
 
 #===============================================================================
 # Sets Flags
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl \
+          -I../boxfilter-sycl -I../recursiveGaussian-cuda
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -66,11 +70,22 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp main.h shrUtils.h
+main.o: main.cpp ../boxfilter-sycl/shrUtils.h ../recursiveGaussian-cuda/main.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+RecursiveGaussianHost.o: ../recursiveGaussian-cuda/RecursiveGaussianHost.cpp \
+                         ../recursiveGaussian-cuda/main.h 
+	$(CC) $(CFLAGS) -c $< -o $@
+
+
+shrUtils.o : ../boxfilter-sycl/shrUtils.cpp ../boxfilter-sycl/shrUtils.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../recursiveGaussian-cuda/StoneRGB.ppm 1000
+	$(LAUNCHER) ./$(program) ../recursiveGaussian-cuda/StoneRGB.ppm 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../recursiveGaussian-cuda/StoneRGB.ppm 1
