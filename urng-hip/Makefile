@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../include -I../urng-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include -I../urng-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../urng-sycl/URNG_Input.bmp 16 16 1000
+	$(LAUNCHER) ./$(program) ../urng-sycl/URNG_Input.bmp 300000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../urng-sycl/URNG_Input.bmp 100
