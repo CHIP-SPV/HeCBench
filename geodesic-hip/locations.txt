@@ -1,1 +1,1 @@
-../geodesic-sycl/locations.txt
+../geodesic-cuda/locations.txt
