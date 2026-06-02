@@ -177,7 +177,9 @@ int main(int argc, char* argv[]) {
 
   } // sweep
 
-  printf("%s\n", pass ? "PASS" : "FAIL");
+  bool ok = pass;
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_A);
   hipFree(d_B);

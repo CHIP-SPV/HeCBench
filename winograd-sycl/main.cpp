@@ -178,6 +178,7 @@ int main(int argc, char* argv[]) {
   } // sweep
 
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!pass) exit(1);
 
   sycl::free(d_A, q);
   sycl::free(d_B, q);

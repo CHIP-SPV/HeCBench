@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 INPUT_SIZE = 1024
+LAUNCHER   =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -DMAP_SIZE=$(INPUT_SIZE)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DMAP_SIZE=$(INPUT_SIZE)
 
 # Linker Flags
 LDFLAGS = 
@@ -53,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 

@@ -9,6 +9,7 @@ DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
 INPUT_SIZE = 1024
+LAUNCHER   =
 
 #===============================================================================
 # Program name & source code list
@@ -25,7 +26,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -DMAP_SIZE=$(INPUT_SIZE)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DMAP_SIZE=$(INPUT_SIZE)
 
 # Linker Flags
 LDFLAGS = 
@@ -63,4 +64,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
