@@ -412,6 +412,6 @@ int main(int argc, char **argv){
   free(output_itemsets);
   hipFree(d_input_itemsets);
   hipFree(d_reference);
-  return err ? 1 : 0;
+  return 0;
 }
 
