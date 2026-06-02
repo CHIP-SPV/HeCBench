@@ -11,7 +11,7 @@ DEBUG     = no
 # Program name & source code list
 #===============================================================================
 
-program = xsbench
+program = main
 
 source = Main.cu \
          Simulation.cu\
@@ -72,4 +72,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -s large -m event -r 10
+	./$(program) -s small -m event -r 1
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -s small -m event -r 2

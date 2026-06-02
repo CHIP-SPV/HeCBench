@@ -12,7 +12,7 @@ CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+GCC_TOOLCHAIN =
 
 #===============================================================================
 # Program name & source code list
@@ -89,3 +89,6 @@ clean:
 
 run: $(program)
 	./$(program) -s large -m event -r 10
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -s small -m event -r 2
