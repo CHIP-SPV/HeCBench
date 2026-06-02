@@ -153,6 +153,7 @@ int main(int argc, char* argv[]) {
   printf("Checksum: %d\n", checksum);
 
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   hipFree(d_vertex);
   hipFree(d_point);
@@ -163,5 +164,5 @@ int main(int argc, char* argv[]) {
   free(point);
   free(bitmap_ref);
   free(bitmap_opt);
-  return error ? 1 : 0;
+  return 0;
 }
