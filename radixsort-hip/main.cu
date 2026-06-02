@@ -113,10 +113,12 @@ int main(int argc, const char **argv)
   // finish
   if (passed)
     printf("PASS\n");
-  else 
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
-  return passed ? 0 : 1;
+  return 0;
 }
 
 void makeRandomUintVector(unsigned int *a, unsigned int numElements, unsigned int keybits)

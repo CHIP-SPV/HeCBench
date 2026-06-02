@@ -113,8 +113,10 @@ int main(int argc, const char **argv)
   // finish
   if (passed)
     printf("PASS\n");
-  else 
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   return 0;
 }
