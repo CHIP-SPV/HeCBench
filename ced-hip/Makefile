@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 OPENCV    = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = -lpthread 
@@ -58,5 +59,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -a 0
+	$(LAUNCHER) ./$(program) -a 0 -r 1100
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -a 0

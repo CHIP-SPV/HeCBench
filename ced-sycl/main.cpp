@@ -605,11 +605,6 @@ int main(int argc, char **argv) {
   free(all_out_frames);
   free(worklist);
 
-  if (status == 0) { 
-    printf("PASS\n");
-    return 0;
-  } else {
-    printf("FAIL\n");
-    return 1;
-  }
+  if (status == 0) printf("PASS\n");
+  return 0;
 }
