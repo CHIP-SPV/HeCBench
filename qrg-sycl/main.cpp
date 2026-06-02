@@ -256,8 +256,10 @@ int main(int argc, const char **argv)
 
   if (bPassFlag)
     printf("PASS\n");
-  else
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   free(h_OutputGPU);
   sycl::free(d_Output, q);
