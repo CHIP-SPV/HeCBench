@@ -7,6 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,10 +24,10 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -qopenmp
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -41,8 +42,6 @@ endif
 
 ifeq ($(DEVICE),gpu)
   CFLAGS +=-fiopenmp -fopenmp-targets=spir64 -D__STRICT_ANSI__
-else
-  CFLAGS +=-qopenmp
 endif
 #===============================================================================
 # Targets to Build
@@ -51,11 +50,11 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp
+%.o: %.cpp reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 1000
+	$(LAUNCHER) ./$(program) 1000
