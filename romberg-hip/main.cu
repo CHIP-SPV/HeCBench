@@ -117,10 +117,10 @@ int main( int argc, char** argv)
   for(int k = 0; k < nwg; k++) sum += h_result[k];
 
   double ref_sum = reference(f, A, B, ROW_SIZE, EPS);
-  bool ok = fabs(sum - ref_sum) <= EPS;
-  printf("%s\n", ok ? "FAIL" : "PASS");
+  printf("%s\n", (fabs(sum - ref_sum) > EPS) ? "FAIL" : "PASS");
+  if ((fabs(sum - ref_sum) > EPS)) exit(1);
 
   hipFree(d_result);
   free(h_result);
-  return ok ? 0 : 1;
+  return 0;
 }
