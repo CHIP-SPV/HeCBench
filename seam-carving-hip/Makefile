@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../seam-carving-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../seam-carving-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -52,5 +53,8 @@ clean:
 	rm -rf $(program) $(obj) *.bmp
 
 run: $(program)
-	./$(program) ../seam-carving-cuda/Broadway_tower.jpg 100 -u 
-	#./$(program) ../seam-carving-cuda/Broadway_tower.jpg 100 -a
+	$(LAUNCHER) ./$(program) ../seam-carving-cuda/Broadway_tower.jpg 100 -u 
+	#$(LAUNCHER) ./$(program) ../seam-carving-cuda/Broadway_tower.jpg 100 -a
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../seam-carving-cuda/Broadway_tower.jpg 100 -u 
