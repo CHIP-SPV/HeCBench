@@ -17,7 +17,7 @@ using namespace std;
 constexpr int m_size = 512 * 8;  // Must be a multiple of 8.
 constexpr int M = m_size / 8;
 constexpr int N = m_size / 4;
-constexpr int P = m_size / 2;
+constexpr int K = m_size / 2;
 
 #include "verify.cpp"
 
@@ -54,11 +54,11 @@ int main(int argc, char* argv[]) {
 
   // 2D arrays on host side.
   float(*a_host)[N] = new float[M][N];
-  float(*b_host)[P] = new float[N][P];
+  float(*b_host)[K] = new float[N][K];
   // host-side cpu result
-  float(*c_host)[P] = new float[M][P];
+  float(*c_host)[K] = new float[M][K];
   // host-side gpu result
-  float(*c_back)[P] = new float[M][P];
+  float(*c_back)[K] = new float[M][K];
 
   for (i = 0; i < M; i++)
     for (j = 0; j < N; j++)
@@ -66,10 +66,10 @@ int main(int argc, char* argv[]) {
 
   srand(123);
   for (i = 0; i < N; i++)
-    for (j = 0; j < P; j++)
+    for (j = 0; j < K; j++)
       b_host[i][j] = rand() % 256;
 
-  for (j = 0; j < P; j++) { 
+  for (j = 0; j < K; j++) { 
     float sum = 0;
     for (i = 0; i < N; i++)
       sum += b_host[i][j];
@@ -80,19 +80,19 @@ int main(int argc, char* argv[]) {
   float *a_device, *b_device, *c_device;
 
   hipMalloc((void **) &a_device, sizeof(float)*M*N);
-  hipMalloc((void **) &b_device, sizeof(float)*N*P);
-  hipMalloc((void **) &c_device, sizeof(float)*M*P);
+  hipMalloc((void **) &b_device, sizeof(float)*N*K);
+  hipMalloc((void **) &c_device, sizeof(float)*M*K);
 
   hipMemcpy(a_device, a_host, sizeof(float)*M*N, hipMemcpyHostToDevice);
-  hipMemcpy(b_device, b_host, sizeof(float)*N*P, hipMemcpyHostToDevice);
+  hipMemcpy(b_device, b_host, sizeof(float)*N*K, hipMemcpyHostToDevice);
 
-  unsigned int grid_cols = (P + BLOCK_SIZE - 1) / BLOCK_SIZE;
+  unsigned int grid_cols = (K + BLOCK_SIZE - 1) / BLOCK_SIZE;
   unsigned int grid_rows = (M + BLOCK_SIZE - 1) / BLOCK_SIZE;
   dim3 dimGrid(grid_cols, grid_rows);
   dim3 dimBlock(BLOCK_SIZE, BLOCK_SIZE);
 
-  cout << "Problem size: c(" << M << "," << P << ") = a(" << M << "," << N
-       << ") * b(" << N << "," << P << ")\n";
+  cout << "Problem size: c(" << M << "," << K << ") = a(" << M << "," << N
+       << ") * b(" << N << "," << K << ")\n";
 
   for (int k = 1; k <= 4; k++) {
     printf("Minkowski distance with p = %d\n", k);
@@ -101,16 +101,15 @@ int main(int argc, char* argv[]) {
 
     auto start = std::chrono::steady_clock::now();
 
-    auto kernel = minkowski<M, N, P>;
     for (int i = 0; i < repeat; i++)
-      hipLaunchKernelGGL(kernel, dimGrid, dimBlock, 0, 0, a_device, b_device, c_device, p, one_over_p);
+      minkowski<M, N, K><<<dimGrid, dimBlock>>>(a_device, b_device, c_device, p, one_over_p);
 
     hipDeviceSynchronize();
     auto end = std::chrono::steady_clock::now();
     auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
     printf("Average kernel execution time: %f (s)\n", (time * 1e-9f) / repeat);
 
-    hipMemcpy(c_back, c_device, sizeof(int)*M*P, hipMemcpyDeviceToHost);
+    hipMemcpy(c_back, c_device, sizeof(int)*M*K, hipMemcpyDeviceToHost);
 
     #ifdef VERIFY
     VerifyResult(a_host, b_host, c_host, c_back, p, one_over_p);
