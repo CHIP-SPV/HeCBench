@@ -102,3 +102,6 @@ clean:
 
 run: $(program)
 	./$(program) -boxes1d 30
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -boxes1d 30

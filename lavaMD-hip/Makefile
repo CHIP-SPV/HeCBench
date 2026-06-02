@@ -63,4 +63,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -boxes1d 30
+	./$(program) -boxes1d 80
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -boxes1d 30
