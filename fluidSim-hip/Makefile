@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 VERIFY    = yes
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -20,7 +21,7 @@ obj = main.o kernels.o reference.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../fluidSim-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../fluidSim-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -59,4 +60,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000
+	$(LAUNCHER) ./$(program) 10000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10
