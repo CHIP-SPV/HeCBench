@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -45,7 +46,7 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu kernels.h Makefile
+%.o: %.cu kernels.h reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
@@ -55,4 +56,4 @@ compress:
 	bzip2 -9 -z -k alphas.csv
 
 run: $(program)
-	./$(program) alphas.csv 10
+	$(LAUNCHER) ./$(program) alphas.csv 10
