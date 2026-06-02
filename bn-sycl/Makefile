@@ -6,13 +6,14 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -29,16 +30,19 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            -Xcuda-ptxas --maxrregcount=32 \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -74,4 +78,7 @@ clean:
 	rm -rf $(program) $(obj) result
 
 run: $(program)
-	./$(program) result 10
+	$(LAUNCHER) ./$(program) result 10
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) result 10
