@@ -6,13 +6,14 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -29,15 +30,19 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = -lpthread
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -73,5 +78,11 @@ clean:
 	rm -rf $(program) $(obj)
 
 # 120 work-groups, 1 CPU thread, 10 warm-up runs, and 100 timed run
-run: $(program)
-	./$(program) -g 120 -t 1 -w 10 -r 100
+input/NYR_input.dat: ../sssp-cuda/data.tar.gz
+	tar xzf ../sssp-cuda/data.tar.gz
+
+run: $(program) input/NYR_input.dat
+	$(LAUNCHER) ./$(program) -g 120 -t 1 -w 10 -r 100
+
+smoke: $(program) input/NYR_input.dat
+	$(LAUNCHER) ./$(program) -g 120 -t 1 -w 10 -r 5

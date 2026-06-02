@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++11 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = -lpthread
@@ -51,5 +52,11 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	./$(program) -g 120 -t 1 -w 10 -r 100
+input/NYR_input.dat: ../sssp-cuda/data.tar.gz
+	tar xzf ../sssp-cuda/data.tar.gz
+
+run: $(program) input/NYR_input.dat
+	$(LAUNCHER) ./$(program) -g 120 -t 1 -w 10 -r 100
+
+smoke: $(program) input/NYR_input.dat
+	$(LAUNCHER) ./$(program) -g 120 -t 1 -w 10 -r 5

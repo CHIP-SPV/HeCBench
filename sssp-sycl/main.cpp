@@ -624,5 +624,6 @@ int main(int argc, char **argv) {
   timer.print("Host/Device Deallocation", 1);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
-  return ok ? 0 : 1;
+  if (!ok) exit(1);
+  return 0;
 }
