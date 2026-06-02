@@ -1,13 +1,14 @@
 #===============================================================================
 # User Options
 #===============================================================================
-MPI_ROOT=$(HOME)/openmpi-4.1.0-install/
-HIPBLAS_ROOT=/opt/rocm/hipblas
-HIPRT_ROOT=/opt/rocm/hip
+MPI_ROOT=/usr/lib/x86_64-linux-gnu/openmpi
+MPI_BIN=/usr/bin
+HIPBLAS_ROOT=/space/pvelesko/install/HIP/chipStar/hecbench-individual-fixes
+HIPRT_ROOT=/space/pvelesko/install/HIP/chipStar/hecbench-individual-fixes
 
 # Compiler can be set below, or via environment variable
 CC        = hipcc
-LD        = $(MPI_ROOT)/bin/mpiCC
+LD        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 
@@ -29,8 +30,8 @@ obj = $(source:.cu=.o)
 CFLAGS := $(EXTRA_CFLAGS) -I$(MPI_ROOT)/include -std=c++11 -Wall -fPIE
 
 # Linker Flags
-LDFLAGS = -L$(HIPBLAS_ROOT)/lib -lhipblas \
-	  -L$(HIPRT_ROOT)/lib -lamdhip64 
+LDFLAGS = -L$(MPI_ROOT)/lib -lmpi -lmpi_cxx \
+	  -L$(HIPBLAS_ROOT)/lib -lhipblas
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -57,4 +58,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(MPI_ROOT)/bin/mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
+	$(MPI_BIN)/mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 30
+
+smoke: $(program)
+	$(MPI_BIN)/mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10

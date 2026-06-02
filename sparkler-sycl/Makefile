@@ -3,8 +3,10 @@
 #===============================================================================
 
 # Compiler can be set below, or via environment variable
-CC        = mpiicpc
+CC        = icpx
 CXX       = icpx
+MPI_INC   = /usr/lib/x86_64-linux-gnu/openmpi/include
+MPI_LIB   = /usr/lib/x86_64-linux-gnu/openmpi/lib
 OPTIMIZE  = yes
 DEBUG     = no
 
@@ -30,17 +32,14 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -cxx=${CXX} -std=c++17 -Wall \
-          -fsycl -I${MKLROOT}/include -DMKL_ILP64 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
+          -fsycl -I$(MPI_INC) -I${MKLROOT}/include -DMKL_ILP64
 
 # Linker Flags
-LDFLAGS = -fsycl ${MKLROOT}/lib/intel64/libmkl_sycl.a \
+LDFLAGS = -fsycl -L${MKLROOT}/lib -lmkl_sycl -lmkl_intel_ilp64 -lmkl_tbb_thread -lmkl_core \
           -fsycl-device-code-split=per_kernel \
-          -Wl,-export-dynamic -Wl,--start-group \
-          ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a \
-          ${MKLROOT}/lib/intel64/libmkl_tbb_thread.a \
-          ${MKLROOT}/lib/intel64/libmkl_core.a \
-          -Wl,--end-group -ltbb -lsycl -lOpenCL -lpthread -lm -ldl 
+          -ltbb -lsycl -lOpenCL -lpthread -lm -ldl \
+          -L$(MPI_LIB) -lmpi -lmpi_cxx
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -81,4 +80,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
+	mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
+
+smoke: $(program)
 	mpirun -n 4 ./$(program) --num_vector 4000 --num_field 90000 --num_iterations 10
