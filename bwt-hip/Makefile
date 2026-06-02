@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -20,7 +21,7 @@ obj = main.o bwt.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../include -I../bwt-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../include -I../bwt-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -30,7 +31,6 @@ ifeq ($(DEBUG),yes)
   CFLAGS += -g
   LDFLAGS  += -g
 endif
-
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
@@ -54,5 +54,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000000
+	$(LAUNCHER) ./$(program) 25000000
 
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 100000
