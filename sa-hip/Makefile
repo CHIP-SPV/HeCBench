@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,6 +24,8 @@ obj = $(source:.cu=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../sa-cuda/
+# chipStar/vulkan: thrust CUDA backend needs CUB which is unavailable; use CPP backend.
+CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
 
 # Linker Flags
 LDFLAGS = 
@@ -51,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../sa-cuda/genome.txt 1000000 100 
+	$(LAUNCHER) ./$(program) ../sa-cuda/genome.txt 1000000 100 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../sa-cuda/genome.txt 1000000 100 
