@@ -56,3 +56,6 @@ clean:
 
 run: $(program)
 	./$(program) example.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) example.txt
