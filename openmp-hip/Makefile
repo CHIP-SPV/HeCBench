@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,10 +23,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -fopenmp -Wall -I../openmp-omp
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../openmp-omp
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS = -fopenmp
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -51,5 +52,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 100
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10
