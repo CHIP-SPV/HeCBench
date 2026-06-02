@@ -372,6 +372,7 @@ int main(int argc, char *argv[])
     printf("PASS\n");
   else
     printf("FAIL\n");
+    exit(1);
 
   cudaFree(glob_d);
   cudaFree(best_d);

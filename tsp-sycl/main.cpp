@@ -391,8 +391,10 @@ int main(int argc, char *argv[])
   // for the specific dataset d493.tsp
   if (best < 38000 && best >= 35002)
     printf("PASS\n");
-  else
+  else {
     printf("FAIL\n");
+    exit(1);
+  }
 
   sycl::free(glob_d, q);
   sycl::free(best_d, q);
