@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,10 +23,10 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../attention-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../attention-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -36,7 +37,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -munsafe-fp-atomics
 endif
 
 #===============================================================================
@@ -46,11 +47,21 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../attention-cuda/reference.h Makefile
+%.o: %.cu ../attention-cuda/reference.h kernels.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 65536 2048 100
+	$(LAUNCHER) ./$(program) 65536 2048 0 100
+	$(LAUNCHER) ./$(program) 65536 2048 1 100
+	$(LAUNCHER) ./$(program) 65536 2048 2 100
+	$(LAUNCHER) ./$(program) 65536 2048 3 100
+	$(LAUNCHER) ./$(program) 8192 8192 0 100
+	$(LAUNCHER) ./$(program) 8192 8192 1 100
+	$(LAUNCHER) ./$(program) 8192 8192 2 100
+	$(LAUNCHER) ./$(program) 8192 8192 3 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 256 64 0 1

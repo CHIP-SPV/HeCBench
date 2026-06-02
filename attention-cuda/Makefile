@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -34,7 +35,6 @@ ifeq ($(DEBUG),yes)
   LDFLAGS  += -g
 endif
 
-
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
@@ -47,11 +47,18 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu reference.h Makefile
+%.o: %.cu reference.h kernels.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 65536 2048 100
+	$(LAUNCHER) ./$(program) 65536 2048 0 1000
+	$(LAUNCHER) ./$(program) 65536 2048 1 1000
+	$(LAUNCHER) ./$(program) 65536 2048 2 1000
+	$(LAUNCHER) ./$(program) 65536 2048 3 1000
+	$(LAUNCHER) ./$(program) 8192 8192 0 1000
+	$(LAUNCHER) ./$(program) 8192 8192 1 1000
+	$(LAUNCHER) ./$(program) 8192 8192 2 1000
+	$(LAUNCHER) ./$(program) 8192 8192 3 1000

@@ -7,6 +7,7 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -26,7 +27,7 @@ obj = $(source:.cpp=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../attention-cuda
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -59,4 +60,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 65536 2048 100
+	$(LAUNCHER) ./$(program) 65536 2048 1000
+	$(LAUNCHER) ./$(program) 8192 8192 1000
