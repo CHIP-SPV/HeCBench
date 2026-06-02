@@ -93,3 +93,6 @@ clean:
 
 run: $(program)
 	./$(program) -a 0.1
+
+smoke: $(program)
+	./$(program) -a 0.1
