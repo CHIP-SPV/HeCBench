@@ -6,6 +6,7 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
@@ -29,15 +30,20 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../atomicIntrinsics-cuda -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../atomicIntrinsics-cuda -fsycl \
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -66,11 +72,14 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp ../atomicIntrinsics-cuda/reference.h
+%.o: %.cpp ../atomicIntrinsics-cuda/reference.h kernel.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100
+	$(LAUNCHER) ./$(program) 27 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 27 1
