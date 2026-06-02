@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I/opt/rocm/hiprand/include/ \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I/opt/rocm/hiprand/include/ \
                            -I/opt/rocm/rocrand/include/
 
 # Linker Flags
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000000 100
+	$(LAUNCHER) ./$(program) 16777216 2000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 16777216 1000
