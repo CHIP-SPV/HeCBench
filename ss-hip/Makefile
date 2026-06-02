@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -51,5 +52,11 @@ $(program): $(obj)
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	./$(program) ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000
+../ss-sycl/StringSearch_Input.txt: ../ss-sycl/input.tar.gz
+	cd ../ss-sycl && tar xzf input.tar.gz
+
+run: $(program) ../ss-sycl/StringSearch_Input.txt
+	$(LAUNCHER) ./$(program) ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000
+
+smoke: $(program) ../ss-sycl/StringSearch_Input.txt
+	$(LAUNCHER) ./$(program) ../ss-sycl/StringSearch_Input.txt clEnqueueNDRangeKernel 20000

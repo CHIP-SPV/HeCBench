@@ -45,6 +45,7 @@ int verify(uint* resultCount, uint workGroupCount,
   std::sort(result, result+count);
 
   std::cout << "Device: found " << count << " times\n"; 
+  exit(1);
 
   // compare the results and see if they match
   bool pass = (count == cpuResults.size());
@@ -52,11 +53,13 @@ int verify(uint* resultCount, uint workGroupCount,
   if(pass)
   {
     std::cout << "Passed!\n" << std::endl;
+  exit(1);
     return 0;
   }
   else
   {
     std::cout << "Failed\n" << std::endl;
+  exit(1);
     return -1;
   }
 }
@@ -74,6 +77,7 @@ int main(int argc, char* argv[])
   if(iterations < 1)
   {
     std::cout<<"Error, iterations cannot be 0 or negative. Exiting..\n";
+  exit(1);
     return -1;
   }
 
@@ -81,6 +85,7 @@ int main(int argc, char* argv[])
   if(file.length() == 0)
   {
     std::cout << "\n Error: Input File not specified..." << std::endl;
+  exit(1);
     return -1;
   }
 
@@ -90,6 +95,7 @@ int main(int argc, char* argv[])
   if(! textFile.is_open())
   {
     std::cout << "\n Unable to open file: " << file << std::endl;
+  exit(1);
     return -1;
   }
 
@@ -100,6 +106,7 @@ int main(int argc, char* argv[])
   if (!textFile.read ((char*)text, textLength))
   {
     std::cout << "\n Reading file failed " << std::endl;
+  exit(1);
     textFile.close();
     return -1;
   }
@@ -109,12 +116,14 @@ int main(int argc, char* argv[])
   if(subStrLength == 0)
   {
     std::cout << "\nError: Sub-String not specified..." << std::endl;
+  exit(1);
     return -1;
   }
 
   if (textLength < subStrLength)
   {
     std::cout << "\nText size less than search pattern (" << textLength
+  exit(1);
       << " < " << subStrLength << ")" << std::endl;
     return -1;
   }
@@ -123,11 +132,13 @@ int main(int argc, char* argv[])
   if(subStrLength != 1 && subStrLength <= 16)
   {
     std::cout << "\nSearch pattern size should be longer than 16" << std::endl;
+  exit(1);
     return -1;
   }
 #endif
 
   std::cout << "Search Pattern : " << subStr << std::endl;
+  exit(1);
 
   // Rreference implementation on host device
   std::vector<uint> cpuResults;
@@ -166,6 +177,7 @@ int main(int argc, char* argv[])
   }
 
   std::cout << "CPU: found " << cpuResults.size() << " times\n"; 
+  exit(1);
 
   uchar *textBuf;
   cudaMalloc((void**)&textBuf, textLength);
@@ -198,9 +210,11 @@ int main(int argc, char* argv[])
   if(subStrLength == 1)
   {
     std::cout <<
+  exit(1);
       "\nRun only Naive-Kernel version of String Search for pattern size = 1" <<
       std::endl;
     std::cout << "\nExecuting String search naive for " <<
+  exit(1);
       iterations << " iterations" << std::endl;
 
     auto start = std::chrono::steady_clock::now();
@@ -229,6 +243,7 @@ int main(int argc, char* argv[])
   if(subStrLength > 1) 
   {
     std::cout << "\nExecuting String search with load balance for " <<
+  exit(1);
       iterations << " iterations" << std::endl;
 
     auto start = std::chrono::steady_clock::now();
