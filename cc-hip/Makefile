@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../mis-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../mis-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,5 +54,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	ulimit -s unlimited	
+	$(LAUNCHER) ulimit -s unlimited	
 	./$(program) ../cc-cuda/delaunay_n24.egr 100
+
+smoke: $(program)
+	ulimit -s unlimited && $(LAUNCHER) ./$(program) ../cc-cuda/delaunay_n24.egr 1

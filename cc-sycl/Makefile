@@ -6,13 +6,14 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -31,19 +32,24 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I$(inc) -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I$(inc) -fsycl \
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
-  CFLAGS += -DWARPSIZE=64 -fsycl-targets=amdgcn-amd-amdhsa \
+  CFLAGS += -fsycl-targets=amdgcn-amd-amdhsa \
 	    -Xsycl-target-backend --offload-arch=$(HIP_ARCH) 
 endif
 
@@ -75,5 +81,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	ulimit -s unlimited	
+	$(LAUNCHER) ulimit -s unlimited	
 	./$(program) ../cc-cuda/delaunay_n24.egr 100
+
+smoke: $(program)
+	ulimit -s unlimited && $(LAUNCHER) ./$(program) ../cc-cuda/delaunay_n24.egr 1
