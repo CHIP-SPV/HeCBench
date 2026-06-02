@@ -77,3 +77,9 @@ clean:
 
 run: $(program)
 	./$(program) ../lsqt-cuda/examples/input.txt
+
+smoke: $(program)
+	# Smoke uses a 100x100 lattice (vs 2000x2000 / 4M-site) to fit 60s budget;
+	# generate the driver file pointing to the smoke example directory.
+	@echo "../lsqt-cuda/examples/smoke" > smoke_input.in
+	$(LAUNCHER) ./$(program) smoke_input.in

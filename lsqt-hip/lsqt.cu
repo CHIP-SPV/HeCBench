@@ -26,6 +26,7 @@
 #include "model.h"
 #include "sigma.h"
 #include "vector.h"
+#include <chrono>
 #include <iostream>
 
 static void print_started_random_vector(int i)
@@ -64,10 +65,11 @@ static void print_finished_ldos()
 
 static void run_dos(Model& model, Hamiltonian& H, Vector& random_state)
 {
-  clock_t time_begin = clock();
+  auto time_begin = std::chrono::steady_clock::now();
   find_dos(model, H, random_state, 0);
-  clock_t time_finish = clock();
-  real time_used = real(time_finish - time_begin) / CLOCKS_PER_SEC;
+  auto time_finish = std::chrono::steady_clock::now();
+  auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(time_finish - time_begin).count();
+  real time_used = time * 1e-9f;
   std::cout << "- Time used for finding DOS = " << time_used << " s" << std::endl;
 }
 
