@@ -7,13 +7,14 @@ CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
 EXAMPLE   = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -30,9 +31,15 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++17 -Wall -I../radixsort2-cuda \
-          -I./oneDPL/include -I./oneTBB/include -fsycl \
-          --gcc-toolchain=$(GCC_TOOLCHAIN)
+DPL_INCLUDE ?= /space/pvelesko/HecBench/HeCBench/src/coordinates-sycl/oneDPL/include
+
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../radixsort2-cuda \
+          -I$(DPL_INCLUDE) -fsycl
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -79,7 +86,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -float -keysonly -n=536870912
-	./$(program) -float -n=536870912
-	./$(program) -keysonly -n=536870912
-	./$(program) -n=536870912
+	$(LAUNCHER) ./$(program) -float -keysonly -n=536870912
+	$(LAUNCHER) ./$(program) -float -n=536870912
+	$(LAUNCHER) ./$(program) -keysonly -n=536870912
+	$(LAUNCHER) ./$(program) -n=536870912
