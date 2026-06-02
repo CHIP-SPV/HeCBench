@@ -67,3 +67,6 @@ demo: $(program)
 
 run: $(program)
 	./$(program) ../logan-cuda/inputs/100k.txt 17 100 1
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../logan-cuda/inputs/100k.txt 17 100 1

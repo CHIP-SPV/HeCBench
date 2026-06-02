@@ -33,11 +33,11 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall \
-          -Isrc -I$(OPENMP_INCLUDE) \
+          -Isrc \
           -fopenmp -fsycl
 
 # Linker Flags
-LDFLAGS = -L$(OPENMP_LIB) -lomp
+LDFLAGS = -fopenmp
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
@@ -92,3 +92,6 @@ demo: $(program)
 
 run: $(program)
 	./$(program) ../logan-cuda/inputs/100k.txt 17 100 1
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../logan-cuda/inputs/100k.txt 17 100 1
