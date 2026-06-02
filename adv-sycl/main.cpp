@@ -271,7 +271,8 @@ int main(int argc, char **argv) {
 
   q.wait();
   auto end = std::chrono::high_resolution_clock::now();
-  const double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / Ntests;
+  const double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / (double)Ntests;
+  printf("Average kernel execution time %f (us)\n", elapsed * 1e-3);
 
   q.memcpy(h_adv, adv, 3*Np*Nelements*sizeof(dfloat)).wait();
 

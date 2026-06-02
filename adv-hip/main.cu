@@ -92,7 +92,8 @@ int main(int argc, char **argv) {
 
   hipDeviceSynchronize();
   auto end = std::chrono::high_resolution_clock::now();
-  const double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / Ntests;
+  const double elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() / (double)Ntests;
+  printf("Average kernel execution time %f (us)\n", elapsed * 1e-3);
 
   hipMemcpy(adv, d_adv, 3*Np*Nelements*sizeof(dfloat), hipMemcpyDeviceToHost);
 
