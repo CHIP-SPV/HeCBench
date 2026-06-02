@@ -14,6 +14,7 @@ CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
 GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -38,6 +39,10 @@ obj = $(source:.cpp=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -fsycl -fopenmp \
           -I$(Trimesh_PATH)/include \
           -I$(GLM_PATH)/include
+
+ifeq ($(VENDOR), AdaptiveCpp)
+CFLAGS := $(filter-out -fsycl,$(CFLAGS))
+endif
 
 # Linker Flags
 LDFLAGS = $(Trimesh_PATH)/lib.Linux64/libtrimesh.a \
@@ -83,4 +88,4 @@ clean:
 	rm -rf $(program) $(obj) *binvox*
 
 run: $(program)
-	./$(program) -s 256 -f ../voxelizer-cuda/xyzrgb_statuette.ply
+	$(LAUNCHER) ./$(program) -s 256 -f ../voxelizer-cuda/xyzrgb_statuette.ply

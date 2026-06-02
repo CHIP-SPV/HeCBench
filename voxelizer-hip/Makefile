@@ -7,6 +7,7 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 GPU       = yes
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -28,7 +29,7 @@ obj = main.o voxelize.o voxelize_solid.o util_io.o cpu_voxelizer.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -fopenmp \
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 \
           -I$(Trimesh_PATH)/include \
           -I$(GLM_PATH)/include
 
@@ -68,4 +69,7 @@ clean:
 	rm -rf $(program) $(obj) *binvox*
 
 run: $(program)
-	./$(program) -s 256 -f ../voxelizer-cuda/xyzrgb_statuette.ply
+	$(LAUNCHER) ./$(program) -s 256 -f ../voxelizer-cuda/xyzrgb_statuette.ply
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -s 64 -f ../voxelizer-cuda/xyzrgb_statuette.ply
