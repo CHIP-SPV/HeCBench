@@ -14,116 +14,18 @@
 #include <chrono>
 #include <hip/hip_runtime.h>
 #include <hip/hip_fp16.h>
+#include <hipcub/hipcub.hpp>
+#include <hipblas/hipblas.h>
+#include "kernels.h"
 
-#define NUM_OF_BLOCKS 1024
-#define NUM_OF_THREADS 128
-
-__forceinline__ __device__ 
-void reduceInShared_intrinsics(half2 * const v)
-{
-  int lid = threadIdx.x;  
-  if(lid<64) v[lid] = __hadd2( v[lid], v[lid+64]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+32]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+16]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+8]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+4]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+2]);
-  __syncthreads();
-  if(lid<32) v[lid] = __hadd2( v[lid], v[lid+1]);
-  __syncthreads();
-}
-
-__forceinline__ __device__
-void reduceInShared_native(half2 * const v)
-{
-  int lid = threadIdx.x;  
-  if(lid<64) v[lid] = v[lid] + v[lid+64];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+32];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+16];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+8];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+4];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+2];
-  __syncthreads();
-  if(lid<32) v[lid] = v[lid] + v[lid+1];
-  __syncthreads();
-}
-
-__global__
-void scalarProductKernel_intrinsics(
-    half2 const *__restrict__ const a,
-    half2 const *__restrict__ const b,
-    float *__restrict__ const results,
-    size_t const size)
-{
-  const int stride = gridDim.x*blockDim.x;
-  __shared__ half2 shArray[NUM_OF_THREADS];
-
-  half2 value = __float2half2_rn(0.f);
-
-  for (int i = threadIdx.x + blockDim.x * blockIdx.x; i < size; i+=stride)
-  {
-    value = __hfma2(a[i], b[i], value);
-  }
-
-  shArray[threadIdx.x] = value;
-  __syncthreads();
-  reduceInShared_intrinsics(shArray);
-
-  if (threadIdx.x == 0)
-  {
-    half2 result = shArray[0];
-    float f_result = __low2float(result) + __high2float(result);
-    results[blockIdx.x] = f_result;
-  }
-}
-
-__global__
-void scalarProductKernel_native(
-    half2 const *__restrict__ const a,
-    half2 const *__restrict__ const b,
-    float *__restrict__ const results,
-    size_t const size)
-{
-  const int stride = gridDim.x*blockDim.x;
-  __shared__ half2 shArray[NUM_OF_THREADS];
-
-  half2 value(0.f, 0.f);
-  shArray[threadIdx.x] = value;
-
-  for (int i = threadIdx.x + blockDim.x * blockIdx.x; i < size; i+=stride)
-  {
-    value += a[i] * b[i];
-  }
-
-  shArray[threadIdx.x] = value;
-  __syncthreads();
-  reduceInShared_native(shArray);
-
-  if (threadIdx.x == 0)
-  {
-    half2 result = shArray[0];
-    float f_result = (float)result.y + (float)result.x;
-    results[blockIdx.x] = f_result;
-  }
-}
-
+// The analytical result of dot product is 65504
 void generateInput(half2 * a, size_t size)
 {
   for (size_t i = 0; i < size; ++i)
   {
     half2 temp;
-    temp.x = static_cast<float>(rand() % 4);
-    temp.y = static_cast<float>(rand() % 2);
+    temp.x = (half)(sqrt(32752.0/size));
+    temp.y = (half)(sqrt(32752.0/size));
     a[i] = temp;
   }
 }
@@ -136,88 +38,136 @@ int main(int argc, char *argv[])
   }
   const int repeat = atoi(argv[1]);
 
-  const size_t size = NUM_OF_BLOCKS*NUM_OF_THREADS*16;
+  const size_t size = NUM_OF_BLOCKS*NUM_OF_THREADS;
   const size_t size_bytes = size * sizeof(half2);
-  const size_t result_bytes = NUM_OF_BLOCKS*sizeof(float);
+  const size_t result_bytes = sizeof(float);
+  const size_t result2_bytes = sizeof(half);
 
   half2 *a, *b;
   half2 *d_a, *d_b;
 
-  float *r;  // result
-  float *d_r;
+  float r, *d_r;
+  half r2, *d_r2;
 
   a = (half2*) malloc (size_bytes);
   b = (half2*) malloc (size_bytes);
   hipMalloc((void**)&d_a, size_bytes);
   hipMalloc((void**)&d_b, size_bytes);
 
-  r = (float*) malloc (result_bytes);
   hipMalloc((void**)&d_r, result_bytes);
+  hipMalloc((void**)&d_r2, result2_bytes);
 
-  srand(123); 
+  srand(123);
   generateInput(a, size);
   hipMemcpy(d_a, a, size_bytes, hipMemcpyHostToDevice);
 
   generateInput(b, size);
   hipMemcpy(d_b, b, size_bytes, hipMemcpyHostToDevice);
 
+  printf("\nNumber of elements in the vectors is %zu\n", size * 2);
+
+  // evaluate the impact of grid sizes on performance
+  for (int grid = NUM_OF_BLOCKS; grid >= NUM_OF_BLOCKS / 16; grid = grid / 2) {
+
+    printf("\nGPU grid size is %d\n", grid);
+
+    // warmup
+    for (int i = 0; i < 1000; i++)
+      scalarProductKernel_intrinsics<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+
+    hipDeviceSynchronize();
+    auto start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < repeat; i++) {
+      hipMemset(d_r, 0, result_bytes);
+      scalarProductKernel_intrinsics<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+    }
+
+    hipDeviceSynchronize();
+    auto end = std::chrono::steady_clock::now();
+    auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average kernel1 execution time %f (us)\n", (time * 1e-3f) / repeat);
+
+    hipMemcpy(&r, d_r, result_bytes, hipMemcpyDeviceToHost);
+    printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
+
+    // warmup
+    for (int i = 0; i < 1000; i++)
+      scalarProductKernel_native_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+
+    hipDeviceSynchronize();
+    start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < repeat; i++) {
+      hipMemset(d_r, 0, result_bytes);
+      scalarProductKernel_native_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+    }
+
+    hipDeviceSynchronize();
+    end = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average kernel2 execution time %f (us)\n", (time * 1e-3f) / repeat);
+
+    hipMemcpy(&r, d_r, result_bytes, hipMemcpyDeviceToHost);
+    printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
+
+    // warmup
+    for (int i = 0; i < 1000; i++)
+      scalarProductKernel_native2_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+
+    hipDeviceSynchronize();
+    start = std::chrono::steady_clock::now();
+
+    for (int i = 0; i < repeat; i++) {
+      hipMemset(d_r, 0, result_bytes);
+      scalarProductKernel_native2_fp32<<<grid, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
+    }
+
+    hipDeviceSynchronize();
+    end = std::chrono::steady_clock::now();
+    time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+    printf("Average kernel3 execution time %f (us)\n", (time * 1e-3f) / repeat);
+
+    hipMemcpy(&r, d_r, result_bytes, hipMemcpyDeviceToHost);
+    printf("Error rate: %e\n", fabsf(r - 65504.f)/65504.f);
+  }
+
+  printf("\n");
+  // library-based dot product
+  hipblasHandle_t h;
+  hipblasCreate(&h);
+  hipblasSetPointerMode(h, HIPBLAS_POINTER_MODE_DEVICE);
+
+  hipDataType xType, yType, rType, eType;
+  xType = yType = rType = HIP_R_16F;
+  eType = HIP_R_32F;
+
   // warmup
-  for (int i = 0; i < repeat; i++)
-    scalarProductKernel_intrinsics<<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
-
+  for (int i = 0; i < 1000; i++) {
+    hipblasDotEx_v2(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
+                yType, 1, d_r2, rType, eType);
+  }
   hipDeviceSynchronize();
+
   auto start = std::chrono::steady_clock::now();
-
-  for (int i = 0; i < repeat; i++)
-    scalarProductKernel_intrinsics<<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
-
+  for (int i = 0; i < repeat; i++) {
+    hipblasDotEx_v2(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
+                yType, 1, d_r2, rType, eType);
+  }
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (us)\n", (time * 1e-3f) / repeat);
-
-  hipMemcpy(r, d_r, result_bytes, hipMemcpyDeviceToHost);
-
-  float result_intrinsics = 0;
-  for (int i = 0; i < NUM_OF_BLOCKS; ++i)
-  {
-    result_intrinsics += r[i];
-  }
-  printf("Result intrinsics\t: %f \n", result_intrinsics);
-
-  // warmup
-  for (int i = 0; i < repeat; i++)
-    scalarProductKernel_native<<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
-
-  hipDeviceSynchronize();
-  start = std::chrono::steady_clock::now();
-
-  for (int i = 0; i < repeat; i++)
-    scalarProductKernel_native<<<NUM_OF_BLOCKS, NUM_OF_THREADS>>>(d_a, d_b, d_r, size);
-
-  hipDeviceSynchronize();
-  end = std::chrono::steady_clock::now();
-  time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average kernel execution time %f (us)\n", (time * 1e-3f) / repeat);
-
-  hipMemcpy(r, d_r, result_bytes, hipMemcpyDeviceToHost);
-
-  float result_native = 0;
-  for (int i = 0; i < NUM_OF_BLOCKS; ++i)
-  {
-    result_native += r[i];
-  }
-  printf("Result native operators\t: %f \n", result_native);
-
-  printf("fp16ScalarProduct %s\n", (fabs(result_intrinsics - result_native) < 0.00001) ? 
-         "PASS" : "FAIL");
+  printf("Average kernel (hipblasDot) execution time %f (us)\n", (time * 1e-3f) / repeat);
+  hipMemcpy(&r2, d_r2, result2_bytes, hipMemcpyDeviceToHost);
+  printf("Error rate: %e\n", fabsf((float)r2 - 65504.f)/65504.f);
 
   hipFree(d_a);
   hipFree(d_b);
   hipFree(d_r);
+  hipFree(d_r2);
+  hipblasDestroy(h);
   free(a);
   free(b);
-  free(r);
 
   return EXIT_SUCCESS;
 }
