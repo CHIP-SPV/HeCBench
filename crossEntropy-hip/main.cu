@@ -302,23 +302,26 @@ int main(int argc, char** argv) {
   printf("=========== Data type is FP16 ==========\n");
 
   LossNLL_BWD<__half, __half>(repeat);
-  LossNLL_BWD<__half, __half>(repeat);
 
-  printf("%s\n", (errors == 0) ? "PASS" : "FAIL");
+  bool ok = (errors == 0);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   printf("=========== Data type is FP32 ==========\n");
 
   LossNLL_BWD<float, float>(repeat);
-  LossNLL_BWD<float, float>(repeat);
 
-  printf("%s\n", (errors == 0) ? "PASS" : "FAIL");
+  ok = (errors == 0);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   printf("=========== Data type is FP64 ==========\n");
 
   LossNLL_BWD<double, double>(repeat);
-  LossNLL_BWD<double, double>(repeat);
 
-  printf("%s\n", (errors == 0) ? "PASS" : "FAIL");
+  ok = (errors == 0);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
-  return (errors == 0) ? 0 : 1;
+  return 0;
 }
