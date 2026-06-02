@@ -7,12 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = nfa
+program = main
 
 source = main.cpp nfautil.cpp regex.cpp
 
@@ -58,4 +59,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./runtests.sh
+	$(LAUNCHER) ./runtests.sh

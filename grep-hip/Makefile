@@ -6,11 +6,12 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-program = nfa
+program = main
 
 source = main.cu nfautil.cu regex.cu
 
@@ -21,7 +22,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -51,4 +52,8 @@ clean:
 	rm -rf $(program) $(obj) RESULTS
 
 run: $(program)
-	./runtests.sh
+	$(LAUNCHER) ./runtests.sh
+
+smoke: $(program)
+	cp -f $(program) nfa
+	$(LAUNCHER) ./runtests.sh

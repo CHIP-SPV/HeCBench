@@ -7,11 +7,12 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-program = nfa
+program = main
 
 source = main.cu nfautil.cu regex.cu
 
@@ -52,4 +53,4 @@ clean:
 	rm -rf $(program) $(obj) RESULTS
 
 run: $(program)
-	./runtests.sh
+	$(LAUNCHER) ./runtests.sh
