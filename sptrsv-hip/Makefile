@@ -60,3 +60,6 @@ clean:
 
 run: $(program)
 	./$(program) ../sptrsv-sycl/lp1.mtx 2000
+
+smoke: $(program)
+	./$(program) ../sptrsv-sycl/lp1.mtx 2000

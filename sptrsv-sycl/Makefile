@@ -78,3 +78,6 @@ clean:
 
 run: $(program)
 	./$(program) lp1.mtx 2000
+
+smoke: $(program)
+	./$(program) lp1.mtx 2000
