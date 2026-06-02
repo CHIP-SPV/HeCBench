@@ -6,7 +6,8 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-BOOST     = $(HOME)/boost_1_76_0
+BOOST     = /space/pvelesko/install/boost/1.86.0
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -24,7 +25,7 @@ obj = main.o kernels.o mttkrp_cpu.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -I$(BOOST) -std=c++11 -I../mmcsf-cuda
+CFLAGS := $(EXTRA_CFLAGS) -I$(BOOST) -std=c++17 -I../mmcsf-cuda
 
 # Linker Flags
 LDFLAGS = -lpthread
@@ -56,8 +57,14 @@ mttkrp_cpu.o : ../mmcsf-cuda/mttkrp_cpu.cu ../mmcsf-cuda/mttkrp_cpu.h
 clean:
 	rm -rf $(program) $(obj)
 
-test: $(program)
-	./$(program) -i ../mmcsf-cuda/toy.tns -m 0 -R 32 -f 128 -w 1
+output.tns: ../mmcsf-cuda/generate_tensor.py
+	python ../mmcsf-cuda/generate_tensor.py output.tns 2%4096 2%4096 2%4096 2%512
+
+test: ../mmcsf-cuda/toy.tns $(program)
+	$(LAUNCHER) ./$(program) -i ../mmcsf-cuda/toy.tns -m 0 -R 32 -f 128 -w 1
   
-run: $(program)
-	./$(program) -i ../mmcsf-cuda/output.tns -m 0 -R 32 -f 128 -w 4
+run: output.tns $(program)
+	$(LAUNCHER) ./$(program) -i output.tns -m 0 -R 32 -f 128 -w 4
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -i output.tns -m 0 -R 32 -f 128 -w 4
