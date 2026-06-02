@@ -128,6 +128,8 @@ int main(int argc, char **argv)
   sycl::free(d_Input, q);
   sycl::free(d_Kernel, q);
 
-  printf("%s\n", L2norm < 1e-6 ? "PASS" : "FAIL");
+  bool ok = (L2norm < 1e-6);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   return 0;
 }
