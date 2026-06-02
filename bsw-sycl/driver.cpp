@@ -1,4 +1,4 @@
-#include <sycl.hpp>
+#include <sycl/sycl.hpp>
 #include "utils.hpp"
 #include "kernel.cpp"
 
@@ -142,6 +142,8 @@ void kernel_driver_aa(std::string filename,
     q.memcpy(d_strB, h_strB, totalLengthB * sizeof(char));
 
     unsigned minSize = (maxReadSize < maxContigSize) ? maxReadSize : maxContigSize;
+    // Cap workgroup size at 1024 (Arc A770 / Level Zero device limit).
+    if (minSize > 1024) minSize = 1024;
     unsigned totShmem = 3 * (minSize + 1) * sizeof(short);
     unsigned alignmentPad = 4 + (4 - totShmem % 4);
     size_t   ShmemBytes = totShmem + alignmentPad;
@@ -168,7 +170,8 @@ void kernel_driver_aa(std::string filename,
 
       cgh.parallel_for<class aa>(
         sycl::nd_range<1>(gws_aa, lws_aa), [=] (sycl::nd_item<1> item)
-        [[intel::reqd_sub_group_size(32)]] {
+        [[intel::reqd_sub_group_size(32)]]
+        {
         sequence_aa_kernel(
            d_strA,
            d_strB,
@@ -207,6 +210,7 @@ void kernel_driver_aa(std::string filename,
     
     // find the new largest of smaller lengths
     int newMin = get_new_min_length(ref_end, query_end, blocksLaunched);
+    if (newMin > 1024) newMin = 1024;
 
     sycl::range<1> gws_aa_r(sequences_per_stream*newMin);
     sycl::range<1> lws_aa_r(newMin);
@@ -226,7 +230,8 @@ void kernel_driver_aa(std::string filename,
       sycl::local_accessor<short, 1> locInds2(32, cgh);
       cgh.parallel_for<class aa_r>(
         sycl::nd_range<1>(gws_aa_r, lws_aa_r), [=] (sycl::nd_item<1> item)
-        [[intel::reqd_sub_group_size(32)]] {
+        [[intel::reqd_sub_group_size(32)]]
+        {
         sequence_aa_kernel(
            d_strA,
            d_strB,
@@ -294,17 +299,22 @@ void kernel_driver_aa(std::string filename,
             << "Total loop iteration time (seconds):"<< diff.count() << "\n";
 
   std::ofstream results_file(filename);
+  if (results_file.is_open()) {
 
-  for(unsigned int k = 0; k < reads.size(); k++){
-    results_file << h_top_scores[k] <<"\t"
-      << h_ref_begin[k] <<"\t"
-      << h_ref_end[k] - 1 <<"\t"
-      << h_query_begin[k] <<"\t"
-      << h_query_end[k] - 1
-      << std::endl;
+    for(unsigned int k = 0; k < reads.size(); k++){
+      results_file << h_top_scores[k] <<"\t"
+                   << h_ref_begin[k] <<"\t"
+                   << h_ref_end[k] - 1 <<"\t"
+                   << h_query_begin[k] <<"\t"
+                   << h_query_end[k] - 1
+                   << std::endl;
+    }
+    results_file.flush();
+    results_file.close();
+  } else {
+    std::cerr << "Error opening the result file "
+              << filename << std::endl;
   }
-  results_file.flush();
-  results_file.close();
 
   long long int total_cells = 0;
   for(unsigned int l = 0; l < reads.size(); l++){

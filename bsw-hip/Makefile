@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -53,8 +54,13 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) \
+	$(LAUNCHER) ./$(program) \
                 ../bsw-cuda/test-data/protein-reference.fasta \
                 ../bsw-cuda/test-data/protein-query.fasta test_regression_protein_out 
 	diff test_regression_protein_out ../bsw-cuda/test-data/result_aa
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) \
+                ../bsw-cuda/test-data/protein-reference.fasta \
+                ../bsw-cuda/test-data/protein-query.fasta test_regression_protein_out
