@@ -7,14 +7,15 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = lud
+program = main
 
-source = lud.cu ./common/common.cu 
+source = lud.cu ./common/common.cpp 
 
 #===============================================================================
 # Sets Flags
@@ -28,7 +29,7 @@ LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
-  CFLAGS += -g
+  CFLAGS += -g -G
   LDFLAGS  += -g
 endif
 
@@ -48,4 +49,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -s 8192
+	$(LAUNCHER) ./$(program) -s 8192

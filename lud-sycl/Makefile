@@ -3,11 +3,8 @@
 #===============================================================================
 
 # Compiler can be set below, or via environment variable
-ifeq ($(VENDOR), codeplay)
-CC        = compute++
-else
 CC        = clang++
-endif
+LAUNCHER=
 
 OPTIMIZE  = yes
 DEBUG     = no
@@ -17,7 +14,7 @@ CUDA      = no
 CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
-GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+#GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 #===============================================================================
 # Program name & source code list
@@ -25,7 +22,7 @@ GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
 
 program = main
 
-source = lud.cpp utils.cpp
+source = lud.cpp common.cpp
 
 obj = $(source:.cpp=.o)
 
@@ -34,26 +31,21 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) $(KERNEL_DIM) -std=c++17 -Wall
+CFLAGS := $(EXTRA_CFLAGS) $(KERNEL_DIM) -std=c++17 -Wall -fsycl \
+          -I../lud-cuda/common
+          --gcc-toolchain=$(GCC_TOOLCHAIN)
 
-ifeq ($(VENDOR), codeplay)
-CFLAGS += -I$(HOME)/computecpp/ComputeCpp-CE-2.7.0-x86_64-linux-gnu/include/ \
-          -no-serial-memop -sycl -sycl-driver
-else
-CFLAGS += -fsycl
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
 endif
 
 # Linker Flags
 LDFLAGS = 
 
-ifeq ($(VENDOR), codeplay)
-LDFLAGS += -lComputeCpp
-endif
-
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -82,14 +74,20 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp lud.h \
+lud.o: lud.cpp ../lud-cuda/common/common.h \
 	kernel_lud_diagonal.sycl \
 	kernel_lud_internal.sycl \
        	kernel_lud_perimeter.sycl
+	$(CC) $(CFLAGS) -c $< -o $@
+
+common.o: ../lud-cuda/common/common.cpp ../lud-cuda/common/common.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -s 8192
+	$(LAUNCHER) ./$(program) -s 8192
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -s 8192
