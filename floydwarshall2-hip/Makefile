@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := -std=c++14 -Wall -I../mis-cuda
+CFLAGS := -std=c++17 -Wall -I../mis-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -53,5 +54,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../floydwarshall2-cuda/CollegeMsg.egr 1000
+	$(LAUNCHER) ./$(program) ../floydwarshall2-cuda/CollegeMsg.egr 50000
 	#./$(program) ../floydwarshall2-cuda/soc-sign-bitcoin-alpha.egr 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../floydwarshall2-cuda/CollegeMsg.egr 1000
