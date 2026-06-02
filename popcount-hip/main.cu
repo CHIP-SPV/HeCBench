@@ -106,8 +106,10 @@ void checkResults(const unsigned long *d, const int *r, const int length)
       break;
     }
 
-  if (error)
+  if (error) {
     printf("Fail\n");
+    exit(1);
+  }
   else
     printf("Success\n");
 }
