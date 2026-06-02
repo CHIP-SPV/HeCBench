@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = main.o read_data.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../extend2-sycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../extend2-sycl
 
 # Linker Flags
 LDFLAGS = 
@@ -56,5 +57,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 2000
+	$(LAUNCHER) ./$(program) 2000
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 100
