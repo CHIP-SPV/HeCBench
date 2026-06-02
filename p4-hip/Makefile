@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../p4-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../p4-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -35,7 +36,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 #===============================================================================
 # Targets to Build
@@ -44,11 +45,14 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../p4-cuda/params.h Makefile
+%.o: %.cu ../p4-cuda/params.h ../p4-cuda/reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000
+	$(LAUNCHER) ./$(program) 10000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10000
