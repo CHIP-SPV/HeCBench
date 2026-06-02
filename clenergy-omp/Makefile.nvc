@@ -8,12 +8,13 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 SM        = cc70
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = clenergy
+program = main
 
 source = clenergy.cpp WKFUtils.cpp
 
@@ -60,5 +61,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
 

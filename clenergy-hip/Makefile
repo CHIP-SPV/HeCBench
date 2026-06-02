@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = clenergy
+program = main
 
 source = clenergy.cu WKFUtils.cu
 
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
 
 # Linker Flags
 LDFLAGS = 
@@ -53,5 +54,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program)
+	$(LAUNCHER) ./$(program)
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program)
