@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = main.o sgd.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = -lpthread
@@ -52,3 +53,6 @@ sgd.o: sgd.cu sgd.h sgd_k128_kernel_hogwild_warp32.h
 
 clean:
 	rm -rf $(program) $(obj)
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -t 5 ../../mf-sgd-cuda/src/test
