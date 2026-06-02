@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -54,5 +55,11 @@ main.o : main.cu kernels.cu sobel.h
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	./$(program) ../sobel-sycl/SobelFilter_Input.bmp 100000
+../sobel-sycl/SobelFilter_Input.bmp: ../sobel-sycl/data.tar.gz
+	cd ../sobel-sycl && tar xzf data.tar.gz
+
+run: $(program) ../sobel-sycl/SobelFilter_Input.bmp
+	$(LAUNCHER) ./$(program) ../sobel-sycl/SobelFilter_Input.bmp 100000
+
+smoke: $(program) ../sobel-sycl/SobelFilter_Input.bmp
+	$(LAUNCHER) ./$(program) ../sobel-sycl/SobelFilter_Input.bmp 100000
