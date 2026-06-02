@@ -13,6 +13,7 @@ CUDA_ARCH = sm_70
 HIP       = no
 HIP_ARCH  = gfx908
 GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -30,6 +31,10 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+
+ifeq ($(VENDOR), AdaptiveCpp)
+CFLAGS := $(filter-out -fsycl,$(CFLAGS))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -79,4 +84,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) data/lena_std.ppm data/lena_ref.dds 100
+	$(LAUNCHER) ./$(program) data/lena_std.ppm data/lena_ref.dds 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) data/lena_std.ppm data/lena_ref.dds 100
