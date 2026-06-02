@@ -7,6 +7,7 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -23,7 +24,8 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Xcompiler -Wall -arch=$(ARCH)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Xcompiler -Wall -arch=$(ARCH) \
+          -Xcompiler -fopenmp
 
 # Linker Flags
 LDFLAGS = 
@@ -36,7 +38,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 --use_fast_math
 endif
 #===============================================================================
 # Targets to Build
@@ -45,11 +47,11 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu reduce.h Makefile
+%.o: %.cu reduce.h reference.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100 128 60000 100
+	$(LAUNCHER) ./$(program) 1024 8 50257 100

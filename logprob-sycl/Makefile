@@ -7,9 +7,10 @@ CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
 WAVEFRONT = 32
-SYCL_REDUCE = no   # invoke sycl::reduce_over_group()
+# invoke sycl::reduce_over_group()
+SYCL_REDUCE = yes
+LAUNCHER    =
 
-SYCL      = yes
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
@@ -32,15 +33,20 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl -fopenmp \
+          -I../logprob-cuda --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
 
 ifeq ($(CUDA), yes)
   CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
-            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
-            --gcc-toolchain=$(GCC_TOOLCHAIN)
+            -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH)
 endif
 
 ifeq ($(HIP), yes)
@@ -56,7 +62,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 
 ifeq ($(GPU),yes)
@@ -77,11 +83,14 @@ endif
 $(program): $(obj)
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cpp reduce.h
+%.o: %.cpp reduce.h ../logprob-cuda/reference.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100 128 60000 100
+	$(LAUNCHER) ./$(program) 1024 8 50257 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 1024 8 50257 100
