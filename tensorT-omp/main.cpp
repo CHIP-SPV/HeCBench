@@ -27,6 +27,7 @@ void verify(double *input, double *output) {
     if (input[input_offset + i * d1 * d2 * d3 * d4] != 
         output[output_offset + i * d2 * d3 * d4 * d6 * d1]) {
       printf("FAIL\n");
+  exit(1);
       error = true;
       break;
     }
@@ -34,10 +35,12 @@ void verify(double *input, double *output) {
   if (!error) printf("PASS\n");
 }
 
-int main(int argv, char **argc) {
-  if (argv > 1) {
-    repeat = atoi(argc[1]);
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    printf("Usage: %s <repeat>\n", argv[0]);
+    return 1;
   }
+  repeat = atoi(argv[1]);
 
   double *input = new double[data_size]();
   double *output = new double[data_size]();
