@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -35,7 +36,7 @@ endif
 
 # Optimization Flags
 ifeq ($(OPTIMIZE),yes)
-  CFLAGS += -O3
+  CFLAGS += -O3 -ffast-math
 endif
 
 #===============================================================================
@@ -52,7 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../svd3x3-cuda/Dataset_1M.txt 100
-	./$(program) ../svd3x3-cuda/Dataset_1M.txt 300
-	./$(program) ../svd3x3-cuda/Dataset_1M.txt 600
-	./$(program) ../svd3x3-cuda/Dataset_1M.txt 900
+	$(LAUNCHER) ./$(program) ../svd3x3-cuda/Dataset_1M.txt 50000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../svd3x3-cuda/Dataset_1M.txt 10
