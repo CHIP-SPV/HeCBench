@@ -153,10 +153,11 @@ int main(int argc, char* argv[]) {
   }
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   free(std_ref);
   free(std);
   free(data);
   hipFree(d_std);
   hipFree(d_data);
-  return ok ? 0 : 1;
+  return 0;
 }
