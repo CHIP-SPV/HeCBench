@@ -16,14 +16,16 @@ void damage_of_node(
      double *__restrict damage,
         int *__restrict local_cache)
 {
-  const int global_id = item.get_global_id(0); 
-  if (global_id >= n) return;
+  const int global_id = item.get_global_id(0);
 
-  const int local_id = item.get_local_id(0); 
-  const int local_size = item.get_local_range(0); 
+  const int local_id = item.get_local_id(0);
+  const int local_size = item.get_local_range(0);
 
-  //Copy values into local memory 
-  local_cache[local_id] = nlist[global_id] != -1 ? 1 : 0; 
+  // Initialize local cache for all lanes (avoid uninitialized reductions for OOB lanes)
+  if (global_id < n)
+    local_cache[local_id] = nlist[global_id] != -1 ? 1 : 0;
+  else
+    local_cache[local_id] = 0;
 
   //Wait for all threads
   item.barrier(sycl::access::fence_space::local_space);
