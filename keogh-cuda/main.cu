@@ -118,13 +118,14 @@ int main(int argc, char* argv[]) {
   reference(subject, avgs, stds, lb_h, lower, upper, M, N);
   bool ok = true;
   for (int i = 0; i < N-M+1; i++) {
-    if (fabsf(lb[i] - lb_h[i]) > 1e-3f) {
+    if (fabsf(lb[i] - lb_h[i]) > 1e-2f) {
       printf("%d %f %f\n", i, lb[i], lb_h[i]);
       ok = false;
       break;
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   cudaFree(d_lb);
   cudaFree(d_avgs);

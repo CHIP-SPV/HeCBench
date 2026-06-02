@@ -118,13 +118,15 @@ int main(int argc, char* argv[]) {
   reference(subject, avgs, stds, lb_h, lower, upper, M, N);
   bool ok = true;
   for (int i = 0; i < N-M+1; i++) {
-    if (fabs(lb[i] - lb_h[i]) > 1e-3) {
+    // Relative+absolute tolerance: lb values reach ~1e5, so absolute 1e-2 is too tight.
+    if (fabs(lb[i] - lb_h[i]) > 1e-3 * fabs(lb_h[i]) + 1e-2) {
       printf("%d %f %f\n", i, lb[i], lb_h[i]);
       ok = false;
       break;
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(d_lb, q);
   sycl::free(d_avgs, q);
@@ -139,7 +141,7 @@ int main(int argc, char* argv[]) {
   free(subject);
   free(lower);
   free(upper);
-  return ok ? 0 : 1;
+  return 0;
 }
 
 

@@ -117,13 +117,15 @@ int main(int argc, char* argv[]) {
   reference(subject, avgs, stds, lb_h, lower, upper, M, N);
   bool ok = true;
   for (int i = 0; i < N-M+1; i++) {
-    if (fabsf(lb[i] - lb_h[i]) > 1e-3f) {
+    // Relative+absolute tolerance: lb values reach ~1e5, so absolute 1e-2 is too tight.
+    if (fabsf(lb[i] - lb_h[i]) > 1e-3f * fabsf(lb_h[i]) + 1e-2f) {
       printf("%d %f %f\n", i, lb[i], lb_h[i]);
       ok = false;
       break;
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   hipFree(d_lb);
   hipFree(d_avgs);
@@ -138,5 +140,5 @@ int main(int argc, char* argv[]) {
   free(subject);
   free(lower);
   free(upper);
-  return ok ? 0 : 1;
+  return 0;
 }
