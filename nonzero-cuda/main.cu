@@ -103,11 +103,10 @@ void nonzero (int nrows, int ncols, int repeat) {
 
     cudaFree(d_temp_storage);
 
-    cudaDeviceSynchronize();
+    cudaMemcpy(&h_nzeros, d_nzeros, sizeof(int64_t), cudaMemcpyDeviceToHost);
+
     auto end = std::chrono::steady_clock::now();
     sum_time += std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-
-    cudaMemcpy(&h_nzeros, d_nzeros, sizeof(int64_t), cudaMemcpyDeviceToHost);
 
     if (h_nzeros != r_nzeros) {
 
@@ -197,6 +196,7 @@ void nonzero (int nrows, int ncols, int repeat) {
          idx_time * 1e-3 / repeat);
 
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 }
 
 int main(int argc, char* argv[])
