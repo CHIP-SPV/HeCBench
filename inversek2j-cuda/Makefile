@@ -7,12 +7,13 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = invkin
+program = main
 
 source = main.cu
 
@@ -54,4 +55,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../inversek2j-sycl/coord_in.txt 100000
+	$(LAUNCHER) ./$(program) ../inversek2j-sycl/coord_in.txt 100000
