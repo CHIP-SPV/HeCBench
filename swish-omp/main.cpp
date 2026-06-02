@@ -3,7 +3,6 @@
 #include <math.h>
 #include <chrono>
 #include <random>
-#include <cuda.h>
 #include "reference.h"
 
 #define GPU_THREADS 256
@@ -83,6 +82,7 @@ void eval_swish (const int N, const int repeat) {
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(h_X);
   free(h_Y);
