@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+//----------------
 #ifdef __unix__
 #include <dirent.h>
 #include <unistd.h>
@@ -26,7 +27,6 @@
 #define GetCurrentDir _getcwd
 #endif
 
-#include "common.h"
 
 // Some useful text replacements related to the analysis
 // The total number of genes involved for this particular kind of dataset // TODO: Revise the wording
@@ -84,7 +84,7 @@ void writeOutputFileHeader(std::ofstream &outdata, const std::string &sigFilenam
     const std::vector<int> &regNum);
 
 // Main processing function
-int processQuery(sycl::queue &q,
+int processQuery(
     const std::vector<std::string> &refFiles, 
     const std::vector<std::string> &sigGeneNameList,
     const std::vector<int> &sigRegValue,
@@ -103,25 +103,26 @@ int queryToIndex(
 inline int getNDrugs(const int compoundChoice);
 
 double computePValue(
-    sycl::queue &q,
     const int nRandomGenerations,
+    const int blocksPerGrid,
     const int threadsPerBlock,
     const double averageSetScore,
     const int setSize,
     const int signatureByRNGs,
     const double UCmax,
-    buffer<float,1> &device_randomIndexArray,
-    buffer<int,1> &device_refRegNum,
-    buffer<float,1> &device_arraysAdded);
+          int *device_aboveThresholdAccumulator,
+    const float *device_randomIndexArray,
+    const int *device_refRegNum,
+          float *device_arraysAdded);
 
 double computePValueHelper(const double nAboveThreshold, const int nRandomGenerations);
 
 inline double computeUCMax(const int sigNGenes, const int nGenesTotal);
 
 double computeDotProduct(
-    sycl::queue &q,
-    buffer<int,1> &device_v1,
-    buffer<int,1> &device_v2,
+    const int *device_v1,
+    const int *device_v2,
+          int *result,
     const int vLength,
     const int blockSize,
     const int nThreads);
