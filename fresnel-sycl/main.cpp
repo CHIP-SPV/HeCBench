@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <math.h>
 #include <chrono>
 #include <sycl/sycl.hpp>
 
@@ -75,11 +76,12 @@ int main(int argc, char *argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
   
   sycl::free(d_x, q);
   sycl::free(d_output, q);
   free(x);
   free(output);
   free(h_output);
-  return ok ? 0 : 1;
+  return 0;
 }
