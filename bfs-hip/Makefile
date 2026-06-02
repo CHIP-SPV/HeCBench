@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../bfs-sycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../bfs-sycl
 
 # Linker Flags
 LDFLAGS = 
@@ -53,5 +54,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../data/bfs/graph1MW_6.txt
+	$(LAUNCHER) ./$(program) ../data/bfs/graph1MW_6.txt
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../data/bfs/graph1MW_6.txt
