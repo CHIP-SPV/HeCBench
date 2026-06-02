@@ -133,6 +133,7 @@ int main(int argc, char* argv[]) {
   //printf("Best candidate score: %f\n", bestScore);
   bool pass = verify(&decrypted[ENCRYPTEDLEN*bestCandidate]);
   printf("%s\n", pass ? "PASS" : "FAIL");
+  if (!pass) exit(1);
 
   hipFree(d_scores);
   hipFree(d_encrypted);
@@ -140,5 +141,5 @@ int main(int argc, char* argv[]) {
   hipFree(devStates);
   delete[] decrypted;
   delete[] scoreHistory;
-  return pass ? 0 : 1;
+  return 0;
 }
