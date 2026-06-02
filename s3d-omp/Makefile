@@ -7,13 +7,14 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = s3d
+program = main
 
 source = main.cpp  Option.cpp  OptionParser.cpp  S3D.cpp 
 
@@ -69,4 +70,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -q -n 100 -s 1
+	$(LAUNCHER) ./$(program) -q -n 100 -s 1

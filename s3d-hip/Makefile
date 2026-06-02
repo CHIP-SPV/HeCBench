@@ -6,13 +6,14 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = s3d
+program = main
 
 source = main.cu  Option.cu  OptionParser.cu  S3D.cu
 
@@ -23,7 +24,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -65,5 +66,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -q -n 100 -s 1
+	$(LAUNCHER) ./$(program) -q -n 100 -s 1
 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -q -n 100 -s 1
