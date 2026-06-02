@@ -6,6 +6,7 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 GPU       = yes
 CUDA      = no
@@ -30,6 +31,11 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../ccs-cuda -fsycl
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -73,5 +79,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -t 0.9 -i ../ccs-cuda/Data_Constant_100_1_bicluster.txt -o ./Output.txt -m 50 -p 1 -g 100.0 -r 100
+	$(LAUNCHER) ./$(program) -t 0.9 -i ../ccs-cuda/Data_Constant_100_1_bicluster.txt -o ./Output.txt -m 50 -p 1 -g 100.0 -r 100
 	diff -Bb Output.txt ../ccs-cuda/ccs_constant_100_1.out
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -t 0.9 -i ../ccs-cuda/Data_Constant_100_1_bicluster.txt -o ./Output.txt -m 50 -p 1 -g 100.0 -r 1
