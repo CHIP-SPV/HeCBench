@@ -139,7 +139,9 @@ int main(int argc, char **argv) {
   // check the result
   long sum = 0;
   for (int i = 0; i < time_clocks; i++) sum += i % 3;
-  printf("%s\n", a[0] == nkernels * sum ? "PASS" : "FAIL");
+  bool ok = (a[0] == nkernels * sum);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   sycl::free(a, q);
   sycl::free(d_a, q);
