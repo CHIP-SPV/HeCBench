@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -DUNIX -DBENCH_ITERATIONS=100 -std=c++14 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -DUNIX -DBENCH_ITERATIONS=100 -std=c++17 -Wall 
 
 # Linker Flags
 LDFLAGS = 
@@ -69,6 +70,9 @@ clean:
 	rm -rf $(program) $(obj) *.dat *.timing *.txt *.csv
 
 run: $(program)
-	./$(program) -num_systems=524288
-	./$(program) --lmem -num_systems=524288
-	./$(program) --vec4 -num_systems=524288 
+	$(LAUNCHER) ./$(program) -num_systems=524288
+	$(LAUNCHER) ./$(program) --lmem -num_systems=524288
+	$(LAUNCHER) ./$(program) --vec4 -num_systems=524288 
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -num_systems=8192
