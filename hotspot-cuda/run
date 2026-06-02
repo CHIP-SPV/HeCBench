@@ -1,2 +1,0 @@
-#!/bin/bash
-./main "$@" ../data/hotspot/temp_512 ../data/hotspot/power_512 output.out

@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../hotspot-cuda/
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../hotspot-cuda/
 
 # Linker Flags
 LDFLAGS = 
@@ -51,4 +52,7 @@ clean:
 	rm -rf $(program) $(obj) *.out
 
 run: $(program)
-	./$(program) 512 2 200 ../data/hotspot/temp_512 ../data/hotspot/power_512 output_512.out
+	$(LAUNCHER) ./$(program) 512 2 20000 ../data/hotspot/temp_512 ../data/hotspot/power_512 output_512.out
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 512 2 200 ../data/hotspot/temp_512 ../data/hotspot/power_512 output_512.out
