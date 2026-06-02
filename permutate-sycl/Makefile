@@ -97,3 +97,6 @@ clean:
 
 run: $(program)
 	./$(program) ../permutate-cuda/test_data/truerand_1bit.bin
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../permutate-cuda/test_data/truerand_1bit.bin
