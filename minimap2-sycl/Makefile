@@ -33,7 +33,7 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl -Iinclude
 
 # Linker Flags
 LDFLAGS = 
@@ -81,3 +81,6 @@ clean:
 
 run: $(program)
 	./$(program) in-1k.txt kernel-out.txt
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) in-1k.txt kernel-out.txt

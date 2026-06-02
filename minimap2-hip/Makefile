@@ -86,3 +86,6 @@ $(BUILD_HIP_PATH)/%.o: $(HIP_PATH)/%.$(HIP_EXT)
 
 run: dirs $(BIN_PATH)/$(BIN_NAME)
 	$(BIN_PATH)/$(BIN_NAME) ../minimap2-sycl/in-1k.txt kernel-out.txt
+
+smoke: release
+	$(LAUNCHER) $(BIN_PATH)/$(BIN_NAME) ../minimap2-sycl/in-1k.txt kernel-out.txt
