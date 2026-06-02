@@ -54,8 +54,10 @@ void verifyBroadcast(const int *out, const int subGroupSize, int pattern = 0)
   }
   if (errors == 0)
     std::cout << "PASS\n";
-  else
+  else {
     std::cout << "FAIL\n";
+    exit(1);
+  }
 }
 
 void verifyTransposeMatrix(const float *TransposeMatrix,
@@ -76,8 +78,10 @@ void verifyTransposeMatrix(const float *TransposeMatrix,
   }
   if (errors == 0)
     std::cout << "PASS\n";
-  else
+  else {
     std::cout << "FAIL\n";
+    exit(1);
+  }
 }
 
 #define __shfl(v, d)  __shfl_sync(0xffffffff, v, d)
@@ -147,7 +151,8 @@ __global__ void transpose_shfl(float* out, const float* in) {
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-    std::cerr << "Usage: " << argv[0] << " <repeat> <repeat for matrix transpose>\n";
+    std::cerr << "Usage: " << argv[0]
+              << " <repeat for broadcast> <repeat for matrix transpose>\n";
     return 1;
   }
   const int repeat = atoi(argv[1]);

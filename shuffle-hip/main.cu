@@ -52,16 +52,16 @@ void verifyBroadcast(const int *out, const int subGroupSize, int pattern = 0)
       break;
     }
   }
-  if (errors == 0)
+  if (errors == 0) {
     std::cout << "PASS\n";
-  else {
+  } else {
     std::cout << "FAIL\n";
     exit(1);
   }
 }
 
 void verifyTransposeMatrix(const float *TransposeMatrix,
-                           const float* cpuTransposeMatrix, 
+                           const float* cpuTransposeMatrix,
                            const int total, const int subGroupSize)
 {
   int errors = 0;
@@ -76,9 +76,9 @@ void verifyTransposeMatrix(const float *TransposeMatrix,
       break;
     }
   }
-  if (errors == 0)
+  if (errors == 0) {
     std::cout << "PASS\n";
-  else {
+  } else {
     std::cout << "FAIL\n";
     exit(1);
   }
@@ -149,7 +149,8 @@ __global__ void transpose_shfl(float* out, const float* in) {
 
 int main(int argc, char* argv[]) {
   if (argc != 3) {
-    std::cerr << "Usage: " << argv[0] << " <repeat> <repeat for matrix transpose>\n";
+    std::cerr << "Usage: " << argv[0]
+              << " <repeat for broadcast> <repeat for matrix transpose>\n";
     return 1;
   }
   const int repeat = atoi(argv[1]);
