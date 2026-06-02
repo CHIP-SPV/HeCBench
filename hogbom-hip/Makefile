@@ -67,4 +67,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) $(src)/data/dirty_4096.img $(src)/data/psf_4096.img 1000
+	./$(program) $(src)/data/dirty_4096.img $(src)/data/psf_4096.img 15000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) $(src)/data/dirty_4096.img $(src)/data/psf_4096.img 1000

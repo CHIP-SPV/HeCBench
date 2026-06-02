@@ -88,3 +88,6 @@ clean:
 
 run: $(program)
 	./$(program) $(inc)/data/dirty_4096.img $(inc)/data/psf_4096.img 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) $(inc)/data/dirty_4096.img $(inc)/data/psf_4096.img 1000
