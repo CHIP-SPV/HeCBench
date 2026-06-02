@@ -14,6 +14,7 @@ HIP       = no
 HIP_ARCH  = gfx908
 ONEMKL    = no
 GCC_TOOLCHAIN = "/auto/software/gcc/x86_64/gcc-9.1.0/"
+LAUNCHER  =
 
 # path to the install of the oneMKL interface
 ONEMKL_PATH   = /path/to/oneMKL
@@ -34,6 +35,10 @@ obj = $(source:.cpp=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl -I../gemmEx-cuda
+
+ifeq ($(VENDOR), AdaptiveCpp)
+CFLAGS := $(filter-out -fsycl,$(CFLAGS))
+endif
 
 ifeq ($(CUDA), yes)
   ONEMKL = yes
@@ -85,4 +90,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 4096 4096 4096 100
+	$(LAUNCHER) ./$(program) 4096 4096 4096 100
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 4096 4096 4096 100

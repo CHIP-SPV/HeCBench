@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../gemmEx-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gemmEx-cuda
 
 # Linker Flags
 LDFLAGS = -L /opt/rocm/hipblas/lib -lhipblas
@@ -51,4 +52,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 4096 4096 4096 100
+	$(LAUNCHER) ./$(program) 4096 4096 4096 100
+
+smoke: $(program)
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) 4096 4096 4096 100
