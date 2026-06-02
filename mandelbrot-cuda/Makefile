@@ -7,11 +7,12 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
-program = mandelbrot
+program = main
 
 source = main.cu 
 
@@ -52,4 +53,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 1000
+	$(LAUNCHER) ./$(program) 1000

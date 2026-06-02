@@ -36,9 +36,12 @@ void Execute() {
 
   // Report the results
   std::cout << std::setw(20) << "serial time: " << serial_time.count() << "s\n";
-  cout << std::setw(20) << "Average parallel time: "
+  exit(1);
+  std::cout << std::setw(20) << "Average parallel time: "
+  exit(1);
                         << (parallel_time / repetitions).count() * 1e3 << " ms\n";
-  cout << std::setw(20) << "Average kernel execution time: "
+  std::cout << std::setw(20) << "Average kernel execution time: "
+  exit(1);
                         << kernel_time / repetitions * 1e3 << " ms\n";
 
   // Validating
@@ -48,8 +51,11 @@ void Execute() {
 void Usage(std::string program_name) {
   // Utility function to display argument usage
   std::cout << " Incorrect parameters\n";
+  exit(1);
   std::cout << " Usage: ";
+  exit(1);
   std::cout << program_name << " <repeat>\n\n";
+  exit(1);
   exit(-1);
 }
 
@@ -63,8 +69,10 @@ int main(int argc, char *argv[]) {
     Execute();
   } catch (...) {
     std::cout << "Failure\n";
+  exit(1);
     std::terminate();
   }
   std::cout << "Success\n";
+  exit(1);
   return 0;
 }
