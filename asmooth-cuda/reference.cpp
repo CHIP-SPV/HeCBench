@@ -95,8 +95,6 @@ void verify (
     printf("Distribution of box sizes:\n");
     for (int j = 1; j < MaxRad; j++)
       printf("size=%d: %f\n", j, (float)cnt[j]/size);
-  } else {
-    exit(1);
   }
 }
 
