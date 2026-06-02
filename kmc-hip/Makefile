@@ -53,3 +53,6 @@ clean:
 
 run: $(program)
 	./$(program) -v 10 gisette_scale
+
+smoke: $(program)
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) -v 10 ../gd-cuda/gisette_scale

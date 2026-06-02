@@ -90,3 +90,6 @@ clean:
 
 run: $(program)
 	./$(program) -v 10 gisette_scale
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -v 10 ../gd-cuda/gisette_scale
