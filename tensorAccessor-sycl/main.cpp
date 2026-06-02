@@ -176,11 +176,12 @@ int main(int argc, char* argv[])
     }
   }
   printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
   free(m);
   free(v);
   free(r);
   free(r_ref);
 
-  return ok ? 0 : 1;
+  return 0;
 }
