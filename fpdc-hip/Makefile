@@ -52,3 +52,6 @@ clean:
 
 run: $(program)
 	./$(program) 255 8 100 2
+
+smoke: $(program)
+	./$(program) 255 8 100 2
