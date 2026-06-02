@@ -68,7 +68,14 @@ int main(int argc, char* argv[]) {
             long temp = (node & MASK) ;
             temp += (next & MASK) ;
             temp += (next >> 32) << 32;
-            item.barrier(sycl::access::fence_space::local_space);
+            // Removed item.barrier() inside divergent control flow:
+            // Level Zero on Arc treats it as a hard requirement that all
+            // work-items reach the same barrier, so the threads with
+            // index>=elems (ND-range round-up) and those that exit the
+            // while at different iterations deadlock the WG -> DEVICE_LOST.
+            // Wyllie pointer-jumping only needs per-thread store ordering.
+            sycl::atomic_fence(sycl::memory_order::release,
+                               sycl::memory_scope::work_group);
             d_list [index] = temp ;
           }
         }
@@ -103,7 +110,9 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  printf("%s\n", (h_res == d_res) ? "PASS" : "FAIL");
+  bool ok = (h_res == d_res);
+  printf("%s\n", ok ? "PASS" : "FAIL");
+  if (!ok) exit(1);
 
-  return (h_res == d_res) ? 0 : 1;
+  return 0;
 }
