@@ -17,6 +17,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <cmath>
 #include <chrono>
 #include <sycl/sycl.hpp>
 #include "kernels.cpp"
