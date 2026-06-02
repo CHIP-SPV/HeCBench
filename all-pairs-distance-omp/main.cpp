@@ -129,14 +129,19 @@ int main(int argc, char **argv) {
       gettimeofday(&tp, &tzp);
       stop_gpu = tp.tv_sec*1000000+tp.tv_usec;
       elapsedTime += stop_gpu - start_gpu;
-  
-      #pragma omp target update from (gpu_distance[0:INSTANCES * INSTANCES])
     }
-  
+
+    #pragma omp target update from (gpu_distance[0:INSTANCES * INSTANCES])
+
     printf("Average kernel execution time (w/o shared memory): %f (us)\n", elapsedTime / iterations);
     status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
-    if (status != 0) printf("FAIL\n");
-    else printf("PASS\n");
+    if (status != 0) {
+      printf("FAIL\n");
+      exit(1);
+    }
+    else {
+      printf("PASS\n");
+    }
   
     elapsedTime = 0; 
     for (int n = 0; n < iterations; n++) {
@@ -185,19 +190,21 @@ int main(int argc, char **argv) {
            necessary because each thread was accessing its own memory
         */
           #pragma omp barrier
-      
-        /* Reduction: Thread 0 will add the value of all other threads to
-        its own */ 
-          if(idx == 0) {
-            for(int i = 1; i < THREADS; i++) {
-              dist[0] += dist[i];
+
+          /* Perform balanced tree reduction across the shared memory */
+          for (int stride = THREADS/2; stride > 0; stride /= 2) {
+            if (idx < stride) {
+              dist[idx] += dist[idx + stride];
             }
-      
+            #pragma omp barrier
+          }
+
             /* Thread 0 will then write the output to global memory. Note that
                this does not need to be performed atomically, because only one
                thread per block is writing to global memory, and each block
-               corresponds to a unique memory address. 
+               corresponds to a unique memory address.
             */
+          if(idx == 0) {
             gpu_distance[INSTANCES*gy + gx] = dist[0];
           }
         }
@@ -206,14 +213,19 @@ int main(int argc, char **argv) {
       gettimeofday(&tp, &tzp);
       stop_gpu = tp.tv_sec*1000000+tp.tv_usec;
       elapsedTime += stop_gpu - start_gpu;
-  
-      #pragma omp target update from (gpu_distance[0:INSTANCES * INSTANCES])
     }
-  
+
+    #pragma omp target update from (gpu_distance[0:INSTANCES * INSTANCES])
+
     printf("Average kernel execution time (w/ shared memory): %f (us)\n", elapsedTime / iterations);
     status = memcmp(cpu_distance, gpu_distance, INSTANCES * INSTANCES * sizeof(int));
-    if (status != 0) printf("FAIL\n");
-    else printf("PASS\n");
+    if (status != 0) {
+      printf("FAIL\n");
+      exit(1);
+    }
+    else {
+      printf("PASS\n");
+    }
   }
 
   free(cpu_distance);
