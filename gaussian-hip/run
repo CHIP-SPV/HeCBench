@@ -1,4 +1,0 @@
-#!/bin/bash
-#./gaussian -f ../data/gaussian/matrix4.txt
-#./gaussian -t -p 0 -d 0 -s 256
-./main -p 0 -d 0  "$@"
