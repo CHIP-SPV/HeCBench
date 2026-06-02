@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = main.o shrUtils.o cmd_arg_reader.o reference.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../boxfilter-sycl
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../boxfilter-sycl
 
 # Linker Flags
 LDFLAGS = 
@@ -54,11 +55,14 @@ shrUtils.o : $(SPATH)/shrUtils.cpp $(SPATH)/shrUtils.h $(SPATH)/cmd_arg_reader.h
 cmd_arg_reader.o : $(SPATH)/cmd_arg_reader.cpp $(SPATH)/cmd_arg_reader.h $(SPATH)/exception.h
 	$(CC) $(CFLAGS) -c $< -o $@
 
-reference.o : $(SPATH)/reference.cpp 
-	$(CC) $(CFLAGS) -c $< -o $@
+reference.o : $(SPATH)/reference.cpp
+	g++ -std=c++17 -O3 -Wall -I../boxfilter-sycl -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../boxfilter-sycl/data/lenaRGB.ppm 10000
+	$(LAUNCHER) ./$(program) ../boxfilter-sycl/data/lenaRGB.ppm 3000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../boxfilter-sycl/data/lenaRGB.ppm 10

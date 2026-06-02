@@ -8,6 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -24,7 +25,7 @@ obj = main.o shrUtils.o cmd_arg_reader.o reference.o
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../boxfilter-sycl 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../boxfilter-sycl 
 
 # Linker Flags
 LDFLAGS = 
@@ -73,4 +74,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../boxfilter-sycl/data/lenaRGB.ppm 10000
+	$(LAUNCHER) ./$(program) ../boxfilter-sycl/data/lenaRGB.ppm 10000
