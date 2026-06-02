@@ -57,3 +57,6 @@ clean:
 
 run: $(program)
 	./$(program) ../graphB+-cuda/graph.csv 10000 output
+
+smoke: $(program)
+	./$(program) ../graphB+-cuda/graph.csv 10000 output
