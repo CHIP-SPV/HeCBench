@@ -5,7 +5,12 @@
  * Perform matrix multiplication on host to verify results from device.
  */
 bool ValueSame(FP a, FP b) {
-  return FABS(a - b) < std::numeric_limits<FP>::epsilon();
+  // Tolerance relaxed: matmul-style accumulation across N elements means the
+  // result is far from machine-epsilon precise. Use an absolute+relative
+  // tolerance suitable for float32 matmul of dimension ~N.
+  const FP atol = (FP)1e-4;
+  const FP rtol = (FP)1e-3;
+  return FABS(a - b) <= atol + rtol * FABS(b);
 }
 
 bool VerifyResult(FP (*a_host)[N], FP (*b_host)[P], 
