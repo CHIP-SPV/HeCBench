@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -51,6 +52,12 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
+	$(LAUNCHER) ./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
                      -d ../bitcracker-cuda/hash_pass/user_passwords_60000.txt \
                      -b 60000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
+                     -d ../bitcracker-cuda/hash_pass/user_passwords_100.txt \
+                     -b 100
+

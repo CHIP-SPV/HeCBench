@@ -6,8 +6,8 @@
 CC        = clang++
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
-SYCL      = yes
 GPU       = yes
 CUDA      = no
 CUDA_ARCH = sm_70
@@ -30,8 +30,12 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl 
-          --gcc-toolchain=$(GCC_TOOLCHAIN)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 
 # Linker Flags
 LDFLAGS = 
@@ -74,6 +78,12 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
+	$(LAUNCHER) ./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
                      -d ../bitcracker-cuda/hash_pass/user_passwords_60000.txt \
                      -b 60000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -f ../bitcracker-cuda/hash_pass/img_win8_user_hash.txt \
+                     -d ../bitcracker-cuda/hash_pass/user_passwords_100.txt \
+                     -b 100
+
