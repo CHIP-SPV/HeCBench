@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 CheckSize ?= 256x256
 FINAL_STATE_FILE = ./final_state.dat
@@ -29,7 +30,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -60,7 +61,11 @@ clean:
 	rm -rf $(program) $(obj) *.dat
 
 run: $(program)
-	./$(program) Inputs/input_256x256.params Obstacles/obstacles_256x256.dat
+	$(LAUNCHER) ./$(program) Inputs/input_256x256.params Obstacles/obstacles_256x256.dat
+
+smoke: $(program)
+	@test -d Inputs || tar xzf test.tar.gz
+	$(LAUNCHER) ./$(program) Inputs/input_256x256.params Obstacles/obstacles_256x256.dat
 
 check: $(AV_VELS_FILE) $(FINAL_STATE_FILE)
 	python check/check.py --ref-av-vels-file=$(REF_AV_VELS_FILE) \
