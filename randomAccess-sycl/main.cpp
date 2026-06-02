@@ -14,7 +14,6 @@ typedef long long int s64Int;
 
 #define K1_BLOCKSIZE  256
 #define K2_BLOCKSIZE  128
-#define K3_BLOCKSIZE  128
 
 u64Int
 HPCC_starts(s64Int n)
@@ -103,16 +102,12 @@ int main(int argc, char** argv) {
 #endif
 
   u64Int *d_Table = sycl::malloc_device<u64Int>(TableSize, q);
-  u64Int *d_ran = sycl::malloc_device<u64Int>(128, q);
 
   sycl::range<1> gws1 ((TableSize+K1_BLOCKSIZE-1) / K1_BLOCKSIZE * K1_BLOCKSIZE);
   sycl::range<1> lws1 (K1_BLOCKSIZE);
 
   sycl::range<1> gws2 (K2_BLOCKSIZE);
   sycl::range<1> lws2 (K2_BLOCKSIZE);
-
-  sycl::range<1> gws3 (K3_BLOCKSIZE);
-  sycl::range<1> lws3 (K3_BLOCKSIZE);
 
   auto start = std::chrono::steady_clock::now();
 
@@ -126,27 +121,19 @@ int main(int argc, char** argv) {
       });
     });
 
-    /* initialize the ran structure */
-    q.submit([&](sycl::handler &h) {
-      h.parallel_for<class init_ranarray>(
-        sycl::nd_range<1>(gws2, lws2), [=](sycl::nd_item<1> item) {
-        int j = item.get_global_id(0);
-        d_ran[j] = HPCC_starts ((NUPDATE/128) * j);
-      });
-    });
-
     /* update the table */
     q.submit([&](sycl::handler &h) {
       h.parallel_for<class update>(
-        sycl::nd_range<1>(gws3, lws3), [=](sycl::nd_item<1> item) {
+        sycl::nd_range<1>(gws2, lws2), [=](sycl::nd_item<1> item) {
         int j = item.get_global_id(0);
+        u64Int ran = HPCC_starts ((NUPDATE/128) * j);
         for (u64Int i=0; i<NUPDATE/128; i++) {
-          d_ran[j] = (d_ran[j] << 1) ^ ((s64Int) d_ran[j] < 0 ? POLY : 0);
+          ran = (ran << 1) ^ ((s64Int) ran < 0 ? POLY : 0);
           auto atm = sycl::atomic_ref<u64Int,
             sycl::memory_order::relaxed,
             sycl::memory_scope::device,
-            sycl::access::address_space::global_space>(d_Table[d_ran[j] & (TableSize-1)]);
-          atm.fetch_xor(d_ran[j]);
+            sycl::access::address_space::global_space>(d_Table[ran & (TableSize-1)]);
+          atm.fetch_xor(ran);
         }
       });
     });
@@ -179,6 +166,5 @@ int main(int argc, char** argv) {
 
   free( Table );
   sycl::free(d_Table, q);
-  sycl::free(d_ran, q);
   return failure;
 }
