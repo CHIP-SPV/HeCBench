@@ -7,12 +7,13 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = iso2dfd
+program = main
 
 source = iso2dfd.cpp
 
@@ -58,4 +59,4 @@ clean:
 	rm -rf $(program) $(obj) *.txt *.bin
 
 run: $(program)
-	./$(program) 2048 2048 1000
+	$(LAUNCHER) ./$(program) 2048 2048 1000

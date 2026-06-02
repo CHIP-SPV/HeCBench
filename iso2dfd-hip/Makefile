@@ -6,12 +6,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = iso2dfd
+program = main
 
 source = iso2dfd.cu
 
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -53,4 +54,7 @@ clean:
 	rm -rf $(program) $(obj) *.bin *.txt
 
 run: $(program)
-	./$(program) 2048 2048 1000
+	$(LAUNCHER) ./$(program) 2048 2048 6000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 2048 2048 1000

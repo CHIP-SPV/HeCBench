@@ -7,12 +7,13 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = iso2dfd
+program = main
 
 source = iso2dfd.cu
 
@@ -54,4 +55,4 @@ clean:
 	rm -rf $(program) $(obj) *.bin *.txt
 
 run: $(program)
-	./$(program) 2048 2048 1000
+	$(LAUNCHER) ./$(program) 2048 2048 1000
