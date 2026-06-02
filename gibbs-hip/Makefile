@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I/opt/rocm/include/hiprand -I/opt/rocm/include/rocrand
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) ../gibbs-cuda/data.csv 5000
+	$(LAUNCHER) ./$(program) ../gibbs-cuda/data.csv 5000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) ../gibbs-cuda/data.csv 5000
