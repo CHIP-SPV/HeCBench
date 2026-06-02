@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../complex-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../complex-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -44,11 +45,15 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu ../complex-cuda/kernels.h ../complex-cuda/complex.h Makefile
+%.o: %.cu reference.h ../complex-cuda/kernels.h \
+          ../complex-cuda/complex.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 10000000 1000
+	$(LAUNCHER) ./$(program) 10000000 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 10000000 1000
