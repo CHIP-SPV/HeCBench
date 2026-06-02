@@ -7,13 +7,14 @@ CC        = nvcc
 OPTIMIZE  = yes
 DEBUG     = no
 ARCH      = sm_60
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = qtc
+program = main
 
 cpp_source = main.cpp Option.cpp OptionParser.cpp comm.cpp libdata.cpp
 cuda_source = QTC.cu 
@@ -72,5 +73,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) --Verbose
+	$(LAUNCHER) ./$(program) --Verbose
 	#./$(program) --SaveOutput

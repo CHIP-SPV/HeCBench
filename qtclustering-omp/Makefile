@@ -7,13 +7,14 @@ CC        = icpx
 OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = qtc
+program = main
 
 source = main.cpp Option.cpp OptionParser.cpp QTC.cpp comm.cpp libdata.cpp
 
@@ -77,5 +78,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) --Verbose
+	$(LAUNCHER) ./$(program) --Verbose
 	#./$(program) --SaveOutput

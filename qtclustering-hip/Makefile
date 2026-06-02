@@ -6,13 +6,14 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 
 #===============================================================================
 # Program name & source code list
 #===============================================================================
 
-program = qtc
+program = main
 
 cpp_source = main.cpp Option.cpp OptionParser.cpp comm.cpp libdata.cpp
 hip_source = QTC.cu 
@@ -24,7 +25,7 @@ obj = $(cpp_source:.cpp=.o) $(hip_source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall 
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall 
 
 # Linker Flags
 LDFLAGS = 
@@ -71,5 +72,5 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) --Verbose
+	$(LAUNCHER) ./$(program) --Verbose
 	#./$(program) --SaveOutput
