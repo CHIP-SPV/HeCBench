@@ -1,3 +1,0 @@
-#!/bin/bash
-#./OpenCL/leukocyte ../data/leukocyte/testfile.avi 10
-./main ../data/leukocyte/testfile.avi "$@"

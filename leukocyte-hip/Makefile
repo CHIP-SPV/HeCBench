@@ -1,12 +1,13 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 # Matrix library path
 MATRIX_DIR = ./meschach_lib
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -Wall -std=c++11 -I$(MATRIX_DIR) -x hip
+CFLAGS := $(EXTRA_CFLAGS) -Wall -std=c++17 -I$(MATRIX_DIR) -x hip
 
 # Linker flags
 LDFLAGS = -lm
@@ -27,7 +28,7 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
-leukocyte: detect_main.o \
+main: detect_main.o \
 	avilib.o \
 	track_ellipse.o \
 	track_ellipse_gpu.o \
@@ -35,7 +36,7 @@ leukocyte: detect_main.o \
 	misc_math.o \
 	helper.o \
 	$(MATRIX_DIR)/meschach.a
-	$(CC)  -o leukocyte avilib.o \
+	$(CC)  -o main avilib.o \
 		track_ellipse.o \
 		track_ellipse_gpu.o \
 		find_ellipse.o \
@@ -62,9 +63,12 @@ track_ellipse_gpu.o: track_ellipse_gpu.c track_ellipse.h kernel_IMGVF.h
 $(MATRIX_DIR)/meschach.a:
 	cd $(MATRIX_DIR); make cleanup; make all CC=$(CC); make clean
 
-run: leukocyte
-	./leukocyte ../data/leukocyte/testfile.avi 100
+run: main
+	$(LAUNCHER) ./main ../data/leukocyte/testfile.avi 599
 
 clean:
-	rm -f *.o *~ leukocyte 
+	rm -f *.o *~ main
 	cd $(MATRIX_DIR); make cleanup
+
+smoke: main
+	$(LAUNCHER) ./main ../data/leukocyte/testfile.avi 1
