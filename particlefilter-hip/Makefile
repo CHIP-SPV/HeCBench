@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../particlefilter-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../particlefilter-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -57,4 +58,7 @@ clean:
 	rm -rf $(program) $(obj) output.txt
 
 run: $(program)
-	./main -x 128 -y 128 -z 10 -np 400000
+	$(LAUNCHER) ./main -x 128 -y 128 -z 10 -np 400000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -x 128 -y 128 -z 10 -np 4000

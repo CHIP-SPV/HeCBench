@@ -8,6 +8,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 ARCH      = gfx906
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -26,7 +27,7 @@ obj = $(source:.cpp=.o)
 BLOCK_SIZE=256
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -DBLOCK_SIZE=$(BLOCK_SIZE)
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DBLOCK_SIZE=$(BLOCK_SIZE)
 
 # Linker Flags
 LDFLAGS = 
@@ -65,4 +66,4 @@ clean:
 	rm -rf $(program) $(obj) output.txt
 
 run: $(program)
-	./$(program) -x 128 -y 128 -z 10 -np 400000
+	$(LAUNCHER) ./$(program) -x 128 -y 128 -z 10 -np 400000
