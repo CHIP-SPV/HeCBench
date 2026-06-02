@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../laplace3d-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../laplace3d-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -51,5 +52,8 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 128 128 128 100 1
-	./$(program) 512 512 512 100 0
+	$(LAUNCHER) ./$(program) 128 128 128 1500 1
+	$(LAUNCHER) ./$(program) 512 512 512 1500 0
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 128 128 128 100 1
