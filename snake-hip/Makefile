@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I../snake-cuda
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../snake-cuda
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 100 ../snake-cuda/Datasets/ERR240727_1_E2_30000Pairs.txt 30000 1000
+	$(LAUNCHER) ./$(program) 100 ../snake-cuda/Datasets/ERR240727_1_E2_30000Pairs.txt 30000 1000
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 100 ../snake-cuda/Datasets/ERR240727_1_E2_30000Pairs.txt 30000 1000

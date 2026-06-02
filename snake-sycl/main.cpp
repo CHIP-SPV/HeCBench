@@ -209,6 +209,7 @@ int main(int argc, const char * const argv[])
           F_ErrorThreshold, elapsed_time / repeat, D_accepted, NumReads - D_accepted);
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
 
   free(ReadSeq);
   free(RefSeq);
@@ -217,5 +218,5 @@ int main(int argc, const char * const argv[])
   sycl::free(d_ReadSeq, q);
   sycl::free(d_RefSeq, q);
   sycl::free(d_Results, q);
-  return error ? 1 : 0;
+  return 0;
 }

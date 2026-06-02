@@ -202,6 +202,7 @@ int main(int argc, const char * const argv[])
     printf("Average kernel time (us): %5.4f", elapsed_time / repeat);
   }
   printf("%s\n", error ? "FAIL" : "PASS");
+  if (error) exit(1);
   
   free(ReadSeq);
   free(RefSeq);
@@ -210,5 +211,5 @@ int main(int argc, const char * const argv[])
   hipFree(Dev_ReadSeq);
   hipFree(Dev_RefSeq);
   hipFree(Dev_Results);
-  return error ? 1 : 0;
+  return 0;
 }
