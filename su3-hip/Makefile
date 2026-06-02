@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -22,7 +23,7 @@ obj = $(source:.cu=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -DMILC_COMPLEX -DPRECISION
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -DMILC_COMPLEX -DPRECISION
 
 # Linker Flags
 LDFLAGS = 
@@ -52,4 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) -i 1000 -l 32 -t 128 -v 3 -w 1
+	$(LAUNCHER) ./$(program) -i 1000 -l 32 -t 128 -v 3 -w 1
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -i 10 -l 16 -t 64 -v 3 -w 1
