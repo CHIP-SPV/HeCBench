@@ -8,6 +8,7 @@ CC        = compute++
 else
 CC        = clang++
 endif
+LAUNCHER=
 
 OPTIMIZE  = yes
 DEBUG     = no
@@ -41,6 +42,11 @@ CFLAGS += -I$(HOME)/computecpp/ComputeCpp-CE-2.7.0-x86_64-linux-gnu/include/ \
           -no-serial-memop -sycl -sycl-driver
 else
 CFLAGS += -fsycl
+
+ifeq ($(VENDOR), AdaptiveCpp)
+    CFLAGS_TMP := $(CFLAGS)
+    CFLAGS = $(filter-out -fsycl, $(CFLAGS_TMP))
+endif
 endif
 
 # Linker Flags
@@ -51,7 +57,7 @@ LDFLAGS += -lComputeCpp
 endif
 
 ifeq ($(CUDA), yes)
-  CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda-sycldevice \
+  CFLAGS += -fsycl-targets=nvptx64-nvidia-cuda \
             -Xsycl-target-backend --cuda-gpu-arch=$(CUDA_ARCH) \
             --gcc-toolchain=$(GCC_TOOLCHAIN)
 endif
@@ -93,5 +99,5 @@ clean:
 	rm -rf *.bmp.dwt.*
 
 run: $(program)
-	#./$(program) 192.bmp -d 192x192 -f -5 -l 3
+	$(LAUNCHER) #./$(program) 192.bmp -d 192x192 -f -5 -l 3
 	./$(program) rgb.bmp -d 1024x1024 -f -5 -l 3
