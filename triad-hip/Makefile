@@ -12,7 +12,7 @@ DEBUG     = no
 # Program name & source code list
 #===============================================================================
 
-program = triad
+program = main
 
 source = main.cpp  Option.cpp  OptionParser.cpp  Timer.cpp
 hip_source = triad.cu 
@@ -67,4 +67,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) --passes 100 -v
+	./$(program) --passes 3000 -v
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) --passes 5 -v

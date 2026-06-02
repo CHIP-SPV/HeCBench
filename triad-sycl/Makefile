@@ -86,3 +86,6 @@ clean:
 
 run: $(program)
 	./$(program) --passes 100 -v
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) --passes 5 -v
