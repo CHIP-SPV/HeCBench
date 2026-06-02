@@ -6,6 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
+LAUNCHER  =
 
 #===============================================================================
 # Program name & source code list
@@ -21,11 +22,14 @@ obj = $(source:.cu=.o)
 # Sets Flags
 #===============================================================================
 
+HIPBLAS_PATH = /space/pvelesko/install/HIP/chipStar/H4I-HipBLAS/2026.04.16
+MKLSHIM_PATH = /space/pvelesko/install/HIP/chipStar/H4I-MKLShim/2026.04.16
+
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(HIPBLAS_PATH)/include
 
 # Linker Flags
-LDFLAGS = -lhipblas 
+LDFLAGS = -L$(HIPBLAS_PATH)/lib -L$(MKLSHIM_PATH)/lib -lhipblas -lMKLShim
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -51,4 +55,4 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	./$(program) 16384 16384 200
+	$(LAUNCHER) ./$(program) 16384 16384 200
