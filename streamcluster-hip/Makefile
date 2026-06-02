@@ -2,10 +2,11 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 PROFILE   = yes
+LAUNCHER  =
 
 
 # Standard flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Linker flags
 LDFLAGS = -lm
@@ -31,7 +32,10 @@ $(EXE):$(SRC) kernel.h streamcluster.h  streamcluster_cl.h
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDFLAGS)
 
 run: $(EXE)
-	./$(EXE) 10 20 256 65536 65536 1000 none output.txt 1 
+	$(LAUNCHER) ./$(EXE) 10 20 256 65536 65536 1000 none output.txt 1
 
 clean: 
 	rm -f $(EXE) output.txt result*
+
+smoke: $(EXE)
+	$(LAUNCHER) ./$(EXE) 10 20 64 1024 1024 100 none output.txt 1

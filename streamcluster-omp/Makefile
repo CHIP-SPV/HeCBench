@@ -3,6 +3,7 @@ OPTIMIZE  = yes
 DEBUG     = no
 DEVICE    = gpu
 PROFILE   = yes
+LAUNCHER  =
 
 
 # Standard flags
@@ -32,13 +33,13 @@ else
 endif
 
 SRC = streamcluster.cpp
-EXE = streamcluster
+EXE = main
 
 $(EXE):$(SRC) kernel.h streamcluster.h  streamcluster_cl.h
 	$(CC) $(CFLAGS) $(SRC) -o $(EXE) $(LDFLAGS)
 
 run: $(EXE)
-	./$(EXE) 10 20 256 65536 65536 1000 none output.txt 1 
+	$(LAUNCHER) ./$(EXE) 10 20 256 65536 65536 1000 none output.txt 1
 
 clean: 
 	rm -f $(EXE) output.txt result*
