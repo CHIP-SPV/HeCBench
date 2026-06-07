@@ -6,7 +6,7 @@
 CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
-WAVEFRONT = 64
+WAVEFRONT = 32
 LAUNCHER  =
 
 #===============================================================================
