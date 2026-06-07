@@ -71,4 +71,4 @@ run: $(program)
 	./$(program) -a 0.1
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) ./$(program) -a 0.1
+	$(LAUNCHER) ./$(program) -m 64 -n 64 -e 1 -r 1 -a 0.1
