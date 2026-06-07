@@ -364,8 +364,9 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  // kernel pointer and descriptor
-  void (*kernel)(float *__restrict__, const float *__restrict__, int, int);
+  // kernel descriptor (no function pointer — chipStar's clang marks __global__
+  // with the device_kernel calling convention so &copy is not assignable to
+  // void (*)(...). Dispatch on the loop index k instead.)
   const char *kernelName;
 
   // execution configuration parameters
@@ -415,52 +416,18 @@ int main(int argc, char **argv)
 
   for (int k = 0; k<8; k++)
   {
-    // set kernel pointer
+    // set kernel name
     switch (k)
     {
-      case 0:
-        kernel = &copy;
-        kernelName = "simple copy       ";
-        break;
-
-      case 1:
-        kernel = &copySharedMem;
-        kernelName = "shared memory copy";
-        break;
-
-      case 2:
-        kernel = &transposeNaive;
-        kernelName = "naive             ";
-        break;
-
-      case 3:
-        kernel = &transposeCoalesced;
-        kernelName = "coalesced         ";
-        break;
-
-      case 4:
-        kernel = &transposeNoBankConflicts;
-        kernelName = "optimized         ";
-        break;
-
-      case 5:
-        kernel = &transposeCoarseGrained;
-        kernelName = "coarse-grained    ";
-        break;
-
-      case 6:
-        kernel = &transposeFineGrained;
-        kernelName = "fine-grained      ";
-        break;
-
-      case 7:
-        kernel = &transposeDiagonal;
-        kernelName = "diagonal          ";
-        break;
+      case 0: kernelName = "simple copy       "; break;
+      case 1: kernelName = "shared memory copy"; break;
+      case 2: kernelName = "naive             "; break;
+      case 3: kernelName = "coalesced         "; break;
+      case 4: kernelName = "optimized         "; break;
     }
 
     // set reference solution
-    if (kernel == &copy || kernel == &copySharedMem)
+    if (k == 0 || k == 1)
     {
       gold = h_idata;
     }
@@ -478,7 +445,17 @@ int main(int argc, char **argv)
 
     for (int i=0; i < repeat; i++)
     {
-      hipLaunchKernelGGL(kernel, grid, threads, 0, 0, d_odata, d_idata, size_x, size_y);
+      switch (k)
+      {
+        case 0: hipLaunchKernelGGL(copy,                     grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 1: hipLaunchKernelGGL(copySharedMem,            grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 2: hipLaunchKernelGGL(transposeNaive,           grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 3: hipLaunchKernelGGL(transposeCoalesced,       grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 4: hipLaunchKernelGGL(transposeNoBankConflicts, grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 5: hipLaunchKernelGGL(transposeCoarseGrained,   grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 6: hipLaunchKernelGGL(transposeFineGrained,     grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+        case 7: hipLaunchKernelGGL(transposeDiagonal,        grid, threads, 0, 0, d_odata, d_idata, size_x, size_y); break;
+      }
     }
 
     hipDeviceSynchronize();
