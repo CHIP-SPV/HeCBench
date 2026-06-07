@@ -69,4 +69,4 @@ run: $(program)
 	./$(program) -s 512
 
 smoke: $(program)
-	./$(program) -s 512
+	./$(program) -s 256
