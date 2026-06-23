@@ -53,7 +53,7 @@ clean:
 	rm -rf $(program) $(obj)
 
 run: $(program)
-	$(LAUNCHER) ./$(program) 1 10
+	$(LAUNCHER) ./$(program) 100 10
 	$(LAUNCHER) ./$(program) 16 10
 
 smoke: $(program)
