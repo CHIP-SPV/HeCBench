@@ -45,8 +45,17 @@ bucketsort.o: bucketsort.cu \
 mergesort.o: mergesort.cu mergesort.h kernel_mergeSortPass.h
 	$(CC) $(CFLAGS) -o mergesort.o -c mergesort.cu
 
+main-smoke: hybridsort.cu bucketsort.cu mergesort.cu mergesort.h bucketsort.h kernel_mergeSortPass.h kernel_histogram.h kernel_bucketcount.h kernel_bucketsort.h kernel_bucketprefix.h
+	$(CC) $(CFLAGS) -DSMOKE -c hybridsort.cu -o hybridsort-smoke.o
+	$(CC) $(CFLAGS) -DSMOKE -c bucketsort.cu -o bucketsort-smoke.o
+	$(CC) $(CFLAGS) -DSMOKE -c mergesort.cu -o mergesort-smoke.o
+	$(CC) $(CFLAGS) -DSMOKE -o main-smoke hybridsort-smoke.o bucketsort-smoke.o mergesort-smoke.o $(LDFLAGS)
+
 run: main
 	$(LAUNCHER) ./main r
+
+smoke: main-smoke
+	$(LAUNCHER) ./main-smoke r
 
 clean:
 	rm -f *.o main

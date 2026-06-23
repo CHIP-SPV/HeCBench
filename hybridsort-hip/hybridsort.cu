@@ -22,7 +22,11 @@
 
 // Use a static data size for simplicity
 //
+#ifdef SMOKE
+#define SIZE (10000)
+#else
 #define SIZE (128024000)
+#endif
 
 ////////////////////////////////////////////////////////////////////////////////
 int compare(const void *a, const void *b) {
