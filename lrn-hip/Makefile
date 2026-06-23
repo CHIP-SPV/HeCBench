@@ -49,10 +49,14 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
+	rm -rf main-smoke
 	rm -rf $(program) $(obj)
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 10
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program) 10
+main-smoke: $(source)
+	$(CC) $(CFLAGS) -DSMOKE $^ -o $@ $(LDFLAGS)
+
+smoke: main-smoke
+	$(LAUNCHER) ./main-smoke 1

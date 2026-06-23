@@ -14,11 +14,19 @@ void Forward(int repeat)
   float alpha = 0.000122;
   float beta = 0.750000;
   float k = 1.000000;
+#ifdef SMOKE
+  int64_t N = 1;
+  int64_t C = 4;
+  int64_t D = 4;
+  int64_t H = 4;
+  int64_t W = 4;
+#else
   int64_t N = 6;
   int64_t C = 150;
   int64_t D = 100;
   int64_t H = 160;
   int64_t W = 160;
+#endif
   int64_t stride_mb = C*D*H*W;
   int64_t wk_size = N*C*D*H*W;
 
@@ -84,11 +92,19 @@ void Backward(int repeat)
   float alpha = 0.000122;
   float beta = 0.750000;
   float k = 1.000000;
+#ifdef SMOKE
+  int64_t N = 1;
+  int64_t C = 4;
+  int64_t D = 4;
+  int64_t H = 4;
+  int64_t W = 4;
+#else
   int64_t N = 5;
   int64_t C = 150;
   int64_t D = 100;
   int64_t H = 160;
   int64_t W = 160;
+#endif
   int64_t stride_mb = C*D*H*W;
   int64_t wk_size = N*C*D*H*W;
 
