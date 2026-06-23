@@ -424,6 +424,9 @@ int main(int argc, char **argv)
       case 2: kernelName = "naive             "; break;
       case 3: kernelName = "coalesced         "; break;
       case 4: kernelName = "optimized         "; break;
+      case 5: kernelName = "coarse-grained    "; break;
+      case 6: kernelName = "fine-grained      "; break;
+      case 7: kernelName = "diagonal          "; break;
     }
 
     // set reference solution
@@ -431,7 +434,7 @@ int main(int argc, char **argv)
     {
       gold = h_idata;
     }
-    else if (kernel == &transposeCoarseGrained || kernel == &transposeFineGrained)
+    else if (k == 5 || k == 6)
     {
       gold = h_odata;   // fine- and coarse-grained kernels are not full transposes, so bypass check
     }
