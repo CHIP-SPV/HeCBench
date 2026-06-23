@@ -51,4 +51,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) -s 8192
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) -s 8192
+	$(LAUNCHER) ./$(program) -s 64
