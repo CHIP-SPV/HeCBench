@@ -197,7 +197,7 @@ typedef struct stack_t {
 } stack_t;
 
 stack_t     d_stack;
-__constant__ stack_t    stack;
+__device__ stack_t      stack;
 
 enum particle_status {
     p_cutoff_discard    = 0x00,
@@ -230,8 +230,8 @@ typedef ulong total_list_depth_t[SIMULATION_NUM_BLOCKS];
 typedef ulong total_num_inner_iterations_t[SIMULATION_NUM_BLOCKS];
 total_list_depth_t *d_total_list_depth, *h_total_list_depth;
 total_num_inner_iterations_t *d_total_num_inner_iterations, *h_total_num_inner_iterations;
-__constant__ total_list_depth_t *total_list_depth;
-__constant__ total_num_inner_iterations_t *total_num_inner_iterations;
+__device__ total_list_depth_t *total_list_depth;
+__device__ total_num_inner_iterations_t *total_num_inner_iterations;
 #endif
 
 __shared__ uint step_counters_shared[SIMULATION_WARPS_PER_BLOCK][NUM_CAT];
@@ -247,10 +247,10 @@ double *d_detector_totals_count[NUM_DETECTOR_CAT], *d_detector_totals_energy[NUM
 total_weights_t *d_total_weights;
 total_step_counts_t *d_total_step_counts, *h_total_step_counts;
 
-__constant__ detector_scores_t detector_scores_count, detector_scores_energy;
-__constant__ double *detector_totals_count[NUM_DETECTOR_CAT], *detector_totals_energy[NUM_DETECTOR_CAT];
-__constant__ total_weights_t *total_weights;
-__constant__ total_step_counts_t *total_step_counts;
+__device__ detector_scores_t detector_scores_count, detector_scores_energy;
+__device__ double *detector_totals_count[NUM_DETECTOR_CAT], *detector_totals_energy[NUM_DETECTOR_CAT];
+__device__ total_weights_t *total_weights;
+__device__ total_step_counts_t *total_step_counts;
 
 
 /********************************
@@ -300,9 +300,9 @@ MT_param    *h_MT_params, *d_MT_params;
 uint		*h_MT_statuses, *d_MT_statuses;
 MT_tables_t *d_MT_tables;
 
-__constant__ uint *MT_statuses;
-__constant__ MT_param *MT_params;
-__constant__ MT_tables_t *MT_tables;
+__device__ uint *MT_statuses;
+__device__ MT_param *MT_params;
+__device__ MT_tables_t *MT_tables;
 
 
 
@@ -345,8 +345,8 @@ source_t    h_source;
 phantom_t   h_phantom;
 
 __constant__    detector_t  detector;
-__constant__    source_t    source;
-__constant__    phantom_t   phantom;
+__device__      source_t    source;
+__device__      phantom_t   phantom;
 
 
 
@@ -380,7 +380,7 @@ typedef struct __align__(16) region_data_t {
 } region_data_t;
 
 region_data_t *d_region_data;
-__constant__ region_data_t *region_data;
+__device__ region_data_t *region_data;
 
 
 
