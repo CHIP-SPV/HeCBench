@@ -55,4 +55,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) benchmark
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) benchmark
+	$(LAUNCHER) ./$(program) test
