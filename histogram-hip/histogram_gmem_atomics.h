@@ -85,7 +85,7 @@
         unsigned int *out)
     {
         int i = blockIdx.x * blockDim.x + threadIdx.x;
-        if (i > ACTIVE_CHANNELS * NUM_BINS)
+        if (i >= ACTIVE_CHANNELS * NUM_BINS)
             return; // out of range
 
         unsigned int total = 0;
