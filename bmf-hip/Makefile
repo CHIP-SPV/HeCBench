@@ -53,9 +53,11 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3 
 endif
 
+LLVM_OMP_DIR := $(shell $(CC) --print-file-name libomp.so 2>/dev/null | xargs dirname 2>/dev/null)
+, := ,
 ifeq ($(GPU),yes)
   CFLAGS +=-DUSE_GPU -Wall -DWARPSPERBLOCK=8
-  LDFLAGS += -L/space/pvelesko/install/llvm/22.0-native-hecbench/lib/x86_64-unknown-linux-gnu -lgomp
+  LDFLAGS += -fopenmp $(if $(LLVM_OMP_DIR),-Wl$(,)-rpath$(,)$(LLVM_OMP_DIR))
 else
   CFLAGS += -x c++ -Wall -fopenmp
 endif

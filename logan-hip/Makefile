@@ -26,7 +26,9 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++14 \
           -Wall -fopenmp -Isrc 
 
 # Linker Flags
-LDFLAGS = -fgpu-rdc --hip-link 
+, := ,
+LLVM_OMP_DIR := $(shell $(CC) --print-file-name libomp.so 2>/dev/null | xargs dirname 2>/dev/null)
+LDFLAGS = -fgpu-rdc --hip-link $(if $(LLVM_OMP_DIR),-Wl$(,)-rpath$(,)$(LLVM_OMP_DIR)) 
 
 # Debug Flags
 ifeq ($(DEBUG),yes)

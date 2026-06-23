@@ -26,7 +26,9 @@ obj = $(source:.cu=.o)
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../openmp-omp
 
 # Linker Flags
-LDFLAGS = -fopenmp
+LLVM_OMP_DIR := $(shell $(CC) --print-file-name libomp.so 2>/dev/null | xargs dirname 2>/dev/null)
+LDFLAGS = -fopenmp $(if $(LLVM_OMP_DIR),-Wl$(,)-rpath$(,)$(LLVM_OMP_DIR))
+, := ,
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
