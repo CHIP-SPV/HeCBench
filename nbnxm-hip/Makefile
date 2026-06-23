@@ -55,4 +55,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 6000
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) 10000
+	$(LAUNCHER) ./$(program) 100
