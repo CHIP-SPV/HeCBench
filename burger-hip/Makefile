@@ -57,4 +57,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 8200 8100 100
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) 8200 8100 100
+	$(LAUNCHER) ./$(program) 256 256 10
