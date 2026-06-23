@@ -56,3 +56,6 @@ clean:
 
 run: $(program)
 	$(LAUNCHER) ./$(program) 16384 16384 200
+
+smoke: $(program)
+	$(LAUNCHER) ./$(program) 64 64 5
