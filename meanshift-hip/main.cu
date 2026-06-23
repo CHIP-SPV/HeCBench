@@ -41,6 +41,7 @@ namespace mean_shift::gpu {
     int tid = (blockIdx.x * blockDim.x) + threadIdx.x;
     int row = tid * D;
     int local_row = threadIdx.x * D;
+    bool is_valid = (tid < N);
     float new_position[D] = {0.f};
     float tot_weight = 0.f;
     // Load data in shared memory
@@ -60,25 +61,27 @@ namespace mean_shift::gpu {
         valid_data[threadIdx.x] = 0;
       }
       __syncthreads();
-      for (int i = 0; i < TILE_WIDTH; ++i) {
-        int local_row_tile = i * D;
-        float valid_radius = RADIUS * valid_data[i];
-        float sq_dist = 0.;
-        for (int j = 0; j < D; ++j) {
-          sq_dist += (data[row + j] - local_data[local_row_tile + j]) *
-                     (data[row + j] - local_data[local_row_tile + j]);
-        }
-        if (sq_dist <= valid_radius) {
-          float weight = expf(-sq_dist / DBL_SIGMA_SQ);
+      if (is_valid) {
+        for (int i = 0; i < TILE_WIDTH; ++i) {
+          int local_row_tile = i * D;
+          float valid_radius = RADIUS * valid_data[i];
+          float sq_dist = 0.;
           for (int j = 0; j < D; ++j) {
-            new_position[j] += (weight * local_data[local_row_tile + j]);
+            sq_dist += (data[row + j] - local_data[local_row_tile + j]) *
+                       (data[row + j] - local_data[local_row_tile + j]);
           }
-          tot_weight += (weight * valid_data[i]);
+          if (sq_dist <= valid_radius) {
+            float weight = expf(-sq_dist / DBL_SIGMA_SQ);
+            for (int j = 0; j < D; ++j) {
+              new_position[j] += (weight * local_data[local_row_tile + j]);
+            }
+            tot_weight += (weight * valid_data[i]);
+          }
         }
       }
       __syncthreads();
     }
-    if (tid < N) {
+    if (is_valid) {
       for (int j = 0; j < D; ++j) {
         data_next[row + j] = new_position[j] / tot_weight;
       }
