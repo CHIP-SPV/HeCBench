@@ -4,7 +4,7 @@
 
 # Compiler can be set below, or via environment variable
 CC        = hipcc
-OPTIMIZE  = no
+OPTIMIZE  = yes
 DEBUG     = no
 LAUNCHER  =
 
