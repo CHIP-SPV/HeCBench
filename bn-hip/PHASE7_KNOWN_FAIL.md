@@ -1,65 +1,66 @@
-# bn-hip — FIXED (Makefile shipped with OPTIMIZE = no)
+# bn-hip — FIXED (chipStar OCL fix + Makefile OPTIMIZE)
 
-`make smoke` failed on the OpenCL backend until the Makefile's
-`OPTIMIZE = no` was changed to `OPTIMIZE = yes`. One-line bench-side fix; no
-chipStar change required.
+`make smoke` passes on OCL and L0 at both `OPTIMIZE=yes` and `OPTIMIZE=no`.
+Two independent issues were involved; the root chipStar bug is now fixed.
 
 ## Symptom (before fix)
 
-OCL, default backend, deterministic 5/5:
+OCL, `OPTIMIZE=no` (-O0), deterministic:
 ```
-NODE_N=45
-Average execution time of genScoreKernel: 1.82 (s)
-hipErrorOutOfMemory (CL_OUT_OF_RESOURCES) in ...CHIPBackendOpenCL.cc:finish
+Average execution time of genScoreKernel: 1.8 (s)
+hipErrorOutOfMemory (CL_OUT_OF_RESOURCES) in CHIPBackendOpenCL.cc:finish
 clEnqueueSVMMemFill: CL_OUT_OF_RESOURCES
 Aborted (rc=134)
 ```
-L0 passed (its kernel-submit path tolerates the longer-running kernel).
+L0 passed; `OPTIMIZE=yes` (-O3) passed.
 
-## Root cause
+## Root cause (chipStar OCL backend)
 
-bn-hip's Makefile shipped with `OPTIMIZE = no` (line 7), so `main.cu` was
-compiled at `-O0`. At `-O0` chipStar does not inline the HIP device-library
-helpers into the kernel, so `genScoreKernel` — a heavy kernel (45 nodes x
-combinatorial inner loops x DATA_N=600) — runs about **2x slower (~1.8 s vs
-~0.97 s)**. At ~1.8 s a single launch exceeds the Intel Arc B570 GPU
-hang-check (TDR) window; the driver returns `CL_OUT_OF_RESOURCES` from
-`clFinish`, poisons the queue, and the next `clEnqueueSVMMemFill` also fails.
+chipStar's large-allocation workaround set, unconditionally at library load:
+```
+setenv("NEOReadDebugKeys", "1");
+setenv("AllowUnrestrictedSize", "1");
+```
+to permit >4 GiB single OpenCL allocations. But **`NEOReadDebugKeys=1`
+switches the Intel NEO OpenCL driver into debug-key mode globally**, which
+makes high register-pressure / high-scratch kernels — notably unoptimized
+`-O0` kernels like bn-hip's `genScoreKernel`/`computeKernel` — fail at
+execution with `CL_OUT_OF_RESOURCES`, even though they run correctly without
+it. `OPTIMIZE=yes` (-O3) produced a lighter kernel that stayed under the
+threshold, which is why only `-O0` failed; L0 was unaffected (these keys are
+NEO/OpenCL-only).
 
-It is **not** an OCL runtime bug: the device image is 37,132 B at `-O0`
-(helpers called) vs 48,548 B at `-O3` (helpers inlined). Pass/fail tracks the
-compiled kernel's runtime against the hang-check threshold, nothing else.
+### How it was isolated
 
-`bn-hip` was one of only 5 of 1595 HecBench Makefiles shipping `OPTIMIZE =
-no` (the standard default is `yes`) — an upstream anomaly. A perf benchmark
-built unoptimized is not meaningful anyway.
+The exact processed SPIR-V chipStar feeds the driver (`CHIP_DUMP_PROCESSED_SPIRV`)
+was run through **pure OpenCL** (cl_mem and Intel USM, repeated launches +
+memfills) — all passed. So neither the kernel, the driver, nor chipStar's
+memcpy/memfill path was at fault. A controlled libCHIP swap and a source diff
+narrowed it to these two setenv calls; toggling
+`CHIP_OCL_UNRESTRICTED_ALLOC_SIZE=1` (which re-enables the keys) reproduces
+the failure on demand. See `reproducer/scratch-driver/`.
 
-### Ruled out (controlled experiments)
+## chipStar fix
 
-- **Not the OCL memcpy/SVM path.** Hot-swapping libCHIP under a fixed binary
-  changed nothing; kernel time tracks the binary, not the runtime.
-- **Not the chipStar version.** With `-O3`, bn-hip passes on both the
-  2026.06.23 and a freshly built 2026.06.25 install.
-- **Not `-c` separate compilation.** Single-step and separate compile both
-  pass at `-O3` and both fail at `-O0`.
-- **Not thermal/order/module-cache.** Alternating A/B and cache clears
-  reproduced the split cleanly along `-O0` vs `-O3`.
+`src/CHIPDriver.cc`: the NEO debug-key escalation is now **opt-in** via
+`CHIP_OCL_UNRESTRICTED_ALLOC_SIZE=1` (default off). High-footprint kernels are
+far more common than >4 GiB single OpenCL allocations; Level Zero large
+allocations use `ze_relaxed_allocation_limits` and are unaffected.
 
-## Fix
+## Bench-side fix (separate, still correct)
 
-`Makefile`: `OPTIMIZE = no` -> `OPTIMIZE = yes`.
+`Makefile`: `OPTIMIZE = no -> yes`. bn-hip was 1 of only 5/1595 HecBench
+Makefiles shipping `OPTIMIZE=no`; a perf benchmark should build optimized.
+This is independent of the chipStar fix and remains the right default.
 
 ## Verification
 
-| Build | backend | kernel | result |
-|-------|---------|--------|--------|
-| OPTIMIZE=no  (-O0) | OCL | ~1.82 s | FAIL (TDR), 5/5 |
-| OPTIMIZE=yes (-O3) | OCL | ~0.97 s | PASS, 5/5 |
-| OPTIMIZE=yes (-O3) | L0  | ~0.97 s | PASS, 2/2 |
+| Build | backend | result |
+|-------|---------|--------|
+| OPTIMIZE=yes (-O3) | OCL | PASS (~0.97s) |
+| OPTIMIZE=yes (-O3) | L0  | PASS |
+| OPTIMIZE=no  (-O0) | OCL | PASS (5/5, after chipStar fix) |
+| OPTIMIZE=no  (-O0) | L0  | PASS |
 
-Confirmed on both chipStar 2026.06.23 and 2026.06.25.
-
-## Related
-
-frechet-hip also ships `OPTIMIZE = no`; its IGC JIT crash may share this
-root cause (unoptimized device code). Worth re-checking with `OPTIMIZE = yes`.
+OCL `-O0` results (score -11080.462891) match the L0 oracle exactly.
+Confirmed on chipStar 2026.06.25 (with the CHIPDriver.cc fix).
