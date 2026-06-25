@@ -1,71 +1,65 @@
-# bn-hip — OCL_PARTIAL_FAIL (L0 passes)
+# bn-hip — FIXED (Makefile shipped with OPTIMIZE = no)
 
-`make smoke` fails on OpenCL backend but **passes on Level Zero**.
+`make smoke` failed on the OpenCL backend until the Makefile's
+`OPTIMIZE = no` was changed to `OPTIMIZE = yes`. One-line bench-side fix; no
+chipStar change required.
 
-## Symptom before fix
+## Symptom (before fix)
 
-OCL (SIGABRT, rc=134):
+OCL, default backend, deterministic 5/5:
 ```
-clEnqueueSVMMemFill: CL_OUT_OF_RESOURCES → std::abort()
+NODE_N=45
+Average execution time of genScoreKernel: 1.82 (s)
+hipErrorOutOfMemory (CL_OUT_OF_RESOURCES) in ...CHIPBackendOpenCL.cc:finish
+clEnqueueSVMMemFill: CL_OUT_OF_RESOURCES
+Aborted (rc=134)
 ```
-
-OCL (after chipStar error-table fix, rc=124 timeout):
-```
-CHIP error: hipErrorOutOfMemory (CL_OUT_OF_RESOURCES) in finish
-[loops indefinitely ~every 500ms repeating this error]
-```
-
-L0:
-```
-Initialization...
-Average execution time of genScoreKernel: 1.813294 (s)
-Find best graph time 0.489077 (s)
-rc=0  (PASS)
-```
+L0 passed (its kernel-submit path tolerates the longer-running kernel).
 
 ## Root cause
 
-Two issues interact:
+bn-hip's Makefile shipped with `OPTIMIZE = no` (line 7), so `main.cu` was
+compiled at `-O0`. At `-O0` chipStar does not inline the HIP device-library
+helpers into the kernel, so `genScoreKernel` — a heavy kernel (45 nodes x
+combinatorial inner loops x DATA_N=600) — runs about **2x slower (~1.8 s vs
+~0.97 s)**. At ~1.8 s a single launch exceeds the Intel Arc B570 GPU
+hang-check (TDR) window; the driver returns `CL_OUT_OF_RESOURCES` from
+`clFinish`, poisons the queue, and the next `clEnqueueSVMMemFill` also fails.
 
-**1. chipStar missing error-table entries (fixed in 2026-06-24-chipstar-ocl-svm-memcpy-fix)**
+It is **not** an OCL runtime bug: the device image is 37,132 B at `-O0`
+(helpers called) vs 48,548 B at `-O3` (helpers inlined). Pass/fail tracks the
+compiled kernel's runtime against the hang-check threshold, nothing else.
 
-`clEnqueueSVMMemFill`, `clSetKernelArg`, `clEnqueueMarker`, and
-`clEnqueueMarkerWithWaitList` lacked `CL_OUT_OF_RESOURCES` entries in the
-OCL error-conversion table.  When the Intel Arc B570 driver returned that
-error, `CHIPERR_CHECK_LOG_AND_THROW_TABLE` mapped it to `hipErrorTbd`,
-which unconditionally called `std::abort()`.  Fixed: all four functions now
-map `CL_OUT_OF_RESOURCES` to `hipErrorOutOfMemory` so callers receive a
-proper throw instead of an abort.
+`bn-hip` was one of only 5 of 1595 HecBench Makefiles shipping `OPTIMIZE =
+no` (the standard default is `yes`) — an upstream anomaly. A perf benchmark
+built unoptimized is not meaningful anyway.
 
-**2. Intel Arc B570 OCL driver — permanent GPU error state after complex kernels (bench-side / driver bug)**
+### Ruled out (controlled experiments)
 
-After `genScoreKernel` (1.84 s, writes ~26 MB SVM on every invocation),
-the Intel Arc B570 OCL driver enters a permanent GPU-level error state: ALL
-subsequent OpenCL commands — on the same queue OR on newly-created
-replacement queues — return `CL_OUT_OF_RESOURCES`.  The only recovery is
-process exit.  This is reproducible on L0/SYCL with the equivalent kernel
-and is an Intel driver bug, not chipStar.
+- **Not the OCL memcpy/SVM path.** Hot-swapping libCHIP under a fixed binary
+  changed nothing; kernel time tracks the binary, not the runtime.
+- **Not the chipStar version.** With `-O3`, bn-hip passes on both the
+  2026.06.23 and a freshly built 2026.06.25 install.
+- **Not `-c` separate compilation.** Single-step and separate compile both
+  pass at `-O3` and both fail at `-O0`.
+- **Not thermal/order/module-cache.** Alternating A/B and cache clears
+  reproduced the split cleanly along `-O0` vs `-O3`.
 
-`bn-hip` ignores all HIP error return codes, so after the abort fix it
-loops forever through 100 × 45 graph iterations printing the error every
-~500 ms until `timeout` sends SIGTERM.
+## Fix
 
-## chipStar fixes applied
+`Makefile`: `OPTIMIZE = no` -> `OPTIMIZE = yes`.
 
-Worktree: `2026-06-24-chipstar-ocl-svm-memcpy-fix`
+## Verification
 
-- `clHipErrorConversion.hh`: added `CL_OUT_OF_RESOURCES` to all four missing entries
-- `CHIPBackendOpenCL.cc`: IntelUSM staging buffer for D2H/H2D to unregistered host ptrs
-- `CHIPBackendOpenCL.cc`: `recreateQueues()` after `clFinish → CL_OUT_OF_RESOURCES`
-- Regression test: `TestFixSVMMemcpyToHostPtr.hip`
+| Build | backend | kernel | result |
+|-------|---------|--------|--------|
+| OPTIMIZE=no  (-O0) | OCL | ~1.82 s | FAIL (TDR), 5/5 |
+| OPTIMIZE=yes (-O3) | OCL | ~0.97 s | PASS, 5/5 |
+| OPTIMIZE=yes (-O3) | L0  | ~0.97 s | PASS, 2/2 |
 
-These fixes prevent abort (rc=134) and convert the Intel driver bug into a
-recoverable error for benchmarks that check return codes.  bn-hip itself
-remains a BENCH_SIDE fail on OCL (driver bug + benchmark ignores errors).
+Confirmed on both chipStar 2026.06.23 and 2026.06.25.
 
-## Status
+## Related
 
-| Backend | Result | Reason |
-|---------|--------|--------|
-| OCL     | FAIL   | Intel Arc B570 driver GPU error state after genScoreKernel |
-| L0      | PASS   | Uses different memory path; not affected |
+frechet-hip also ships `OPTIMIZE = no`; its IGC JIT crash may share this
+root cause (unoptimized device code). Worth re-checking with `OPTIMIZE = yes`.
