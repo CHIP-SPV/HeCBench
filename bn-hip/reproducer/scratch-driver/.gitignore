@@ -1,0 +1,8 @@
+*.spv
+*.o
+ocl_genscore
+ocl_genscore_usm
+ocl_genscore_usm_loop
+ocl_compute
+ocl_host
+result
