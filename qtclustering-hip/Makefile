@@ -74,3 +74,9 @@ clean:
 run: $(program)
 	$(LAUNCHER) ./$(program) --Verbose
 	#./$(program) --SaveOutput
+
+# Smallest fast invocation: size 1 is the minimum supported problem size
+# (4096 points). PointCount is overridden by the size switch, so --size 1 is
+# the fastest run that exercises all kernels and exits 0 (~1s).
+smoke: $(program)
+	$(LAUNCHER) ./$(program) --size 1 --Verbose
