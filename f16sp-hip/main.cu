@@ -138,21 +138,22 @@ int main(int argc, char *argv[])
   hipblasCreate(&h);
   hipblasSetPointerMode(h, HIPBLAS_POINTER_MODE_DEVICE);
 
-  hipDataType xType, yType, rType, eType;
-  xType = yType = rType = HIP_R_16F;
-  eType = HIP_R_32F;
-
+  // H4I-HipBLAS (chipStar) does not provide the extended-precision dot API
+  // (hipblasDotEx_v2). Here x, y and result are all HIP_R_16F, so the typed
+  // half dot product hipblasHdot() is the available equivalent. The only
+  // functional difference is the accumulation type: hipblasHdot accumulates
+  // in half, whereas DotEx would accumulate in the float execution type.
   // warmup
   for (int i = 0; i < 1000; i++) {
-    hipblasDotEx_v2(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
-                yType, 1, d_r2, rType, eType);
+    hipblasHdot(h, size*2, (const hipblasHalf*)d_a, 1,
+                (const hipblasHalf*)d_b, 1, (hipblasHalf*)d_r2);
   }
   hipDeviceSynchronize();
 
   auto start = std::chrono::steady_clock::now();
   for (int i = 0; i < repeat; i++) {
-    hipblasDotEx_v2(h, size*2, (half*)d_a, xType, 1, (half*)d_b,
-                yType, 1, d_r2, rType, eType);
+    hipblasHdot(h, size*2, (const hipblasHalf*)d_a, 1,
+                (const hipblasHalf*)d_b, 1, (hipblasHalf*)d_r2);
   }
   hipDeviceSynchronize();
   auto end = std::chrono::steady_clock::now();
