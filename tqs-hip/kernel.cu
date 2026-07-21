@@ -53,8 +53,14 @@ void TaskQueue_gpu(const task_t *__restrict__ queue,
   // Fetch task
   if(tid == 0) {
     *next = atomicAdd(consumed, 1);
-    t->id = queue[*next].id;
-    t->op = queue[*next].op;
+    // Guard against reading past the queue_size-sized queue buffer: when *next
+    // reaches gpuQueueSize the while-loop below exits and t is never used, but
+    // the out-of-bounds read is undefined behavior and wedges the device on
+    // chipStar/Intel (harmless on NVIDIA). Only fetch a valid task.
+    if(*next < gpuQueueSize) {
+      t->id = queue[*next].id;
+      t->op = queue[*next].op;
+    }
   }
   __syncthreads();
   while(*next < gpuQueueSize) {
@@ -75,9 +81,11 @@ void TaskQueue_gpu(const task_t *__restrict__ queue,
     }
     if(tid == 0) {
       *next = atomicAdd(consumed, 1);
-      // Fetch task
-      t->id = queue[*next].id;
-      t->op = queue[*next].op;
+      // Fetch task (guard the out-of-bounds read past the queue buffer; see above)
+      if(*next < gpuQueueSize) {
+        t->id = queue[*next].id;
+        t->op = queue[*next].op;
+      }
     }
     __syncthreads();
   }
