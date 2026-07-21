@@ -343,7 +343,6 @@ void jaccard_weight (const int iteration, const int n, const int e,
   auto end = std::chrono::steady_clock::now();
   auto time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
   cout << "Average execution time of kernels: " << (time * 1e-9f) / iteration << " (s)\n";
-  exit(1);
 
   hipMemcpy(weight_j, d_weight_j, sizeof(T) * e, hipMemcpyDeviceToHost);
 #ifdef DEBUG

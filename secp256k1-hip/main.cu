@@ -1257,9 +1257,10 @@ int main(int argc, char **argv) {
 
   if (0 == strcmp(result, "bbde464b6355ee6de6deba5ae860f8a66524937eee81dde224a0214efd795d09"))
     printf("PASS\n");
-  else
+  else {
     printf("FAIL\n");
     exit(1);
+  }
   return 0;
 }
 
