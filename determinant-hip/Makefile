@@ -27,8 +27,13 @@ MKLSHIM_PATH  = /space/pvelesko/install/HIP/chipStar/H4I-MKLShim/2026.04.16
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(HIPSOLVER_PATH)/include
-# chipStar/vulkan: thrust CUDA backend needs CUB which is unavailable; use CPP backend.
-CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
+# chipStar 2026.07.20 ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
+# the op runs on the GPU (matches the SYCL variant's make_device_policy). Pin chipStar's rocThrust
+# ahead of the apt /usr/include/thrust (upstream NVIDIA thrust, no HIP backend) which the host
+# compile pass otherwise picks up via -idirafter/CPATH.
+CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
+CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
 # H4I-HipSOLVER only exports non-Dn potrf; redirect Dn variants to non-Dn equivalents.
 CFLAGS += -DhipsolverDnSpotrf_bufferSize=hipsolverSpotrf_bufferSize
 CFLAGS += -DhipsolverDnSpotrf=hipsolverSpotrf

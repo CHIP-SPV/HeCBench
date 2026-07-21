@@ -24,8 +24,13 @@ obj = $(source:.cu=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../rowwiseMoments-cuda
-# chipStar/vulkan: thrust CUDA backend needs CUB which is unavailable; use CPP backend.
-CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_CPP
+# chipStar 2026.07.20 ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
+# the op runs on the GPU (matches the SYCL variant's make_device_policy). Pin chipStar's rocThrust
+# ahead of the apt /usr/include/thrust (upstream NVIDIA thrust, no HIP backend) which the host
+# compile pass otherwise picks up via -idirafter/CPATH.
+CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
+CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
 
 # Linker Flags
 LDFLAGS = 
