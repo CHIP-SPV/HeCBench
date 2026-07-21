@@ -55,4 +55,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 100
 
 smoke: $(program)
-	CHIP_BE=level0 $(LAUNCHER) ./$(program) 100
+	CHIP_BE=level0 $(LAUNCHER) ./$(program) 100 268435456
