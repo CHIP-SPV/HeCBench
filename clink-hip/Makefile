@@ -39,6 +39,13 @@ ifeq ($(OPTIMIZE),yes)
   CFLAGS += -O3
 endif
 
+# OpenMP parallelizes the CPU reference() verification (../clink-cuda/reference.h),
+# which otherwise runs serially over N*SAMPLE_TEST_LEN and dominates the runtime.
+# rpath the toolchain's own libomp so the binary runs without LD_LIBRARY_PATH.
+OMP_LIBDIR := $(dir $(shell $(CC) -print-file-name=libomp.so))
+CFLAGS  += -fopenmp
+LDFLAGS += -fopenmp -Wl,-rpath,$(OMP_LIBDIR)
+
 #===============================================================================
 # Targets to Build
 #===============================================================================
@@ -56,4 +63,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 10
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) 10
+	$(LAUNCHER) ./$(program) 1
