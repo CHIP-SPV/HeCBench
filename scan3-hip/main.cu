@@ -94,9 +94,10 @@ int main(int argc, char * argv[])
   // compare the results and see if they match
   if (compare<float>(output, verificationOutput, length, (float)0.001))
     std::cout << "PASS" << std::endl;
-  else
+  else {
     std::cout << "FAIL" << std::endl;
     exit(1);
+  }
 
   // include the overhead of allocating temporary device storage
   start = std::chrono::steady_clock::now();
@@ -130,9 +131,10 @@ int main(int argc, char * argv[])
   // compare the results and see if they match
   if (compare<float>(output, verificationOutput, length, (float)0.001))
     std::cout << "PASS" << std::endl;
-  else
+  else {
     std::cout << "FAIL" << std::endl;
     exit(1);
+  }
 
   hipFree(inputBuffer);
   hipFree(outputBuffer);
