@@ -1,4 +1,5 @@
-HIPCC_BIN=/opt/rocm/bin
+# Use hipcc from PATH (chipStar or ROCm) instead of a hardcoded ROCm path
+HIPCC_BIN := $(patsubst %/hipcc,%,$(shell command -v hipcc))
 
 # the path may be adjusted for each platform
 MPI_INCLUDE=/usr/lib/x86_64-linux-gnu/openmpi/include
@@ -6,7 +7,7 @@ MPI_INCLUDE=/usr/lib/x86_64-linux-gnu/openmpi/include
 OPT=-O3 -DRCB_UNTHREADED_BUILD -DUSE_SERIAL_COSMO
 
 #HIPCC_FLAGS=-ffast_math -DINLINE_FORCE -I${MPI_INCLUDE}
-HIPCC_FLAGS=-I${MPI_INCLUDE} -I/opt/rocm/hip/include
+HIPCC_FLAGS=-I${MPI_INCLUDE}
 
 HACC_PLATFORM=hip
 HACC_OBJDIR=${HACC_PLATFORM}
