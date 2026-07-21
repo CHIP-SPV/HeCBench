@@ -25,8 +25,8 @@ obj = $(source:.cu=.o)
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -I../gemmEx-cuda
 
-# Linker Flags
-LDFLAGS = -L /opt/rocm/hipblas/lib -lhipblas
+# Linker Flags (hipcc adds -L<install>/lib where libhipblas lives)
+LDFLAGS = -lhipblas
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
@@ -54,5 +54,8 @@ clean:
 run: $(program)
 	$(LAUNCHER) ./$(program) 4096 4096 4096 100
 
+# Smaller GEMM for the smoke: 4096^3 x100 x4 dtypes takes >200s on B570.
+# Note: fp16 prints inf and int8 prints zeros — H4I-HipBLAS backend gaps
+# (the bench prints compare values by design and does not verify-exit).
 smoke: $(program)
-	CHIP_BE=level0 $(LAUNCHER) ./$(program) 4096 4096 4096 100
+	$(LAUNCHER) ./$(program) 1024 1024 1024 10

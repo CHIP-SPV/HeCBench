@@ -38,7 +38,13 @@ bool hipblas_gemm_ex(
   } else if (std::is_same<T, int8_t>::value) {
     AType = BType = HIPBLAS_R_8I;
     CType = ComputeType = HIPBLAS_R_32I;
+#if hipblasVersionMajor >= 1
+    // hipblasSetInt8Datatype() / HIPBLAS_INT8_DATATYPE_INT8 are ROCm hipBLAS
+    // extensions selecting the int8 storage layout. H4I-HipBLAS (chipStar,
+    // hipblasVersionMajor == 0) does not provide them; the default int8 layout
+    // is used via HIPBLAS_R_8I in hipblasGemmEx below.
     hipblasSetInt8Datatype(handle, HIPBLAS_INT8_DATATYPE_INT8);
+#endif
   } else {
     printf("Not supported data type.");
     return -1;
