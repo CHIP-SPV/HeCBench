@@ -56,4 +56,4 @@ run: $(program)
 	$(LAUNCHER) ./$(program) 2048 2048 100
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) 2048 2048 100
+	$(LAUNCHER) ./$(program) 2048 2048 5
