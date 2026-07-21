@@ -49,7 +49,7 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj) *.txt fpc
+	rm -rf $(program) $(obj) *.txt fpc smoke_input.bin
 
 run: $(program)
         # compression
@@ -57,3 +57,14 @@ run: $(program)
         # decompression
 	$(LAUNCHER) ./$(program) compression.txt
 	diff ../mpc-cuda/msg_sp.trace.out decompression.txt
+
+# Fast smoke test: the real dataset (../mpc-cuda/msg_sp.trace.out) is a large
+# external download and is not bundled. Use a small SINGLE-CHUNK input (<=1024
+# longs / <=8 KiB). MPCcompress uses a grid-wide inter-block spin-lock (the
+# goffset ring) across chunks, which has no forward-progress guarantee on
+# chipStar/Intel: multi-chunk inputs co-schedule nondeterministically and run
+# from ~15 ms to an indefinite hang. A single chunk avoids that path entirely
+# and compresses in ~10 ms regardless of content. 4 KiB = 512 longs = 1 chunk.
+smoke: $(program)
+	head -c 4096 /dev/zero > smoke_input.bin
+	$(LAUNCHER) ./$(program) smoke_input.bin 1
