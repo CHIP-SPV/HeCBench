@@ -58,5 +58,7 @@ clean:
 run: $(program)
 	./$(program) -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
 
+# Default runs n_reps=1000 (+5 warmup) => ~10050 kernel launches, far too many for
+# a smoke. -r/-w cut the timed/warmup repetitions; the kernel and full verify still run.
 smoke: $(program)
-	$(LAUNCHER) ./$(program) -f ../tqs-cuda/input/patternsNP100NB512FB25.txt
+	$(LAUNCHER) ./$(program) -f ../tqs-cuda/input/patternsNP100NB512FB25.txt -r 10 -w 2
