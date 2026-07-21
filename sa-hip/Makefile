@@ -56,10 +56,14 @@ $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) smoke_genome.txt
 
 run: $(program)
 	$(LAUNCHER) ./$(program) ../sa-cuda/genome.txt 1000000 100 
 
+# The real genome (../sa-cuda/genome.txt) is a large external file that is not
+# bundled. Synthesize a small deterministic ACGT genome so the smoke is
+# self-contained; 10k bases exercises the suffix-array kernels in <1s.
 smoke: $(program)
-	$(LAUNCHER) ./$(program) ../sa-cuda/genome.txt 1000000 100 
+	yes ACGTACGTAC | tr -d '\n' | head -c 20000 > smoke_genome.txt
+	$(LAUNCHER) ./$(program) smoke_genome.txt 10000 1
