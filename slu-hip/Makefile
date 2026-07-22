@@ -69,10 +69,18 @@ main.o: $(SLU_PATH)/main.cpp
 preprocess.o: $(SLU_PATH)/preprocess.cpp
 	$(CC) $(CFLAGS) -c $< -o $@
 
-$(SLU_PATH)/nicslu/lib/nicslu.a:
+# NICSLU ships in-repo as an unextracted tarball (slu-cuda/src/nicslu.tar.bz2,
+# includes source + LICENSE); extract it on first build. The objects need its
+# headers too, so make extraction an order-only prerequisite of every object.
+$(obj): | $(SLU_PATH)/nicslu/Makefile
+
+$(SLU_PATH)/nicslu/Makefile:
+	tar -xjf $(SLU_PATH)/nicslu.tar.bz2 -C $(SLU_PATH)
+
+$(SLU_PATH)/nicslu/lib/nicslu.a: $(SLU_PATH)/nicslu/Makefile
 	make -C $(SLU_PATH)/nicslu/
 
-$(SLU_PATH)/nicslu/util/nicslu_util.a:
+$(SLU_PATH)/nicslu/util/nicslu_util.a: $(SLU_PATH)/nicslu/Makefile
 	make -C $(SLU_PATH)/nicslu/
 
 clean:
