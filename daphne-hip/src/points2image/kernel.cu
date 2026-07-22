@@ -311,17 +311,21 @@ __global__ void compute_point_from_pointcloud(
   // all threads of the workgroup is undefined behavior on SPIR-V targets and
   // hangs on Intel GPUs. Inactive threads are masked with "valid" instead.
   bool valid = (x < width);
+
   float intensity = 0.0f;
   float cm_point = 0.0f;
   int px = -1, py = -1, pid = 0;
+
   if (valid) {
     const float* fp = (float *)((uintptr_t)cp + (x + y*width) * point_step);
+
     intensity = fp[4];
     // first step of the transformation
     Mat13 point, point2;
     point2.data[0] = double(fp[0]);
     point2.data[1] = double(fp[1]);
     point2.data[2] = double(fp[2]);
+
     for (int row = 0; row < 3; row++) {
       point.data[row] = invT.data[row];
       for (int col = 0; col < 3; col++)
@@ -331,6 +335,7 @@ __global__ void compute_point_from_pointcloud(
     // discard points of low depth
     if (point.data[2] <= 2.5)
       valid = false;
+
     if (valid) {
       // second transformation step
       double tmpx = point.data[0] / point.data[2];
@@ -338,11 +343,13 @@ __global__ void compute_point_from_pointcloud(
       double r2 = tmpx * tmpx + tmpy * tmpy;
       double tmpdist = 1.0 + distCoeff.data[0] * r2 + distCoeff.data[1] * r2 * r2
                        + distCoeff.data[4] * r2 * r2 * r2;
+
       Point2d imagepoint;
       imagepoint.x = tmpx * tmpdist + 2.0 * distCoeff.data[2] * tmpx * tmpy
                      + distCoeff.data[3] * (r2 + 2.0 * tmpx * tmpx);
       imagepoint.y = tmpy * tmpdist + distCoeff.data[2] * (r2 + 2.0 * tmpy * tmpy)
                      + 2.0 * distCoeff.data[3] * tmpx * tmpy;
+
       // apply camera intrinsics to yield a point on the image
       imagepoint.x = cameraMat.data[0][0] * imagepoint.x + cameraMat.data[0][2];
       imagepoint.y = cameraMat.data[1][1] * imagepoint.y + cameraMat.data[1][2];
