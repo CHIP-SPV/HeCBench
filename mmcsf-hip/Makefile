@@ -66,5 +66,8 @@ test: ../mmcsf-cuda/toy.tns $(program)
 run: output.tns $(program)
 	$(LAUNCHER) ./$(program) -i output.tns -m 0 -R 32 -f 128 -w 4
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program) -i output.tns -m 0 -R 32 -f 128 -w 4
+smoke.tns: ../mmcsf-cuda/generate_tensor.py
+	python3 ../mmcsf-cuda/generate_tensor.py smoke.tns 20%256 20%256 20%256
+
+smoke: $(program) smoke.tns
+	$(LAUNCHER) ./$(program) -i smoke.tns -m 0 -R 32 -f 128 -w 4

@@ -258,7 +258,7 @@ inline int load_tensor(Tensor &X, const Options &Opt){
 
   if(fp.fail()){
     std::cout << "File " << filename << " does not exist!" << std::endl;
-    exit(0);
+    exit(1);
   }
 
   /*get number of line (totnnz)*/
