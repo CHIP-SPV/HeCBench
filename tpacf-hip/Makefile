@@ -7,7 +7,8 @@ CC        = hipcc
 OPTIMIZE  = yes
 DEBUG     = no
 
-POINTS    = 97178
+# Parboil tpacf "large" dataset: 10391 points per file (Datapnts.1, Randompnts.1-100)
+POINTS    = 10391
 DATAPARS  = -d ../tpacf-cuda/data/small/Datapnts.1 -p $(POINTS)
 RANDPARS  = -r ../tpacf-cuda/data/small/Randompnts -n 100 -q $(POINTS)
 ANALPARS  = -b 5 -l 1 -u 10000 -a -j 10

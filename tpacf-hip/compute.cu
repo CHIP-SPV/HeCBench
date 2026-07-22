@@ -272,7 +272,12 @@ void doComputeGPU(char* dataName, char* randomNames, int nr, int dataSize, int r
   gettimeofday(&t0, NULL);
 
   char fname[256];
-  readdatafile(dataName, h_idata1, dataSize);
+  int nread = readdatafile(dataName, h_idata1, dataSize);
+  if (nread < dataSize) {
+    fprintf(stderr, "FATAL: read %d of %d requested points from %s\n",
+            nread, dataSize, dataName);
+    exit(1);
+  }
 
   gettimeofday(&t1, NULL);
 
@@ -288,7 +293,12 @@ void doComputeGPU(char* dataName, char* randomNames, int nr, int dataSize, int r
     sprintf(fname, "%s.%i", randomNames, i+1);
     gettimeofday(&t0, NULL);
 
-    readdatafile(fname, h_idata2, randomSize);
+    nread = readdatafile(fname, h_idata2, randomSize);
+    if (nread < randomSize) {
+      fprintf(stderr, "FATAL: read %d of %d requested points from %s\n",
+              nread, randomSize, fname);
+      exit(1);
+    }
     gettimeofday(&t1, NULL);
 
     // Compute DR_i
