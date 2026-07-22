@@ -78,9 +78,14 @@ int main(int argc, char* argv[])
   binbs = init_bins(args.bins_per_dec, args.min_angle, args.max_angle, args.angle_units, &tempnbins);
   writeBoundaries(binbs);
 
+  // Find the bin containing dot product 0.0 (where padded (0,0,0) points land).
+  // Slots [0, 30-nbins) of binbs are -5.0 filler, not real boundaries; skip
+  // them, otherwise zeroBin lands on the underflow bin and the padding
+  // correction in doComputeGPU is subtracted from the wrong bin (driving it
+  // negative while the true zero bin keeps the padding counts).
   int zeroBin = 0;
   int i;
-  for(i=0; i<NUMBINS-1; i++) {
+  for(i=30-nbins; i<NUMBINS-1; i++) {
     if(0.0f > binbs[i]) {
       zeroBin = i;
       break;
