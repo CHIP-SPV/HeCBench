@@ -46,14 +46,21 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu Makefile
+%.o: %.cu defs.h io.c lapl_ss.c Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) data.txt smoke_data.txt result.dat
 
-run: $(program)
-	$(LAUNCHER) ./$(program) 4096 4096 1000
+# main requires a binary float32 input file of Lx*Ly elements (see mkinit.py)
+data.txt: mkinit.py
+	python3 mkinit.py 4096 4096 data.txt
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program) 256 256 1
+smoke_data.txt: mkinit.py
+	python3 mkinit.py 256 256 smoke_data.txt
+
+run: $(program) data.txt
+	$(LAUNCHER) ./$(program) 4096 4096 1000 data.txt
+
+smoke: $(program) smoke_data.txt
+	$(LAUNCHER) ./$(program) 256 256 1 smoke_data.txt
