@@ -72,4 +72,5 @@ run: $(program)
 
 
 smoke: $(program)
+	@test -f example/geom.xyz || tar xzf example.tar.gz
 	$(LAUNCHER) ./$(program) sp
