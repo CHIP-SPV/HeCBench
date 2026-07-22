@@ -24,9 +24,15 @@ obj = $(source:.cu=.o)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
+# chipStar ships the hipRAND headers in ROCm layout (<prefix>/include/hiprand/
+# hiprand_kernel.h) but this source includes <hiprand_kernel.h> directly, so add
+# that subdirectory to the header search path. Derive the install root from the
+# hipcc found on PATH (same pattern as minmax-hip).
+CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(CHIPSTAR_ROOT)/include/hiprand
 
 # Linker Flags
-LDFLAGS = 
+LDFLAGS =
 
 # Debug Flags
 ifeq ($(DEBUG),yes)
