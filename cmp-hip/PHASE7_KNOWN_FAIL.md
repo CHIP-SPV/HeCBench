@@ -1,18 +1,11 @@
-# cmp-hip — MISSING_DATA_FILE
+# cmp-hip — FIXED (dataset located)
 
-`make smoke` fails because the required seismic data file is missing.
+`make smoke` passes: rc=0, GPU vs CPU reference error rates str=0.0 stk=0.0
+(ctr=7.75e-05 = float argmax tie-breaking, not a correctness failure).
 
-## Symptom
-
-```
-main: ../cmp-cuda/su_trace.cpp:38: bool su_trace::fgettr(std::ifstream &): Assertion `f != NULL' failed.
-Aborted
-```
-
-## Root cause
-
-The benchmark reads seismic survey data from a file (passed via stdin or
-hardcoded path). The data file is not bundled in the HecBench repository.
-The SEGY/SU seismic trace format file needs to be downloaded separately.
-
-Same class of failure as `mpc-hip` (missing data file).
+The missing seismic input is the original UNICAMP hpg-cepetro dataset;
+fetched from https://raw.githubusercontent.com/menotti/oil_gas_fpga/master/datasets/simple-synthetic.su
+(94,281,600 bytes; 9200 traces, ns=2502, dt=2000us — matches the Makefile's
+documented parameters exactly). Kept untracked at cmp-cuda/data/; re-fetch on
+a fresh checkout. No source or Makefile changes were needed.
+Verified on chipStar 2026.07.20.

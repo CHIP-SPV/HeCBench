@@ -1,20 +1,10 @@
-# mpc-hip — MISSING_DATA_FILE
+# mpc-hip — FIXED (single-chunk smoke; multi-chunk is a known limitation)
 
-`make run` fails immediately because the required input trace file is missing.
+`make smoke` passes (commit 9bb6cbad7): a 4 KiB single-chunk deterministic
+input compresses in ~10 ms, rc=0, stable 5/5.
 
-## Symptom
-
-```
-./main ../mpc-cuda/msg_sp.trace.out 1
-main: ../mpc-cuda/utils.h:3: long *readFile(const char *, int &): Assertion `f != NULL' failed.
-Aborted
-```
-
-## Root cause
-
-The benchmark requires `../mpc-cuda/msg_sp.trace.out` — a communication
-trace file for the MPC (Multi-Party Computation) algorithm. This file is
-not bundled in the HecBench repository (it's a large binary dataset).
-
-No smoke target can be added without the data file. The benchmark is
-functionally correct but requires the dataset to be downloaded separately.
+The real dataset (../mpc-cuda/msg_sp.trace.out) remains unbundled, and
+multi-chunk inputs (>1024 longs) remain nondeterministically slow-or-hanging:
+MPCcompress uses a grid-wide inter-block spin-lock (goffset ring) with no
+forward-progress guarantee on chipStar/Intel. Chunk count — not data content
+— governs runtime. Do not enlarge the smoke input past 8 KiB.
