@@ -72,3 +72,8 @@ clean:
 # TODO: when p > 1, results mismatch
 run: $(program)
 	$(LAUNCHER) ./$(program) -p 1
+
+# Fast smoke test: the testcase count is read from the (small) reference
+# dataset, so there is no runtime size knob; -p 1 is the minimal invocation.
+smoke: $(program)
+	$(LAUNCHER) ./$(program) -p 1
