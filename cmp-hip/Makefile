@@ -70,8 +70,15 @@ reference.o : $(inc)/reference.cpp $(inc)/utils.hpp
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i ../cmp-cuda/data/simple-synthetic.su
+# Seismic input: the original UNICAMP hpg-cepetro dataset, mirrored by the
+# derived FPGA study repo. Fetched on first use (94 MB).
+CMP_DATA = ../cmp-cuda/data/simple-synthetic.su
+$(CMP_DATA):
+	mkdir -p $(dir $@)
+	wget -q -O $@ https://raw.githubusercontent.com/menotti/oil_gas_fpga/master/datasets/simple-synthetic.su
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i ../cmp-cuda/data/simple-synthetic.su
+run: $(program) $(CMP_DATA)
+	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i $(CMP_DATA)
+
+smoke: $(program) $(CMP_DATA)
+	$(LAUNCHER) ./$(program) -c0 1.98e-7 -c1 1.77e-6 -nc 5 -aph 600 -tau 0.002 -v 2 -i $(CMP_DATA)

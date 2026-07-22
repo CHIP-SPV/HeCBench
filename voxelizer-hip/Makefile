@@ -15,10 +15,15 @@ LAUNCHER  =
 # path to where GLM is installed
 GLM_PATH=$(HOME)/glm
 
-# path to where Trimesh is installed
-# (cloned from https://github.com/Forceflow/trimesh2; build with
-#  "make -C $(Trimesh_PATH)/libsrc linux64")
+# path to where Trimesh is installed; cloned + built on first use (pinned
+# commit; the library target only — gluit needs GL headers and is unused).
 Trimesh_PATH=../voxelizer-cuda/trimesh2
+TRIMESH_COMMIT=76bc89310b45279ff3c40415a6f6d5789479b42f
+
+$(Trimesh_PATH)/lib.Linux64/libtrimesh.a:
+	test -d $(Trimesh_PATH) || git clone https://github.com/Forceflow/trimesh2 $(Trimesh_PATH)
+	cd $(Trimesh_PATH) && git checkout -q $(TRIMESH_COMMIT)
+	$(MAKE) -C $(Trimesh_PATH)/libsrc linux64
 
 program = main
 
@@ -67,7 +72,10 @@ endif
 # Targets to Build
 #===============================================================================
 
-$(program): $(obj) Makefile
+# objects need the trimesh2 headers (clone) and the link needs the lib
+$(obj): | $(Trimesh_PATH)/lib.Linux64/libtrimesh.a
+
+$(program): $(obj) Makefile $(Trimesh_PATH)/lib.Linux64/libtrimesh.a
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
 %.o: %.cu Makefile

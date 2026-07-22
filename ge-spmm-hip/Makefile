@@ -51,8 +51,14 @@ $(program): $(obj) Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
-	$(LAUNCHER) ./$(program) ../ge-spmm-cuda/data/snap/amazon0302/amazon0302.mtx 8 1000
+# SuiteSparse/SNAP amazon0302 matrix, fetched on first use (4.6 MB tar.gz).
+SPMM_MTX = ../ge-spmm-cuda/data/snap/amazon0302/amazon0302.mtx
+$(SPMM_MTX):
+	mkdir -p $(dir $@)
+	wget -q -O - https://suitesparse-collection-website.herokuapp.com/MM/SNAP/amazon0302.tar.gz | tar -xz -C $(dir $@) --strip-components=1
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program) ../ge-spmm-cuda/data/snap/amazon0302/amazon0302.mtx 8 1000
+run: $(program) $(SPMM_MTX)
+	$(LAUNCHER) ./$(program) $(SPMM_MTX) 8 1000
+
+smoke: $(program) $(SPMM_MTX)
+	$(LAUNCHER) ./$(program) $(SPMM_MTX) 8 1000

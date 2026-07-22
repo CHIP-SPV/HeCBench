@@ -64,8 +64,18 @@ compute.o: compute.cu ../tpacf-cuda/args.h ../tpacf-cuda/model_io.cu \
 clean:
 	rm -rf $(program) $(obj) $(OUTFILE)
 
-run: $(program)
+# Parboil 2.5 tpacf large dataset (UIUC IMPACT; the original NCSA URL is
+# dead), fetched from the palmer-dabbelt/parboil mirror on first use:
+# Datapnts.1 + Randompnts.1..100, 10391 "ra dec" points each.
+TPACF_DIR = ../tpacf-cuda/data/small
+TPACF_URL = https://raw.githubusercontent.com/palmer-dabbelt/parboil/master/datasets/tpacf/large/input
+$(TPACF_DIR)/Datapnts.1:
+	mkdir -p $(TPACF_DIR)
+	wget -q -O $@ $(TPACF_URL)/Datapnts.1
+	for i in $$(seq 1 100); do wget -q -O $(TPACF_DIR)/Randompnts.$$i $(TPACF_URL)/Randompnts.$$i; done
+
+run: $(program) $(TPACF_DIR)/Datapnts.1
 	./$(program) $(DATAPARS) $(RANDPARS) $(ANALPARS) -o $(OUTFILE)
 
-smoke: $(program)
-	./$(program) -d ../tpacf-cuda/data/small/Datapnts.1 -p 4096 -r ../tpacf-cuda/data/small/Randompnts -n 5 -q 4096 -b 5 -l 1 -u 10000 -a -j 2 -o ./smoke.dat
+smoke: $(program) $(TPACF_DIR)/Datapnts.1
+	./$(program) -d $(TPACF_DIR)/Datapnts.1 -p 4096 -r $(TPACF_DIR)/Randompnts -n 5 -q 4096 -b 5 -l 1 -u 10000 -a -j 2 -o ./smoke.dat

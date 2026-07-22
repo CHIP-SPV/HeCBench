@@ -54,8 +54,14 @@ main.o: main.cu ../stsg-cuda/Filter.h Makefile
 clean:
 	rm -rf $(program) $(obj)
 
-run: $(program)
+# TestData: fetched from github.com/HPSCIL/cuSTSG and cropped to 150x150 on
+# first use (needs python GDAL bindings; see fetch_testdata.py).
+STSG_DATA = ../stsg-cuda/TestData/NDVI/NDVI_test_2001
+$(STSG_DATA):
+	python3 fetch_testdata.py
+
+run: $(program) $(STSG_DATA)
 	./$(program) example.txt
 
-smoke: $(program)
+smoke: $(program) $(STSG_DATA)
 	$(LAUNCHER) ./$(program) example.txt
