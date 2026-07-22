@@ -67,4 +67,5 @@ run: $(program)
 	./$(program) -i ../hbc-cuda/graphs/breast_coexpress.txt -v --printscores=output.txt
 
 smoke: $(program)
+	@test -f ../hbc-cuda/graphs/breast_coexpress.txt || tar xzf ../hbc-cuda/test_graph.tar.gz -C ../hbc-cuda
 	$(LAUNCHER) ./$(program) -i ../hbc-cuda/graphs/breast_coexpress.txt
