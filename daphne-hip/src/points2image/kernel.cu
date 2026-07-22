@@ -72,7 +72,13 @@ class points2image : public kernel {
 
 // image storage
 // expected image size 800x600 pixels with 4 components per pixel
-__device__ __managed__ float result_buffer[800*600*4];
+// NOTE: originally a module-scope "__device__ __managed__" array. chipStar
+// does not implement __hipRegisterManagedVar (silent no-op stub in release
+// builds), so the host shadow and the device global end up as two unrelated
+// allocations and passing the host address to the kernel faults/hangs the
+// GPU. Allocate the buffer with hipMallocManaged in init() instead, which
+// is fully supported and semantically identical.
+static float* result_buffer = nullptr;
 
 int points2image::read_number_testcases(std::ifstream& input_file)
 {
@@ -241,6 +247,9 @@ void points2image::init() {
     exit(-3);
   }
 
+  // allocate the shared result image buffer (see note at result_buffer)
+  hipMallocManaged(&result_buffer, sizeof(float) * 800 * 600 * 4);
+
   // prepare the first iteration
   error_so_far = false;
   max_delta = 0.0;
@@ -298,59 +307,63 @@ __global__ void compute_point_from_pointcloud(
   // determine index in cloud memory
   int y = blockIdx.x;
   int x = blockIdx.y * THREADS + threadIdx.x;
-  if (x >= width) return;
+  // NOTE: no early "return" before __syncthreads(): a barrier not reached by
+  // all threads of the workgroup is undefined behavior on SPIR-V targets and
+  // hangs on Intel GPUs. Inactive threads are masked with "valid" instead.
+  bool valid = (x < width);
+  float intensity = 0.0f;
+  float cm_point = 0.0f;
+  int px = -1, py = -1, pid = 0;
+  if (valid) {
+    const float* fp = (float *)((uintptr_t)cp + (x + y*width) * point_step);
+    intensity = fp[4];
+    // first step of the transformation
+    Mat13 point, point2;
+    point2.data[0] = double(fp[0]);
+    point2.data[1] = double(fp[1]);
+    point2.data[2] = double(fp[2]);
+    for (int row = 0; row < 3; row++) {
+      point.data[row] = invT.data[row];
+      for (int col = 0; col < 3; col++)
+        point.data[row] += point2.data[col] * invR.data[row][col];
+    }
 
-  const float* fp = (float *)((uintptr_t)cp + (x + y*width) * point_step);
+    // discard points of low depth
+    if (point.data[2] <= 2.5)
+      valid = false;
+    if (valid) {
+      // second transformation step
+      double tmpx = point.data[0] / point.data[2];
+      double tmpy = point.data[1] / point.data[2];
+      double r2 = tmpx * tmpx + tmpy * tmpy;
+      double tmpdist = 1.0 + distCoeff.data[0] * r2 + distCoeff.data[1] * r2 * r2
+                       + distCoeff.data[4] * r2 * r2 * r2;
+      Point2d imagepoint;
+      imagepoint.x = tmpx * tmpdist + 2.0 * distCoeff.data[2] * tmpx * tmpy
+                     + distCoeff.data[3] * (r2 + 2.0 * tmpx * tmpx);
+      imagepoint.y = tmpy * tmpdist + distCoeff.data[2] * (r2 + 2.0 * tmpy * tmpy)
+                     + 2.0 * distCoeff.data[3] * tmpx * tmpy;
+      // apply camera intrinsics to yield a point on the image
+      imagepoint.x = cameraMat.data[0][0] * imagepoint.x + cameraMat.data[0][2];
+      imagepoint.y = cameraMat.data[1][1] * imagepoint.y + cameraMat.data[1][2];
+      px = int(imagepoint.x + 0.5);
+      py = int(imagepoint.y + 0.5);
 
-  float intensity = fp[4];
-  // first step of the transformation
-  Mat13 point, point2;
-  point2.data[0] = double(fp[0]);
-  point2.data[1] = double(fp[1]);
-  point2.data[2] = double(fp[2]);
-
-  for (int row = 0; row < 3; row++) {
-    point.data[row] = invT.data[row];
-    for (int col = 0; col < 3; col++) 
-      point.data[row] += point2.data[col] * invR.data[row][col];
-  }
-
-  // discard points of low depth
-  if (point.data[2] <= 2.5) return;
-
-  // second transformation step
-  double tmpx = point.data[0] / point.data[2];
-  double tmpy = point.data[1] / point.data[2];
-  double r2 = tmpx * tmpx + tmpy * tmpy;
-  double tmpdist = 1.0 + distCoeff.data[0] * r2 + distCoeff.data[1] * r2 * r2
-                   + distCoeff.data[4] * r2 * r2 * r2;
-
-  Point2d imagepoint;
-  imagepoint.x = tmpx * tmpdist + 2.0 * distCoeff.data[2] * tmpx * tmpy
-                 + distCoeff.data[3] * (r2 + 2.0 * tmpx * tmpx);
-  imagepoint.y = tmpy * tmpdist + distCoeff.data[2] * (r2 + 2.0 * tmpy * tmpy)
-                 + 2.0 * distCoeff.data[3] * tmpx * tmpy;
-
-  // apply camera intrinsics to yield a point on the image
-  imagepoint.x = cameraMat.data[0][0] * imagepoint.x + cameraMat.data[0][2];
-  imagepoint.y = cameraMat.data[1][1] * imagepoint.y + cameraMat.data[1][2];
-  int px = int(imagepoint.x + 0.5);
-  int py = int(imagepoint.y + 0.5);
-
-  float cm_point;
-  int pid;
-  // safe point characteristics in the image
-  if (0 <= px && px < w && 0 <= py && py < h)
-  {
-    pid = py * w + px;
-    cm_point = point.data[2] * 100.0;  // double precision multiply
-    atomicCAS((int*)&msg_distance[pid], 0, __float_as_int(cm_point));
-    atomicFloatMin(&msg_distance[pid], cm_point);
+      // safe point characteristics in the image
+      if (0 <= px && px < w && 0 <= py && py < h)
+      {
+        pid = py * w + px;
+        cm_point = point.data[2] * 100.0;  // double precision multiply
+        atomicCAS((int*)&msg_distance[pid], 0, __float_as_int(cm_point));
+        atomicFloatMin(&msg_distance[pid], cm_point);
+      }
+    }
   }
   // synchronize required for deterministic intensity in the image
+  // (reached by ALL threads of the workgroup)
   __syncthreads();
 
-  if (0 <= px && px < w && 0 <= py && py < h)
+  if (valid && 0 <= px && px < w && 0 <= py && py < h)
   {
     float newvalue = msg_distance[pid];
 
