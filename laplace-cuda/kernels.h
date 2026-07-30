@@ -1,5 +1,8 @@
-/** Problem size along one side; total number of cells is this squared */
+/** Problem size along one side; total number of cells is this squared.
+    Overridable (-DNUM=...) so a smoke build can use a smaller grid. */
+#ifndef NUM
 #define NUM 1024
+#endif
 
 // block size
 #define BLOCK_SIZE 128

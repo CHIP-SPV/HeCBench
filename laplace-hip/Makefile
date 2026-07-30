@@ -51,10 +51,20 @@ $(program): $(obj)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -rf $(program) $(obj)
+	rm -rf $(program) $(obj) main-smoke main-smoke.o temperature.dat
 
 run: $(program)
 	$(LAUNCHER) ./$(program)
 
-smoke: $(program)
-	$(LAUNCHER) ./$(program)
+# Smoke uses a smaller grid (NUM=256, the minimum for the launch geometry with
+# BLOCK_SIZE=128). At the default NUM=1024 the single-threaded CPU reference
+# needs the same ~27k SOR sweeps as the GPU and runs 5-15 minutes; at 256 the
+# whole run (GPU + CPU reference + full verification) completes in seconds.
+main-smoke.o: main.cu timer.h ../laplace-cuda/kernels.h
+	$(CC) $(CFLAGS) -DNUM=256 -c $< -o $@
+
+main-smoke: main-smoke.o
+	$(CC) $(CFLAGS) $< -o $@ $(LDFLAGS)
+
+smoke: main-smoke
+	$(LAUNCHER) ./main-smoke
