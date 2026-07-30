@@ -141,75 +141,78 @@ void init(const int nodes,
 }
 
 
+// One convergence sweep of the large-vertex phase.  The original ECL-GC
+// kernel iterated "do { ... } while (__any(again))" inside the kernel, which
+// requires all work-groups to be co-resident and to observe each other's
+// memory updates while spinning.  That forward-progress assumption does not
+// hold on this platform, so the convergence loop is hoisted to the host:
+// each launch performs one sweep and sets *again when another sweep is needed.
 __global__
-void runLarge(const int nodes, 
+void runLarge(const int nodes,
     const int* const __restrict__ nidx,
     const int* const __restrict__ nlist,
     int* const __restrict__ posscol,
     int* const __restrict__ posscol2,
     volatile int* const __restrict__ color,
     const int* const __restrict__ wl,
-    const int* __restrict__ wlsize)
+    const int* __restrict__ wlsize,
+    int* const __restrict__ again)
 {
   const int stop = *wlsize;
   if (stop != 0) {
     const int lane = threadIdx.x % WS;
     const int thread = threadIdx.x + blockIdx.x * ThreadsPerBlock;
     const int threads = gridDim.x * ThreadsPerBlock;
-    bool again;
-    do {
-      again = false;
-      for (int w = thread; __any(w < stop); w += threads) {
-        bool shortcut, done, cond = false;
-        int v, data, range, beg, pcol;
-        if (w < stop) {
-          v = wl[w];
-          data = color[v];
-          range = data >> (WS / 2);
-          if (range > 0) {
-            beg = nidx[v];
-            pcol = posscol[v];
-            cond = true;
-          }
+    for (int w = thread; __any(w < stop); w += threads) {
+      bool shortcut, done, cond = false;
+      int v, data, range, beg, pcol;
+      if (w < stop) {
+        v = wl[w];
+        data = color[v];
+        range = data >> (WS / 2);
+        if (range > 0) {
+          beg = nidx[v];
+          pcol = posscol[v];
+          cond = true;
         }
+      }
 
-        int bal = __ballot(cond);
-        while (bal != 0) {
-          const int who = __ffs(bal) - 1;
-          bal &= bal - 1;
-          const int wdata = __shfl(data, who);
-          const int wrange = wdata >> (WS / 2);
-          const int wbeg = __shfl(beg, who);
-          const int wmincol = wdata & Mask;
-          const int wmaxcol = wmincol + wrange;
-          const int wend = wbeg + wmaxcol;
-          const int woffs = wbeg / WS;
-          int wpcol = __shfl(pcol, who);
+      int bal = __ballot(cond);
+      while (bal != 0) {
+        const int who = __ffs(bal) - 1;
+        bal &= bal - 1;
+        const int wdata = __shfl(data, who);
+        const int wrange = wdata >> (WS / 2);
+        const int wbeg = __shfl(beg, who);
+        const int wmincol = wdata & Mask;
+        const int wmaxcol = wmincol + wrange;
+        const int wend = wbeg + wmaxcol;
+        const int woffs = wbeg / WS;
+        int wpcol = __shfl(pcol, who);
 
-          bool wshortcut = true;
-          bool wdone = true;
-          for (int i = wbeg + lane; __any(i < wend); i += WS) {
-            int nei, neidata, neirange;
-            if (i < wend) {
-              nei = nlist[i];
-              neidata = color[nei];
-              neirange = neidata >> (WS / 2);
-              const bool neidone = (neirange == 0);
-              wdone &= neidone; //consolidated below
-              if (neidone) {
-                const int neicol = neidata;
-                if (neicol < WS) {
-                  wpcol &= ~((unsigned int)MSB >> neicol); //consolidated below
-                } else {
-                  if ((wmincol <= neicol) && (neicol < wmaxcol) && ((posscol2[woffs + neicol / WS] << (neicol % WS)) < 0)) {
-                    atomicAnd((int*)&posscol2[woffs + neicol / WS], ~((unsigned int)MSB >> (neicol % WS)));
-                  }
-                }
+        bool wshortcut = true;
+        bool wdone = true;
+        for (int i = wbeg + lane; __any(i < wend); i += WS) {
+          int nei, neidata, neirange;
+          if (i < wend) {
+            nei = nlist[i];
+            neidata = color[nei];
+            neirange = neidata >> (WS / 2);
+            const bool neidone = (neirange == 0);
+            wdone &= neidone; //consolidated below
+            if (neidone) {
+              const int neicol = neidata;
+              if (neicol < WS) {
+                wpcol &= ~((unsigned int)MSB >> neicol); //consolidated below
               } else {
-                const int neimincol = neidata & Mask;
-                const int neimaxcol = neimincol + neirange;
-                if ((neimincol <= wmincol) && (neimaxcol >= wmincol)) wshortcut = false; //consolidated below
+                if ((wmincol <= neicol) && (neicol < wmaxcol) && ((posscol2[woffs + neicol / WS] << (neicol % WS)) < 0)) {
+                  atomicAnd((int*)&posscol2[woffs + neicol / WS], ~((unsigned int)MSB >> (neicol % WS)));
+                }
               }
+            } else {
+              const int neimincol = neidata & Mask;
+              const int neimaxcol = neimincol + neirange;
+              if ((neimincol <= wmincol) && (neimaxcol >= wmincol)) wshortcut = false; //consolidated below
             }
           }
           wshortcut = __all(wshortcut);
@@ -223,87 +226,101 @@ void runLarge(const int nodes,
           if (who == lane) done = wdone;
           if (who == lane) shortcut = wshortcut;
         }
+        wshortcut = __all(wshortcut);
+        wdone = __all(wdone);
+        wpcol &= __shfl_xor(wpcol, 1);
+        wpcol &= __shfl_xor(wpcol, 2);
+        wpcol &= __shfl_xor(wpcol, 4);
+        wpcol &= __shfl_xor(wpcol, 8);
+        wpcol &= __shfl_xor(wpcol, 16);
+        if (who == lane) pcol = wpcol;
+        if (who == lane) done = wdone;
+        if (who == lane) shortcut = wshortcut;
+      }
 
-        if (w < stop) {
-          if (range > 0) {
-            const int mincol = data & Mask;
-            int val = pcol, mc = 0;
-            if (pcol == 0) {
-              const int offs = beg / WS;
-              mc = max(1, mincol / WS);
-              while ((val = posscol2[offs + mc]) == 0) mc++;
-            }
-            int newmincol = mc * WS + __clz(val);
-            if (mincol != newmincol) shortcut = false;
-            if (shortcut || done) {
-              pcol = (newmincol < WS) ? ((unsigned int)MSB >> newmincol) : 0;
-            } else {
-              const int maxcol = mincol + range;
-              const int range = maxcol - newmincol;
-              newmincol = (range << (WS / 2)) | newmincol;
-              again = true;
-            }
-            posscol[v] = pcol;
-            color[v] = newmincol;
+      if (w < stop) {
+        if (range > 0) {
+          const int mincol = data & Mask;
+          int val = pcol, mc = 0;
+          if (pcol == 0) {
+            const int offs = beg / WS;
+            mc = max(1, mincol / WS);
+            while ((val = posscol2[offs + mc]) == 0) mc++;
           }
+          int newmincol = mc * WS + __clz(val);
+          if (mincol != newmincol) shortcut = false;
+          if (shortcut || done) {
+            pcol = (newmincol < WS) ? ((unsigned int)MSB >> newmincol) : 0;
+          } else {
+            const int maxcol = mincol + range;
+            const int range = maxcol - newmincol;
+            newmincol = (range << (WS / 2)) | newmincol;
+            *again = 1;
+          }
+          posscol[v] = pcol;
+          color[v] = newmincol;
         }
       }
-    } while (__any(again));
+    }
   }
 }
 
 
-__global__ 
+// One convergence sweep of the small-vertex phase.  As with runLarge, the
+// original in-kernel "do { ... } while (again)" spin (with 'again' fed by
+// values other threads write concurrently) is hoisted to the host; each
+// launch performs one sweep and sets *again when another sweep is needed.
+__global__
 void runSmall(const int nodes,
     const int* const __restrict__ nidx,
     const int* const __restrict__ nlist,
     volatile int* const __restrict__ posscol,
-    int* const __restrict__ color)
-    //int* __restrict__ wlsize)
+    int* const __restrict__ color,
+    int* const __restrict__ again)
 {
   const int thread = threadIdx.x + blockIdx.x * ThreadsPerBlock;
   const int threads = gridDim.x * ThreadsPerBlock;
 
-  bool again;
-  do {
-    again = false;
-    for (int v = thread; v < nodes; v += threads) {
-      int pcol = posscol[v];
-      if (__popc(pcol) > 1) {
-        const int beg = nidx[v];
-        int active = color[v];
-        int allnei = 0;
-        int keep = active;
-        do {
-          const int old = active;
-          active &= active - 1;
-          const int curr = old ^ active;
-          const int i = beg + __clz(curr);
-          const int nei = nlist[i];
-          const int neipcol = posscol[nei];
-          allnei |= neipcol;
-          if ((pcol & neipcol) == 0) {
-            pcol &= pcol - 1;
-            keep ^= curr;
-          } else if (__popc(neipcol) == 1) {
-            pcol ^= neipcol;
-            keep ^= curr;
-          }
-        } while (active != 0);
-        if (keep != 0) {
-          const int best = (unsigned int)MSB >> __clz(pcol);
-          if ((best & ~allnei) != 0) {
-            pcol = best;
-            keep = 0;
-          }
+  for (int v = thread; v < nodes; v += threads) {
+    int pcol = posscol[v];
+    if (__popc(pcol) > 1) {
+      const int beg = nidx[v];
+      int active = color[v];
+      int allnei = 0;
+      int keep = active;
+      do {
+        const int old = active;
+        active &= active - 1;
+        const int curr = old ^ active;
+        const int i = beg + __clz(curr);
+        const int nei = nlist[i];
+        const int neipcol = posscol[nei];
+        allnei |= neipcol;
+        if ((pcol & neipcol) == 0) {
+          pcol &= pcol - 1;
+          keep ^= curr;
+        } else if (__popc(neipcol) == 1) {
+          pcol ^= neipcol;
+          keep ^= curr;
+        }
+      } while (active != 0);
+      if (keep != 0) {
+        const int best = (unsigned int)MSB >> __clz(pcol);
+        if ((best & ~allnei) != 0) {
+          pcol = best;
+          keep = 0;
         }
         again |= keep;
         if (keep == 0) keep = __clz(pcol);
         color[v] = keep;
         posscol[v] = pcol;
       }
+      if (keep != 0) *again = 1;
+      if (keep == 0) keep = __clz(pcol);
+      color[v] = keep;
+      posscol[v] = pcol;
     }
-  } while (again);
+  }
 }
 
 
@@ -334,7 +351,7 @@ int main(int argc, char* argv[])
 
   int* const color = new int [g.nodes];
 
-  int *nidx_d, *nlist_d, *nlist2_d, *posscol_d, *posscol2_d, *color_d, *wl_d, *wlsize_d;
+  int *nidx_d, *nlist_d, *nlist2_d, *posscol_d, *posscol2_d, *color_d, *wl_d, *wlsize_d, *again_d;
   if (hipSuccess != hipMalloc((void **)&nidx_d, (g.nodes + 1) * sizeof(int))) 
     printf("ERROR: could not allocate nidx_d\n\n");
   if (hipSuccess != hipMalloc((void **)&nlist_d, g.edges * sizeof(int)))
@@ -349,8 +366,10 @@ int main(int argc, char* argv[])
     printf("ERROR: could not allocate color_d\n\n");
   if (hipSuccess != hipMalloc((void **)&wl_d, g.nodes * sizeof(int))) 
     printf("ERROR: could not allocate wl_d\n\n");
-  if (hipSuccess != hipMalloc((void **)&wlsize_d, sizeof(int))) 
+  if (hipSuccess != hipMalloc((void **)&wlsize_d, sizeof(int)))
     printf("ERROR: could not allocate wlsize\n\n");
+  if (hipSuccess != hipMalloc((void **)&again_d, sizeof(int)))
+    printf("ERROR: could not allocate again_d\n\n");
 
   if (hipSuccess != hipMemcpy(nidx_d, g.nindex, (g.nodes + 1) * sizeof(int), hipMemcpyHostToDevice)) 
     printf("ERROR: copying nidx to device failed\n\n");
@@ -374,8 +393,24 @@ int main(int argc, char* argv[])
   for (int n = 0; n < repeat; n++) {
     hipMemset(wlsize_d, 0, sizeof(int));
     init<<<blocks, ThreadsPerBlock>>>(g.nodes, g.edges, nidx_d, nlist_d, nlist2_d, posscol_d, posscol2_d, color_d, wl_d, wlsize_d);
-    runLarge<<<blocks, ThreadsPerBlock>>>(g.nodes, nidx_d, nlist2_d, posscol_d, posscol2_d, color_d, wl_d, wlsize_d);
-    runSmall<<<blocks, ThreadsPerBlock>>>(g.nodes, nidx_d, nlist_d, posscol_d, color_d);
+
+    // Convergence loops hoisted from the kernels to the host: launch one
+    // sweep at a time and re-launch while any thread requested another sweep.
+    int again, iter;
+    iter = 0;
+    do {
+      hipMemset(again_d, 0, sizeof(int));
+      runLarge<<<blocks, ThreadsPerBlock>>>(g.nodes, nidx_d, nlist2_d, posscol_d, posscol2_d, color_d, wl_d, wlsize_d, again_d);
+      hipMemcpy(&again, again_d, sizeof(int), hipMemcpyDeviceToHost);
+      if (++iter > g.nodes + 32) {printf("ERROR: runLarge failed to converge\n\n"); exit(1);}
+    } while (again != 0);
+    iter = 0;
+    do {
+      hipMemset(again_d, 0, sizeof(int));
+      runSmall<<<blocks, ThreadsPerBlock>>>(g.nodes, nidx_d, nlist_d, posscol_d, color_d, again_d);
+      hipMemcpy(&again, again_d, sizeof(int), hipMemcpyDeviceToHost);
+      if (++iter > g.nodes + 32) {printf("ERROR: runSmall failed to converge\n\n"); exit(1);}
+    } while (again != 0);
   }
 
   hipDeviceSynchronize();
@@ -391,6 +426,7 @@ int main(int argc, char* argv[])
   if (hipSuccess != hipMemcpy(color, color_d, g.nodes * sizeof(int), hipMemcpyDeviceToHost)) 
     printf("ERROR: copying color from device failed\n\n");
 
+  hipFree(again_d);
   hipFree(wlsize_d);
   hipFree(wl_d);
   hipFree(color_d);
