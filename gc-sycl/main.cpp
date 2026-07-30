@@ -155,7 +155,14 @@ void init(const int nodes,
   for (int i = thread; i < edges / WS + 1; i += threads) posscol2[i] = -1;
 }
 
-void runLarge(const int nodes, 
+// One convergence sweep of the large-vertex phase.  The original ECL-GC
+// kernel iterated "do { ... } while (any_of_group(again))" inside the kernel,
+// which requires all work-groups to be co-resident and to observe each
+// other's memory updates while spinning.  That forward-progress assumption
+// does not hold on this platform, so the convergence loop is hoisted to the
+// host: each launch performs one sweep and sets *again when another sweep is
+// needed.
+void runLarge(const int nodes,
     const int* const __restrict nidx,
     const int* const __restrict nlist,
     int* const __restrict posscol,
@@ -163,6 +170,7 @@ void runLarge(const int nodes,
     volatile int* const __restrict color,
     const int* const __restrict wl,
     const int* __restrict wlsize,
+    int* const __restrict again,
     sycl::nd_item<1> &item)
 {
   const int stop = *wlsize;
@@ -171,156 +179,153 @@ void runLarge(const int nodes,
     const int thread = item.get_global_id(0);
     const int threads = item.get_group_range(0) * ThreadsPerBlock;
     auto sg = item.get_sub_group();
-    bool again;
-    do {
-      again = false;
-      for (int w = thread; sycl::any_of_group(sg, w < stop); w += threads) {
-        bool shortcut, done, cond = false;
-        int v, data, range, beg, pcol;
-        if (w < stop) {
-          v = wl[w];
-          data = color[v];
-          range = data >> (WS / 2);
-          if (range > 0) {
-            beg = nidx[v];
-            pcol = posscol[v];
-            cond = true;
-          }
-        }
-
-        int bal = sycl::reduce_over_group(sg,
-            cond ? (0x1 << sg.get_local_linear_id()) : 0, sycl::plus<>());
-        while (bal != 0) {
-          const int who = ffs(bal) - 1;
-          bal &= bal - 1;
-          const int wdata = sycl::select_from_group(sg, data, who);
-          const int wrange = wdata >> (WS / 2);
-          const int wbeg = sycl::select_from_group(sg, beg, who);
-          const int wmincol = wdata & Mask;
-          const int wmaxcol = wmincol + wrange;
-          const int wend = wbeg + wmaxcol;
-          const int woffs = wbeg / WS;
-          int wpcol = sycl::select_from_group(sg, pcol, who);
-
-          bool wshortcut = true;
-          bool wdone = true;
-          for (int i = wbeg + lane; sycl::any_of_group(sg, i < wend); i += WS) {
-            int nei, neidata, neirange;
-            if (i < wend) {
-              nei = nlist[i];
-              neidata = color[nei];
-              neirange = neidata >> (WS / 2);
-              const bool neidone = (neirange == 0);
-              wdone &= neidone; //consolidated below
-              if (neidone) {
-                const int neicol = neidata;
-                if (neicol < WS) {
-                  wpcol &= ~((unsigned int)MSB >> neicol); //consolidated below
-                } else {
-                  if ((wmincol <= neicol) && (neicol < wmaxcol) && ((posscol2[woffs + neicol / WS] << (neicol % WS)) < 0)) {
-                    sycl::atomic<int>(sycl::global_ptr<int>(
-                            (int *)&posscol2[woffs + neicol / WS]))
-                        .fetch_and(~((unsigned int)MSB >> (neicol % WS)));
-                  }
-                }
-              } else {
-                const int neimincol = neidata & Mask;
-                const int neimaxcol = neimincol + neirange;
-                if ((neimincol <= wmincol) && (neimaxcol >= wmincol)) wshortcut = false; //consolidated below
-              }
-            }
-          }
-          wshortcut = sycl::all_of_group(sg, wshortcut);
-          wdone = sycl::all_of_group(sg, wdone);
-          wpcol &= sycl::permute_group_by_xor(sg, wpcol, 1);
-          wpcol &= sycl::permute_group_by_xor(sg, wpcol, 2);
-          wpcol &= sycl::permute_group_by_xor(sg, wpcol, 4);
-          wpcol &= sycl::permute_group_by_xor(sg, wpcol, 8);
-          wpcol &= sycl::permute_group_by_xor(sg, wpcol, 16);
-          if (who == lane) pcol = wpcol;
-          if (who == lane) done = wdone;
-          if (who == lane) shortcut = wshortcut;
-        }
-
-        if (w < stop) {
-          if (range > 0) {
-            const int mincol = data & Mask;
-            int val = pcol, mc = 0;
-            if (pcol == 0) {
-              const int offs = beg / WS;
-              mc = sycl::max(1, (int)(mincol / WS));
-              while ((val = posscol2[offs + mc]) == 0) mc++;
-            }
-            int newmincol = mc * WS + sycl::clz(val);
-            if (mincol != newmincol) shortcut = false;
-            if (shortcut || done) {
-              pcol = (newmincol < WS) ? ((unsigned int)MSB >> newmincol) : 0;
-            } else {
-              const int maxcol = mincol + range;
-              const int range = maxcol - newmincol;
-              newmincol = (range << (WS / 2)) | newmincol;
-              again = true;
-            }
-            posscol[v] = pcol;
-            color[v] = newmincol;
-          }
+    for (int w = thread; sycl::any_of_group(sg, w < stop); w += threads) {
+      bool shortcut, done, cond = false;
+      int v, data, range, beg, pcol;
+      if (w < stop) {
+        v = wl[w];
+        data = color[v];
+        range = data >> (WS / 2);
+        if (range > 0) {
+          beg = nidx[v];
+          pcol = posscol[v];
+          cond = true;
         }
       }
-    } while (sycl::any_of_group(sg, again));
+
+      int bal = sycl::reduce_over_group(sg,
+          cond ? (0x1 << sg.get_local_linear_id()) : 0, sycl::plus<>());
+      while (bal != 0) {
+        const int who = ffs(bal) - 1;
+        bal &= bal - 1;
+        const int wdata = sycl::select_from_group(sg, data, who);
+        const int wrange = wdata >> (WS / 2);
+        const int wbeg = sycl::select_from_group(sg, beg, who);
+        const int wmincol = wdata & Mask;
+        const int wmaxcol = wmincol + wrange;
+        const int wend = wbeg + wmaxcol;
+        const int woffs = wbeg / WS;
+        int wpcol = sycl::select_from_group(sg, pcol, who);
+
+        bool wshortcut = true;
+        bool wdone = true;
+        for (int i = wbeg + lane; sycl::any_of_group(sg, i < wend); i += WS) {
+          int nei, neidata, neirange;
+          if (i < wend) {
+            nei = nlist[i];
+            neidata = color[nei];
+            neirange = neidata >> (WS / 2);
+            const bool neidone = (neirange == 0);
+            wdone &= neidone; //consolidated below
+            if (neidone) {
+              const int neicol = neidata;
+              if (neicol < WS) {
+                wpcol &= ~((unsigned int)MSB >> neicol); //consolidated below
+              } else {
+                if ((wmincol <= neicol) && (neicol < wmaxcol) && ((posscol2[woffs + neicol / WS] << (neicol % WS)) < 0)) {
+                  sycl::atomic<int>(sycl::global_ptr<int>(
+                          (int *)&posscol2[woffs + neicol / WS]))
+                      .fetch_and(~((unsigned int)MSB >> (neicol % WS)));
+                }
+              }
+            } else {
+              const int neimincol = neidata & Mask;
+              const int neimaxcol = neimincol + neirange;
+              if ((neimincol <= wmincol) && (neimaxcol >= wmincol)) wshortcut = false; //consolidated below
+            }
+          }
+        }
+        wshortcut = sycl::all_of_group(sg, wshortcut);
+        wdone = sycl::all_of_group(sg, wdone);
+        wpcol &= sycl::permute_group_by_xor(sg, wpcol, 1);
+        wpcol &= sycl::permute_group_by_xor(sg, wpcol, 2);
+        wpcol &= sycl::permute_group_by_xor(sg, wpcol, 4);
+        wpcol &= sycl::permute_group_by_xor(sg, wpcol, 8);
+        wpcol &= sycl::permute_group_by_xor(sg, wpcol, 16);
+        if (who == lane) pcol = wpcol;
+        if (who == lane) done = wdone;
+        if (who == lane) shortcut = wshortcut;
+      }
+
+      if (w < stop) {
+        if (range > 0) {
+          const int mincol = data & Mask;
+          int val = pcol, mc = 0;
+          if (pcol == 0) {
+            const int offs = beg / WS;
+            mc = sycl::max(1, (int)(mincol / WS));
+            while ((val = posscol2[offs + mc]) == 0) mc++;
+          }
+          int newmincol = mc * WS + sycl::clz(val);
+          if (mincol != newmincol) shortcut = false;
+          if (shortcut || done) {
+            pcol = (newmincol < WS) ? ((unsigned int)MSB >> newmincol) : 0;
+          } else {
+            const int maxcol = mincol + range;
+            const int range = maxcol - newmincol;
+            newmincol = (range << (WS / 2)) | newmincol;
+            *again = 1;
+          }
+          posscol[v] = pcol;
+          color[v] = newmincol;
+        }
+      }
+    }
   }
 }
 
   
+// One convergence sweep of the small-vertex phase.  As with runLarge, the
+// original in-kernel "do { ... } while (again)" spin (with 'again' fed by
+// values other threads write concurrently) is hoisted to the host; each
+// launch performs one sweep and sets *again when another sweep is needed.
 void runSmall(const int nodes,
     const int* const __restrict nidx,
     const int* const __restrict nlist,
     volatile int* const __restrict posscol,
     int* const __restrict color,
+    int* const __restrict again,
     sycl::nd_item<1> &item)
 {
   const int thread = item.get_global_id(0);
   const int threads = item.get_group_range(0) * ThreadsPerBlock;
 
-  bool again;
-  do {
-    again = false;
-    for (int v = thread; v < nodes; v += threads) {
-      int pcol = posscol[v];
-      if (sycl::popcount(pcol) > 1) {
-        const int beg = nidx[v];
-        int active = color[v];
-        int allnei = 0;
-        int keep = active;
-        do {
-          const int old = active;
-          active &= active - 1;
-          const int curr = old ^ active;
-          const int i = beg + sycl::clz((int)curr);
-          const int nei = nlist[i];
-          const int neipcol = posscol[nei];
-          allnei |= neipcol;
-          if ((pcol & neipcol) == 0) {
-            pcol &= pcol - 1;
-            keep ^= curr;
-          } else if (sycl::popcount(neipcol) == 1) {
-            pcol ^= neipcol;
-            keep ^= curr;
-          }
-        } while (active != 0);
-        if (keep != 0) {
-          const int best = (unsigned int)MSB >> sycl::clz(pcol);
-          if ((best & ~allnei) != 0) {
-            pcol = best;
-            keep = 0;
-          }
+  for (int v = thread; v < nodes; v += threads) {
+    int pcol = posscol[v];
+    if (sycl::popcount(pcol) > 1) {
+      const int beg = nidx[v];
+      int active = color[v];
+      int allnei = 0;
+      int keep = active;
+      do {
+        const int old = active;
+        active &= active - 1;
+        const int curr = old ^ active;
+        const int i = beg + sycl::clz((int)curr);
+        const int nei = nlist[i];
+        const int neipcol = posscol[nei];
+        allnei |= neipcol;
+        if ((pcol & neipcol) == 0) {
+          pcol &= pcol - 1;
+          keep ^= curr;
+        } else if (sycl::popcount(neipcol) == 1) {
+          pcol ^= neipcol;
+          keep ^= curr;
         }
-        again |= keep;
-        if (keep == 0) keep = sycl::clz(pcol);
-        color[v] = keep;
-        posscol[v] = pcol;
+      } while (active != 0);
+      if (keep != 0) {
+        const int best = (unsigned int)MSB >> sycl::clz(pcol);
+        if ((best & ~allnei) != 0) {
+          pcol = best;
+          keep = 0;
+        }
       }
+      if (keep != 0) *again = 1;
+      if (keep == 0) keep = sycl::clz(pcol);
+      color[v] = keep;
+      posscol[v] = pcol;
     }
-  } while (again);
+  }
 }
 
 int main(int argc, char *argv[]) {
@@ -368,6 +373,7 @@ int main(int argc, char *argv[]) {
   buffer<int, 1> color_d (nodes);
   buffer<int, 1> wl_d (nodes);
   buffer<int, 1> wlsize_d (1);
+  buffer<int, 1> again_d (1);
 
   const int SMs = q.get_device().get_info<info::device::max_compute_units>();
   const int mTpSM = 2048;
@@ -414,33 +420,62 @@ int main(int argc, char *argv[]) {
       });
     });
 
-    q.submit([&] (handler &cgh) {
-      auto nidx = nidx_d.get_access<sycl_read>(cgh);
-      auto nlist2 = nlist2_d.get_access<sycl_read>(cgh);
-      auto posscol = posscol_d.get_access<sycl_read_write>(cgh);
-      auto posscol2 = posscol2_d.get_access<sycl_read_write>(cgh);
-      auto color = color_d.get_access<sycl_read_write>(cgh);
-      auto wl = wl_d.get_access<sycl_read>(cgh);
-      auto wlsize = wlsize_d.get_access<sycl_read>(cgh);
-      cgh.parallel_for<class runLarge_kernel>(nd_range<1>(gws, lws),
-        [=] (nd_item<1> item) [[intel::reqd_sub_group_size(32)]] {
-        runLarge(nodes, nidx.get_pointer(), nlist2.get_pointer(),
-                 posscol.get_pointer(), posscol2.get_pointer(), color.get_pointer(),
-                 wl.get_pointer(), wlsize.get_pointer(), item);
-        });
-    });
-
-    q.submit([&] (handler &cgh) {
-      auto nidx = nidx_d.get_access<sycl_read>(cgh);
-      auto nlist = nlist_d.get_access<sycl_read>(cgh);
-      auto posscol = posscol_d.get_access<sycl_read_write>(cgh);
-      auto color = color_d.get_access<sycl_read_write>(cgh);
-      cgh.parallel_for<class runSmall_kernel>(nd_range<1>(gws, lws), 
-        [=] (nd_item<1> item) [[intel::reqd_sub_group_size(32)]] {
-        runSmall(nodes, nidx.get_pointer(), nlist.get_pointer(), 
-                 posscol.get_pointer(), color.get_pointer(), item);
+    // Convergence loops hoisted from the kernels to the host: launch one
+    // sweep at a time and re-launch while any thread requested another sweep.
+    int again, iter;
+    iter = 0;
+    do {
+      q.submit([&] (handler &cgh) {
+        auto acc = again_d.get_access<sycl_write>(cgh);
+        cgh.fill(acc, 0);
       });
-    });
+      q.submit([&] (handler &cgh) {
+        auto nidx = nidx_d.get_access<sycl_read>(cgh);
+        auto nlist2 = nlist2_d.get_access<sycl_read>(cgh);
+        auto posscol = posscol_d.get_access<sycl_read_write>(cgh);
+        auto posscol2 = posscol2_d.get_access<sycl_read_write>(cgh);
+        auto color = color_d.get_access<sycl_read_write>(cgh);
+        auto wl = wl_d.get_access<sycl_read>(cgh);
+        auto wlsize = wlsize_d.get_access<sycl_read>(cgh);
+        auto again_acc = again_d.get_access<sycl_read_write>(cgh);
+        cgh.parallel_for<class runLarge_kernel>(nd_range<1>(gws, lws),
+          [=] (nd_item<1> item) [[intel::reqd_sub_group_size(32)]] {
+          runLarge(nodes, nidx.get_pointer(), nlist2.get_pointer(),
+                   posscol.get_pointer(), posscol2.get_pointer(), color.get_pointer(),
+                   wl.get_pointer(), wlsize.get_pointer(), again_acc.get_pointer(), item);
+          });
+      });
+      {
+        auto h = again_d.get_host_access();
+        again = h[0];
+      }
+      if (++iter > nodes + 32) {printf("ERROR: runLarge failed to converge\n\n"); exit(1);}
+    } while (again != 0);
+
+    iter = 0;
+    do {
+      q.submit([&] (handler &cgh) {
+        auto acc = again_d.get_access<sycl_write>(cgh);
+        cgh.fill(acc, 0);
+      });
+      q.submit([&] (handler &cgh) {
+        auto nidx = nidx_d.get_access<sycl_read>(cgh);
+        auto nlist = nlist_d.get_access<sycl_read>(cgh);
+        auto posscol = posscol_d.get_access<sycl_read_write>(cgh);
+        auto color = color_d.get_access<sycl_read_write>(cgh);
+        auto again_acc = again_d.get_access<sycl_read_write>(cgh);
+        cgh.parallel_for<class runSmall_kernel>(nd_range<1>(gws, lws),
+          [=] (nd_item<1> item) [[intel::reqd_sub_group_size(32)]] {
+          runSmall(nodes, nidx.get_pointer(), nlist.get_pointer(),
+                   posscol.get_pointer(), color.get_pointer(), again_acc.get_pointer(), item);
+        });
+      });
+      {
+        auto h = again_d.get_host_access();
+        again = h[0];
+      }
+      if (++iter > nodes + 32) {printf("ERROR: runSmall failed to converge\n\n"); exit(1);}
+    } while (again != 0);
   }
 
   q.wait();
