@@ -137,19 +137,20 @@ void init(sycl::nd_item<1> &item,
 // a) Subtracting the row by the minimum in each row
 const int n_rows_per_block = n / n_blocks_reduction;
 
-void min_in_rows_warp_reduce(volatile data* sdata, int tid) {
-  if (n_threads_reduction >= 64 && n_rows_per_block < 64) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 32]));
-  if (n_threads_reduction >= 32 && n_rows_per_block < 32) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 16]));
-  if (n_threads_reduction >= 16 && n_rows_per_block < 16) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 8]));
-  if (n_threads_reduction >= 8 && n_rows_per_block < 8) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 4]));
-  if (n_threads_reduction >= 4 && n_rows_per_block < 4) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 2]));
-  if (n_threads_reduction >= 2 && n_rows_per_block < 2) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 1]));
+// PORTABILITY NOTE (ported from hungarian-hip): this used to be a CUDA-style
+// warp-synchronous reduction (no barriers, guarded by `if (tid < 32)` at the
+// call site), which requires 32-wide lockstep execution. Devices that do not
+// guarantee that can silently return MAX_DATA, which feeds garbage into
+// steps 1/6 (wrong costs and a step-4/6 livelock). It is now a
+// barrier-synchronized tail reduction executed by ALL threads of the block
+// so that no barrier sits in divergent control flow.
+void min_in_rows_warp_reduce(sycl::nd_item<1> &item, volatile data* sdata, int tid) {
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (n_threads_reduction >= 2*s && n_rows_per_block < 2*s && tid < s)
+      sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + s]));
+    __syncthreads();
+  }
 }
 
 void calc_min_in_rows(sycl::nd_item<1> &item, data *slack,
@@ -192,26 +193,22 @@ void calc_min_in_rows(sycl::nd_item<1> &item, data *slack,
       sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + 64]));
     } __syncthreads();
   }
-  if (tid < 32) min_in_rows_warp_reduce(sdata, tid);
+  min_in_rows_warp_reduce(item, sdata, tid); // all threads: contains barriers
   if (tid < n_rows_per_block) min_in_rows[bid*n_rows_per_block + tid] = sdata[tid];
 }
 
 // a) Subtracting the column by the minimum in each column
 const int n_cols_per_block = n / n_blocks_reduction;
 
-void min_in_cols_warp_reduce(volatile data* sdata, int tid) {
-  if (n_threads_reduction >= 64 && n_cols_per_block < 64) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 32]));
-  if (n_threads_reduction >= 32 && n_cols_per_block < 32) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 16]));
-  if (n_threads_reduction >= 16 && n_cols_per_block < 16) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 8]));
-  if (n_threads_reduction >= 8 && n_cols_per_block < 8) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 4]));
-  if (n_threads_reduction >= 4 && n_cols_per_block < 4) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 2]));
-  if (n_threads_reduction >= 2 && n_cols_per_block < 2) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 1]));
+// Barrier-synchronized for portability; executed by ALL threads (see
+// min_in_rows_warp_reduce).
+void min_in_cols_warp_reduce(sycl::nd_item<1> &item, volatile data* sdata, int tid) {
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (n_threads_reduction >= 2*s && n_cols_per_block < 2*s && tid < s)
+      sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + s]));
+    __syncthreads();
+  }
 }
 
 void calc_min_in_cols(
@@ -245,7 +242,7 @@ void calc_min_in_cols(
     if (tid < 128) { sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + 128])); } __syncthreads(); }
   if (n_threads_reduction >= 128 && n_cols_per_block < 128) {
     if (tid <  64) { sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + 64])); } __syncthreads(); }
-  if (tid < 32) min_in_cols_warp_reduce(sdata, tid);
+  min_in_cols_warp_reduce(item, sdata, tid); // all threads: contains barriers
   if (tid < n_cols_per_block) min_in_cols[bid*n_cols_per_block + tid] = sdata[tid];
 }
 
@@ -291,6 +288,16 @@ void compress_matrix(
 // column or row star the zero. Repeat for each zero.
 
 // The zeros are split through blocks of data so we run step 2 with several thread blocks and rerun the kernel if repeat was set to true.
+//
+// PORTABILITY NOTE (ported from hungarian-hip): the original code additionally
+// iterated inside the kernel with `do { ... } while (repeat)`, where the
+// work-group-local bool `repeat` is written non-atomically by arbitrary
+// threads between barriers.  On some devices that block-side convergence spin
+// does not terminate reliably, and it was only an intra-block optimization:
+// cross-block convergence already relied on the host relaunching the kernel
+// while `repeat_kernel` is set.  The in-kernel loop is therefore hoisted to
+// the host: each launch performs exactly one pass over the zeros and raises
+// the global `repeat_kernel` flag when another pass is needed.
 void step_2(
   sycl::nd_item<1> &item,
   const int *__restrict zeros,
@@ -299,47 +306,33 @@ void step_2(
   int *__restrict column_of_star_at_row,
   int *__restrict cover_row,
   int *__restrict cover_column,
-  bool *__restrict repeat_kernel,
-  bool &s_repeat,
-  bool &s_repeat_kernel)
+  bool *__restrict repeat_kernel)
 {
   int i = item.get_local_id(0);
   int b = item.get_group(0);
 
-  if (i == 0) s_repeat_kernel = false;
+  for (int j = i; j < zeros_size_b[b]; j += item.get_local_range(0))
+  {
+    int z = zeros[(b << log2_data_block_size) + j];
+    int l = z & row_mask;
+    int c = z >> log2_n;
 
-  do {
-    __syncthreads();
-    if (i == 0) s_repeat = false;
-    __syncthreads();
-
-    for (int j = i; j < zeros_size_b[b]; j += item.get_local_range(0))
-    {
-      int z = zeros[(b << log2_data_block_size) + j];
-      int l = z & row_mask;
-      int c = z >> log2_n;
-
-      if (cover_row[l] == 0 && cover_column[c] == 0) {
-        // thread trys to get the line
-        if (!atomicExch(cover_row[l], 1)) {
-          // only one thread gets the line
-          if (!atomicExch(cover_column[c], 1)) {
-            // only one thread gets the column
-            row_of_star_at_column[c] = l;
-            column_of_star_at_row[l] = c;
-          }
-          else {
-            cover_row[l] = 0;
-            s_repeat = true;
-            s_repeat_kernel = true;
-          }
+    if (cover_row[l] == 0 && cover_column[c] == 0) {
+      // thread trys to get the line
+      if (!atomicExch(cover_row[l], 1)) {
+        // only one thread gets the line
+        if (!atomicExch(cover_column[c], 1)) {
+          // only one thread gets the column
+          row_of_star_at_column[c] = l;
+          column_of_star_at_row[l] = c;
+        }
+        else {
+          cover_row[l] = 0;
+          *repeat_kernel = true; // benign race: every writer stores true
         }
       }
     }
-    __syncthreads();
-  } while ((s_repeat));
-
-  if ((s_repeat_kernel)) s_repeat_kernel = true;
+  }
 }
 
 // STEP 3
@@ -390,6 +383,33 @@ void step_4_init(
   row_of_green_at_column[i] = -1;
 }
 
+// PORTABILITY NOTE (ported from hungarian-hip): like step_2, the original
+// kernel iterated in-kernel with `do { ... } while (s_found && !s_goto_5)`
+// over work-group-local bools written non-atomically by arbitrary threads —
+// the same divergent-termination spin that hangs on wide devices.  `s_found`
+// and `s_repeat_kernel` were always set together, so one pass per launch with
+// the host looping `while (repeat_kernel && !goto_5)` (which it already did)
+// is equivalent.
+//
+// RACE FIX (Arc B570 hang in step_5a): priming a starred row must be EXCLUSIVE.
+// The algorithm's acyclicity guarantee for the step-5a chase is a temporal
+// ordering: a starred column c only becomes uncovered after its star row r was
+// primed and covered, so every chase hop  c -> star_row(c)=r -> prime(r)
+// lands on a column that was uncovered strictly earlier — the chain must
+// terminate.  That argument requires `column_of_prime_at_row[l]` to be
+// immutable once `cover_row[l] == 1` is observable.  The original (upstream)
+// code enforced this only probabilistically: the non-atomic check-then-act
+// `if (!cover_column[c] && !cover_row[l]) { prime; cover }`
+// lets two threads both pass the `!cover_row[l]` test, so a thread can
+// overwrite prime[l] AFTER row l's cover/uncover side effects were consumed by
+// other threads to build later primes — cross-linking primes into a cycle
+// (e.g. prime[r1]=c2, prime[r2]=c1 with stars c1@r1, c2@r2), which makes the
+// step_5a chase spin forever.  Narrow schedulers keep the check-act window
+// effectively closed; the B570's wide concurrent execution exposes it.
+// Fix: the row cover is an atomicExch claim — exactly one thread wins the
+// 0->1 transition and only the winner primes the row.  Losers do nothing:
+// their zero is now covered, and the winner already raised repeat_kernel, so
+// the host relaunch re-examines everything.
 void step_4(
   sycl::nd_item<1> &item,
   const int *__restrict zeros,
@@ -399,59 +419,48 @@ void step_4(
   int *__restrict cover_column,
   int *__restrict column_of_prime_at_row,
   bool *__restrict goto_5,
-  bool *__restrict repeat_kernel,
-  bool &s_found,
-  bool &s_goto_5,
-  bool &s_repeat_kernel)
+  bool *__restrict repeat_kernel)
 {
-
   volatile int *v_cover_row = cover_row;
   volatile int *v_cover_column = cover_column;
 
   int i = item.get_local_id(0);
   int b = item.get_group(0);
 
-  if (i == 0) {
-    s_repeat_kernel = false;
-    s_goto_5 = false;
-  }
+  for (int j = i; j < zeros_size_b[b]; j += item.get_local_range(0))
+  {
+    int z = zeros[(b << log2_data_block_size) + j];
+    int l = z & row_mask;
+    int c = z >> log2_n;
+    int c1 = column_of_star_at_row[l];
 
-  do {
-    __syncthreads();
-    if (i == 0) s_found = false;
-    __syncthreads();
+    for (int n = 0; n < 10; n++) {
 
-    for (int j = i; j < zeros_size_b[b]; j += item.get_local_range(0))
-    {
-      int z = zeros[(b << log2_data_block_size) + j];
-      int l = z & row_mask;
-      int c = z >> log2_n;
-      int c1 = column_of_star_at_row[l];
-
-      for (int n = 0; n < 10; n++) {
-
-        if (!v_cover_column[c] && !v_cover_row[l]) {
-          s_found = true;
-          s_repeat_kernel = true;
-          column_of_prime_at_row[l] = c;
-
-          if (c1 >= 0) {
-            v_cover_row[l] = 1;
+      if (!v_cover_column[c] && !v_cover_row[l]) {
+        // Columns are never re-covered during step 4, so an observed
+        // uncovered column stays valid across the claim below.
+        if (c1 >= 0) {
+          if (atomicExch(cover_row[l], 1) == 0) {
+            // Exclusive winner for row l: prime it exactly once.
+            column_of_prime_at_row[l] = c;
+            *repeat_kernel = true; // benign race: every writer stores true
+            // prime visible before the uncover below
             sycl::atomic_fence(sycl::memory_order::acq_rel, sycl::memory_scope::device);
             v_cover_column[c1] = 0;
           }
-          else {
-            s_goto_5 = true;
-          }
+          // Losers: row l is covered now; nothing further to do for this zero.
         }
-      } // for(int n
+        else {
+          // Row without a star: never covered, so last-write-wins priming is
+          // fine — any currently-uncovered zero column is a valid chase entry.
+          column_of_prime_at_row[l] = c;
+          *repeat_kernel = true; // benign race: every writer stores true
+          *goto_5 = true;        // benign race: every writer stores true
+        }
+      }
+    } // for(int n
 
-    } // for(int j
-    __syncthreads();
-  } while (s_found && !s_goto_5);
-
-  if (i == 0 && s_repeat_kernel) *repeat_kernel = true;
-  if (i == 0 && s_goto_5) *goto_5 = true;
+  } // for(int j
 }
 
 /* STEP 5:
@@ -470,7 +479,8 @@ void step_5a(
   const int *__restrict row_of_star_at_column,
   const int *__restrict column_of_star_at_row,
   const int *__restrict column_of_prime_at_row,
-        int *__restrict row_of_green_at_column)
+        int *__restrict row_of_green_at_column,
+        int *__restrict step5_error)
 {
   int i = item.get_global_id(0);
 
@@ -480,8 +490,24 @@ void step_5a(
   if (c_Z0 >= 0 && column_of_star_at_row[i] < 0) {
     row_of_green_at_column[c_Z0] = i;
 
+    // Fail-loudly backstop (ported from hungarian-hip): an alternating path
+    // visits each row/column at most once, so it can never exceed n hops.
+    // Exceeding the bound (step5_error=1), or landing on a starred row with
+    // no prime (step5_error=2), means step 4 produced a cyclic/corrupt
+    // priming state; abort instead of spinning forever.  With the atomic row
+    // claim in step_4 this must never trigger.  The host checks the flag
+    // after step_5a and aborts.
+    int hops = 0;
     while ((r_Z0 = row_of_star_at_column[c_Z0]) >= 0) {
+      if (++hops > nrows) {
+        *step5_error = 1;
+        return;
+      }
       c_Z0 = column_of_prime_at_row[r_Z0];
+      if (c_Z0 < 0) {
+        *step5_error = 2;
+        return;
+      }
       row_of_green_at_column[c_Z0] = r_Z0;
     }
   }
@@ -524,20 +550,16 @@ void step_5b(
 // row, and subtract it from every element of each uncovered column.
 // Return to Step 4 without altering any stars, primes, or covered lines.
 
+// Barrier-synchronized for portability; executed by ALL threads (see
+// min_in_rows_warp_reduce).
 template <unsigned int blockSize>
-void min_warp_reduce(volatile data* sdata, int tid) {
-  if (blockSize >= 64) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 32]));
-  if (blockSize >= 32) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 16]));
-  if (blockSize >= 16) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 8]));
-  if (blockSize >= 8) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 4]));
-  if (blockSize >= 4) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 2]));
-  if (blockSize >= 2) sdata[tid] =
-      sycl::min((int)(sdata[tid]), (int)(sdata[tid + 1]));
+void min_warp_reduce(sycl::nd_item<1> &item, volatile data* sdata, int tid) {
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (blockSize >= (unsigned)(2*s) && tid < s)
+      sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + s]));
+    __syncthreads();
+  }
 }
 
 template <unsigned int blockSize>  // blockSize is the size of a block of threads
@@ -593,7 +615,7 @@ void min_reduce1(
       sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + 64]));
     } __syncthreads();
   }
-  if (tid < 32) min_warp_reduce<blockSize>(sdata, tid);
+  min_warp_reduce<blockSize>(item, sdata, tid); // all threads: contains barriers
   if (tid == 0) g_odata[item.get_group(0)] = sdata[0];
 }
 
@@ -631,7 +653,7 @@ void min_reduce2(
       sdata[tid] = sycl::min((int)(sdata[tid]), (int)(sdata[tid + 64]));
     } __syncthreads();
   }
-  if (tid < 32) min_warp_reduce<blockSize>(sdata, tid);
+  min_warp_reduce<blockSize>(item, sdata, tid); // all threads: contains barriers
   if (tid == 0) g_odata[item.get_group(0)] = sdata[0];
 }
 
@@ -760,6 +782,10 @@ int main(int argc, char* argv[])
   int *n_matches = sycl::malloc_shared<int>(1, q); // Used in step 3 to count the number of matches found
   bool *goto_5 = sycl::malloc_shared<bool>(1, q); // After step 4, goto step 5?
   bool *repeat_kernel = sycl::malloc_shared<bool>(1, q); // Needs to repeat the step 2 and step 4 kernel?
+  // Fail-loudly backstop set by step_5a if the augmenting-path chase exceeds
+  // n hops, which can only happen if step 4 produced a cyclic priming state.
+  // Host checks it after step_5a and aborts.
+  int *step5_error = sycl::malloc_shared<int>(1, q);
 
 #ifndef USE_TEST_MATRIX
   std::default_random_engine generator(seed);
@@ -785,6 +811,8 @@ int main(int argc, char* argv[])
 
     // Invoke kernels
     auto start = std::chrono::steady_clock::now();
+
+    *step5_error = 0;
 
     sycl::range<1> gws1 (n_blocks * n_threads);
     sycl::range<1> lws1 (n_threads);
@@ -845,7 +873,7 @@ int main(int argc, char* argv[])
         sycl::nd_range<1>(gws3, lws3), [=] (sycl::nd_item<1> item) {
         compress_matrix(item, slack, zeros, zeros_size_b, zeros_size);
       });
-    });
+    }).wait(); // host reads *zeros_size below
 
     // Step 2 kernels
     do {
@@ -856,16 +884,12 @@ int main(int argc, char* argv[])
       sycl::range<1> gws4 (n_blocks_step_4 *  block_size);
       sycl::range<1> lws4 (block_size);
       q.submit([&] (sycl::handler &cgh) {
-        sycl::local_accessor<bool, 0> s_repeat (cgh);
-        sycl::local_accessor<bool, 0> s_repeat_kernel (cgh);
         cgh.parallel_for<class s2>(
           sycl::nd_range<1>(gws4, lws4), [=] (sycl::nd_item<1> item) {
-          step_2(item, zeros, zeros_size_b, 
+          step_2(item, zeros, zeros_size_b,
               row_of_star_at_column,
               column_of_star_at_row,
-              cover_row, cover_column, repeat_kernel, 
-              s_repeat,
-              s_repeat_kernel);
+              cover_row, cover_column, repeat_kernel);
         });
       }).wait();
 
@@ -913,21 +937,15 @@ int main(int argc, char* argv[])
           sycl::range<1> gws4 (n_blocks_step_4 *  block_size);
           sycl::range<1> lws4 (block_size);
           q.submit([&] (sycl::handler &cgh) {
-            sycl::local_accessor<bool, 0> s_found (cgh);
-            sycl::local_accessor<bool, 0> s_goto_5 (cgh);
-            sycl::local_accessor<bool, 0> s_repeat_kernel (cgh);
             cgh.parallel_for<class s4>(
               sycl::nd_range<1>(gws4, lws4), [=] (sycl::nd_item<1> item) {
-              step_4(item, zeros, zeros_size_b, 
+              step_4(item, zeros, zeros_size_b,
                   column_of_star_at_row,
-                  cover_row, 
+                  cover_row,
                   cover_column,
                   column_of_prime_at_row,
                   goto_5,
-                  repeat_kernel, 
-                  s_found,
-                  s_goto_5,
-                  s_repeat_kernel);
+                  repeat_kernel);
             });
           }).wait();
           
@@ -982,7 +1000,7 @@ int main(int argc, char* argv[])
           sycl::nd_range<1>(gws3, lws3), [=] (sycl::nd_item<1> item) {
             compress_matrix(item, slack, zeros, zeros_size_b, zeros_size);
           });
-        });
+        }).wait(); // host reads *zeros_size at the top of the step-4 loop
       } // repeat step 4 and 6
 
       // call_kernel(step_5a, n_blocks, n_threads);
@@ -991,9 +1009,19 @@ int main(int argc, char* argv[])
           sycl::nd_range<1>(gws1, lws1), [=] (sycl::nd_item<1> item) {
           step_5a(item, row_of_star_at_column,
                column_of_star_at_row, column_of_prime_at_row,
-               row_of_green_at_column);
+               row_of_green_at_column,
+               step5_error);
         });
-      });
+      }).wait();
+
+      if (*step5_error) {
+        if (*step5_error == 1)
+          fprintf(stderr, "step_5a ERROR: augmenting path exceeds %d hops - cyclic priming state (step 4 race)\n", nrows);
+        else
+          fprintf(stderr, "step_5a ERROR: starred row reached by chase has no prime - corrupt priming state\n");
+        fprintf(stderr, "FATAL: step_5a detected a cyclic/corrupt priming state (step 4 exclusivity violated)\n");
+        exit(2);
+      }
 
       //call_kernel(step_5b, n_blocks, n_threads);
       q.submit([&] (sycl::handler &cgh) {
@@ -1050,6 +1078,7 @@ int main(int argc, char* argv[])
   sycl::free(n_matches, q);
   sycl::free(goto_5, q);
   sycl::free(repeat_kernel, q);
+  sycl::free(step5_error, q);
 
   return 0;
 }

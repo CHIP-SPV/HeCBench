@@ -30,8 +30,11 @@ obj = $(source:.cpp=.o)
 #===============================================================================
 
 # Standard Flags
-CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN) \
-          -D_n_=64 -D_range_=64
+# NOTE: -D_n_=64 -D_range_=64 removed to match the hungarian-hip reference
+# configuration (user_n=1000 -> n=2048, 10 tests).  The n=64 config runs a
+# single step-4 work-group, which cannot exercise the cross-block relaunch
+# paths or the step_4 priming race fixed in main.cpp.
+CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall -fsycl --gcc-toolchain=$(GCC_TOOLCHAIN)
 
 ifeq ($(VENDOR), AdaptiveCpp)
     CFLAGS_TMP := $(CFLAGS)
