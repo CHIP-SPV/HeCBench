@@ -244,6 +244,11 @@ int main(int argc, char* argv[])
   unsigned int *blkcntd = sycl::malloc_device<unsigned int>(1, q);
   float *radiusd = sycl::malloc_device<float>(1, q);
 
+  // host-iterated relaunch state (see tree_building/sum/sort kernels)
+  int *insertedd = sycl::malloc_device<int>(nbodies, q);
+  int *sdoned = sycl::malloc_device<int>(nnodes+1, q);
+  int *repeatd = sycl::malloc_device<int>(1, q);
+
   q.memcpy(accVeld, accVel, nbodies * sizeof(sycl::float4));
   q.memcpy(veld, vel, nbodies * sizeof(sycl::float2));
   q.memcpy(posMassd, posMass, nbodies * sizeof(sycl::float4));
@@ -252,6 +257,11 @@ int main(int argc, char* argv[])
 
   struct timeval starttime, endtime;
   gettimeofday(&starttime, NULL);
+
+  // host-side relaunch bookkeeping for the three iterative phases
+  int repeat;
+  long guard;
+  long treeLaunches = 0, sumLaunches = 0, sortLaunches = 0;
 
   // run timesteps (launch kernels on a device)
   q.submit([&] (sycl::handler &cgh) {
@@ -386,32 +396,45 @@ int main(int argc, char* argv[])
       });
     });
 
+    // The original ECL-BH kernel retried locked/contended child slots in-kernel
+    // (spinning without advancing i until the lock owner releases), with a
+    // work-group barrier inside the divergent loop.  On lockstep SIMT devices
+    // this livelocks/hangs (it happens to pass on Intel GPUs, but is UB per the
+    // SYCL spec).  As in the fixed HIP version, the retry loop is hoisted to
+    // the host: each launch makes ONE bounded insertion attempt per
+    // still-pending body.  A thread that wins the lock always finishes its
+    // subdivision and releases the lock within the same launch, so no lock
+    // survives a launch boundary and every launch inserts at least one body.
+    // The host relaunches until *repeatd stays 0.
     sycl::range<1> k4_gws (blocks * FACTOR2 * THREADS2);
     sycl::range<1> k4_lws (THREADS2);
-    q.submit([&](sycl::handler &cgh) {
-      cgh.parallel_for<class tree_building>(sycl::nd_range<1>(k4_gws, k4_lws), [=] (sycl::nd_item<1> item) {
-        int i, j, depth, skip, inc;
-        float x, y, z, r;
-        float dx, dy, dz;
-        int ch, n, cell, locked, patch;
-        float radius;
 
-        // cache root data
-        radius = radiusd[0] * 0.5f;
-        const sycl::float4 root = posMassd[nnodes];
+    // tree building: relaunch until every body has been inserted
+    q.memset(insertedd, 0, sizeof(int) * nbodies);
+    guard = 0;
+    do {
+      q.memset(repeatd, 0, sizeof(int));
+      q.submit([&](sycl::handler &cgh) {
+        cgh.parallel_for<class tree_building>(sycl::nd_range<1>(k4_gws, k4_lws), [=] (sycl::nd_item<1> item) {
+          int i, j, inc;
+          float x, y, z, r;
+          float dx, dy, dz;
+          int ch, n, cell, locked, patch;
+          float radius;
 
-        skip = 1;
-        inc = item.get_local_range(0) * item.get_group_range(0);
-        i = item.get_global_id(0);
+          // cache root data
+          radius = radiusd[0] * 0.5f;
+          const sycl::float4 root = posMassd[nnodes];
 
-        // iterate over all bodies assigned to thread
-        while (i < nbodies) {
-          const sycl::float4 p = posMassd[i];
-          if (skip != 0) {
-            // new body, so start traversing at root
-            skip = 0;
+          inc = item.get_local_range(0) * item.get_group_range(0);
+
+          // iterate over all bodies assigned to thread
+          for (i = item.get_global_id(0); i < nbodies; i += inc) {
+            if (insertedd[i]) continue;  // placed in an earlier launch
+            const sycl::float4 p = posMassd[i];
+
+            // start traversing at root
             n = nnodes;
-            depth = 1;
             r = radius;
             dx = dy = dz = -r;
             j = 0;
@@ -422,82 +445,88 @@ int main(int argc, char* argv[])
             x = root.x() + dx;
             y = root.y() + dy;
             z = root.z() + dz;
-          }
 
-          // follow path to leaf cell
-          ch = childd[n*8+j];
-          while (ch >= nbodies) {
-            n = ch;
-            depth++;
-            r *= 0.5f;
-            dx = dy = dz = -r;
-            j = 0;
-            // determine which child to follow
-            if (x < p.x()) {j = 1; dx = r;}
-            if (y < p.y()) {j |= 2; dy = r;}
-            if (z < p.z()) {j |= 4; dz = r;}
-            x += dx;
-            y += dy;
-            z += dz;
+            // follow path to leaf cell
             ch = childd[n*8+j];
-          }
+            while (ch >= nbodies) {
+              n = ch;
+              r *= 0.5f;
+              dx = dy = dz = -r;
+              j = 0;
+              // determine which child to follow
+              if (x < p.x()) {j = 1; dx = r;}
+              if (y < p.y()) {j |= 2; dy = r;}
+              if (z < p.z()) {j |= 4; dz = r;}
+              x += dx;
+              y += dy;
+              z += dz;
+              ch = childd[n*8+j];
+            }
 
-          if (ch != -2) {  // skip if child pointer is locked and try again later
-            locked = n*8+j;
-            if (ch == -1) {
-              if (ch == atomicCAS(childd[locked], ch, i)) {  // if null, just insert the new body
-                i += inc;  // move on to next body
-                skip = 1;
-              }
-            } else {  // there already is a body at this position
-              if (ch == atomicCAS(childd[locked], ch, -2)) {  // try to lock
-                patch = -1;
-                const sycl::float4 chp = posMassd[ch];
-                // create new cell(s) and insert the old and new bodies
-                do {
-                  depth++;
-                  cell = atomicSub(bottomd[0], 1) - 1;
+            int done = 0;
+            if (ch != -2) {  // if child pointer is locked, leave body for next launch
+              locked = n*8+j;
+              if (ch == -1) {
+                if (-1 == atomicCAS(childd[locked], -1, i)) {  // if null, just insert the new body
+                  done = 1;
+                }
+              } else {  // there already is a body at this position
+                if (ch == atomicCAS(childd[locked], ch, -2)) {  // try to lock
+                  patch = -1;
+                  const sycl::float4 chp = posMassd[ch];
+                  // create new cell(s) and insert the old and new bodies
+                  do {
+                    cell = atomicSub(bottomd[0], 1) - 1;
 
-                  if (patch != -1) {
-                    childd[n*8+j] = cell;
-                  }
-                  patch = sycl::max(patch, cell);
+                    if (patch != -1) {
+                      childd[n*8+j] = cell;
+                    }
+                    patch = sycl::max(patch, cell);
 
-                  j = 0;
-                  if (x < chp.x()) j = 1;
-                  if (y < chp.y()) j |= 2;
-                  if (z < chp.z()) j |= 4;
-                  childd[cell*8+j] = ch;
+                    j = 0;
+                    if (x < chp.x()) j = 1;
+                    if (y < chp.y()) j |= 2;
+                    if (z < chp.z()) j |= 4;
+                    childd[cell*8+j] = ch;
 
-                  n = cell;
-                  r *= 0.5f;
-                  dx = dy = dz = -r;
-                  j = 0;
-                  if (x < p.x()) {j = 1; dx = r;}
-                  if (y < p.y()) {j |= 2; dy = r;}
-                  if (z < p.z()) {j |= 4; dz = r;}
-                  x += dx;
-                  y += dy;
-                  z += dz;
+                    n = cell;
+                    r *= 0.5f;
+                    dx = dy = dz = -r;
+                    j = 0;
+                    if (x < p.x()) {j = 1; dx = r;}
+                    if (y < p.y()) {j |= 2; dy = r;}
+                    if (z < p.z()) {j |= 4; dz = r;}
+                    x += dx;
+                    y += dy;
+                    z += dz;
 
-                  ch = childd[n*8+j];
-                  // repeat until the two bodies are different children
-                } while (ch >= 0);
-                childd[n*8+j] = i;
+                    ch = childd[n*8+j];
+                    // repeat until the two bodies are different children
+                  } while (ch >= 0);
+                  childd[n*8+j] = i;
 
-                i += inc;  // move on to next body
-                skip = 2;
+                  // make the new subtree visible before releasing the lock
+                  sycl::atomic_fence(sycl::memory_order::seq_cst, sycl::memory_scope::device);
+                  childd[locked] = patch;
+                  done = 1;
+                }
               }
             }
+            if (done) {
+              insertedd[i] = 1;
+            } else {
+              repeatd[0] = 1;  // contention: retry this body in the next launch
+            }
           }
-          item.barrier(sycl::access::fence_space::local_space);  // optional barrier for performance
-
-          if (skip == 2) {
-            childd[locked] = patch;
-          }
-        }
+        });
       });
-    });
+      q.memcpy(&repeat, repeatd, sizeof(int)).wait();
+      treeLaunches++;
+      if (++guard > (long)nbodies + 64) {  // each launch inserts at least one body
+        fprintf(stderr, "tree_building kernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
     sycl::range<1> k5_gws (blocks * 256);
     sycl::range<1> k5_lws (256);
@@ -518,24 +547,36 @@ int main(int argc, char* argv[])
       });
     });
 
+    // The original ECL-BH kernel ran three wait-free pre-passes and then spun
+    // in-kernel until the masses of all children became ready (a
+    // cross-workgroup spin that requires all workgroups to be co-resident and
+    // can hang on lockstep SIMT devices).  As in the fixed HIP version, the
+    // convergence loop is hoisted to the host: each launch performs ONE
+    // wait-free pass (the original pre-pass body, verbatim); cells whose
+    // children are not all ready set *repeatd and are retried in the next
+    // launch.  Bottom-up progress is guaranteed: the deepest unready cell
+    // always has all of its children ready.
     sycl::range<1> k6_gws (blocks * FACTOR3 * THREADS3);
     sycl::range<1> k6_lws (THREADS3);
-    q.submit([&](sycl::handler &cgh) {
-      sycl::local_accessor<int, 1> child(sycl::range<1>(THREADS3*8), cgh);
-      sycl::local_accessor<float, 1> mass(sycl::range<1>(THREADS3*8), cgh);
-      cgh.parallel_for<class sum>(
-        sycl::nd_range<1>(k6_gws, k6_lws), [=] (sycl::nd_item<1> item) {
-        int i, j, ch, cnt;
-        float cm, px, py, pz, m;
-        int bottom = bottomd[0];
-        int lid = item.get_local_id(0);
-        int inc = item.get_local_range(0) * item.get_group_range(0);
-        int k = (bottom & (-WARPSIZE)) + item.get_global_id(0);  // align to warp size
-        if (k < bottom) k += inc;
-      
-        int restart = k;
-        for (j = 0; j < 3; j++) {  // wait-free pre-passes
-          // iterate over all cells assigned to thread
+
+    // summarization: relaunch wait-free passes until all cells are computed
+    guard = 0;
+    do {
+      q.memset(repeatd, 0, sizeof(int));
+      q.submit([&](sycl::handler &cgh) {
+        sycl::local_accessor<int, 1> child(sycl::range<1>(THREADS3*8), cgh);
+        sycl::local_accessor<float, 1> mass(sycl::range<1>(THREADS3*8), cgh);
+        cgh.parallel_for<class sum>(
+          sycl::nd_range<1>(k6_gws, k6_lws), [=] (sycl::nd_item<1> item) {
+          int i, ch, cnt;
+          float cm, px, py, pz, m;
+          int bottom = bottomd[0];
+          int lid = item.get_local_id(0);
+          int inc = item.get_local_range(0) * item.get_group_range(0);
+          int k = (bottom & (-WARPSIZE)) + item.get_global_id(0);  // align to warp size
+          if (k < bottom) k += inc;
+
+          // iterate over all cells assigned to thread (one wait-free pass)
           while (k <= nnodes) {
             if (posMassd[k].w() < 0.0f) {
               for (i = 0; i < 8; i++) {
@@ -578,121 +619,91 @@ int main(int argc, char* argv[])
                 posMassd[k].x() = px * m;
                 posMassd[k].y() = py * m;
                 posMassd[k].z() = pz * m;
+                // make the center of mass visible before publishing the mass
+                sycl::atomic_fence(sycl::memory_order::seq_cst, sycl::memory_scope::device);
                 posMassd[k].w() = cm;
+              } else {
+                repeatd[0] = 1;  // children not ready yet: retry this cell in the next launch
               }
             }
             k += inc;  // move on to next cell
           }
-          k = restart;
-        }
-      
-        j = 0;
-        // iterate over all cells assigned to thread
-        while (k <= nnodes) {
-          if (posMassd[k].w() >= 0.0f) {
-            k += inc;
-          } else {
-            if (j == 0) {
-              j = 8;
-              for (i = 0; i < 8; i++) {
-                ch = childd[k*8+i];
-                child[i*THREADS3+lid] = ch;  // cache children
-                if ((ch < nbodies) || ((mass[i*THREADS3+lid] = posMassd[ch].w()) >= 0.0f)) {
-                  j--;
-                }
-              }
-            } else {
-              j = 8;
-              for (i = 0; i < 8; i++) {
-                ch = child[i*THREADS3+lid];
-                if ((ch < nbodies) || (mass[i*THREADS3+lid] >= 0.0f) || ((mass[i*THREADS3+lid] = posMassd[ch].w()) >= 0.0f)) {
-                  j--;
-                }
-              }
-            }
-      
-            if (j == 0) {
-              // all children are ready
-              cm = 0.0f;
-              px = 0.0f;
-              py = 0.0f;
-              pz = 0.0f;
-              cnt = 0;
-              for (i = 0; i < 8; i++) {
-                ch = child[i*THREADS3+lid];
-                if (ch >= 0) {
-                  const float chx = posMassd[ch].x();
-                  const float chy = posMassd[ch].y();
-                  const float chz = posMassd[ch].z();
-                  const float chw = posMassd[ch].w();
-                  if (ch >= nbodies) {  // count bodies (needed later)
-                    m = mass[i*THREADS3+lid];
-                    cnt += countd[ch];
-                  } else {
-                    m = chw;
-                    cnt++;
-                  }
-                  // add child's contribution
-                  cm += m;
-                  px += chx * m;
-                  py += chy * m;
-                  pz += chz * m;
-                }
-              }
-              countd[k] = cnt;
-              m = 1.0f / cm;
-              posMassd[k].x() = px * m;
-              posMassd[k].y() = py * m;
-              posMassd[k].z() = pz * m;
-              posMassd[k].w() = cm;
-              k += inc;
-            }
-          }
-        }
+        });
       });
-    });
+      q.memcpy(&repeat, repeatd, sizeof(int)).wait();
+      sumLaunches++;
+      if (++guard > (long)nnodes + 64) {  // passes are bounded by the tree depth
+        fprintf(stderr, "summarization kernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
+    // The original ECL-BH kernel spun in-kernel until the parent published the
+    // cell's start index (startd[k] >= 0), with a work-group barrier in the
+    // spin loop that threads exit at different times — both hang on lockstep
+    // SIMT devices.  As in the fixed HIP version, the convergence loop is
+    // hoisted to the host: each launch performs ONE top-down pass; cells whose
+    // start index is not ready yet set *repeatd and are retried in the next
+    // launch.  sdoned marks cells already processed so they are not
+    // reprocessed by later launches.
     sycl::range<1> k7_gws (blocks * FACTOR4 * THREADS4);
     sycl::range<1> k7_lws (THREADS4);
-    q.submit([&](sycl::handler &cgh) {
-      cgh.parallel_for<class sort>(
-        sycl::nd_range<1>(k7_gws, k7_lws), [=] (sycl::nd_item<1> item) {
-        int i, j;
-        int bottom = bottomd[0];
-        int dec = item.get_local_range(0) * item.get_group_range(0);
-        int k = nnodes + 1 - dec + item.get_global_id(0);
 
-        // iterate over all cells assigned to thread
-        while (k >= bottom) {
-          int start = startd[k];
-          if (start >= 0) {
-            j = 0;
-            for (i = 0; i < 8; i++) {
-              int ch = childd[k*8+i];
-              if (ch >= 0) {
-                if (i != j) {
-                  // move children to front (needed later for speed)
-                  childd[k*8+i] = -1;
-                  childd[k*8+j] = ch;
+    // sort: relaunch top-down passes until every cell has been processed
+    q.memset(sdoned, 0, sizeof(int) * (nnodes+1));
+    guard = 0;
+    do {
+      q.memset(repeatd, 0, sizeof(int));
+      q.submit([&](sycl::handler &cgh) {
+        cgh.parallel_for<class sort>(
+          sycl::nd_range<1>(k7_gws, k7_lws), [=] (sycl::nd_item<1> item) {
+          int i, j;
+          int bottom = bottomd[0];
+          int dec = item.get_local_range(0) * item.get_group_range(0);
+          int k = nnodes + 1 - dec + item.get_global_id(0);
+
+          // iterate over all cells assigned to thread (one top-down pass)
+          while (k >= bottom) {
+            if (!sdoned[k]) {
+              int start = startd[k];
+              if (start >= 0) {
+                j = 0;
+                for (i = 0; i < 8; i++) {
+                  int ch = childd[k*8+i];
+                  if (ch >= 0) {
+                    if (i != j) {
+                      // move children to front (needed later for speed)
+                      childd[k*8+i] = -1;
+                      childd[k*8+j] = ch;
+                    }
+                    j++;
+                    if (ch >= nbodies) {
+                      // child is a cell
+                      startd[ch] = start;  // set start ID of child
+                      start += countd[ch];  // add #bodies in subtree
+                    } else {
+                      // child is a body
+                      sortd[start] = ch;  // record body in 'sorted' array
+                      start++;
+                    }
+                  }
                 }
-                j++;
-                if (ch >= nbodies) {
-                  // child is a cell
-                  startd[ch] = start;  // set start ID of child
-                  start += countd[ch];  // add #bodies in subtree
-                } else {
-                  // child is a body
-                  sortd[start] = ch;  // record body in 'sorted' array
-                  start++;
-                }
+                sdoned[k] = 1;
+              } else {
+                repeatd[0] = 1;  // start index not ready yet: retry this cell in the next launch
               }
             }
             k -= dec;  // move on to next cell
           }
-          item.barrier(sycl::access::fence_space::local_space);  // optional barrier for performance
-        }
+        });
       });
-    });
+      q.memcpy(&repeat, repeatd, sizeof(int)).wait();
+      sortLaunches++;
+      if (++guard > (long)nnodes + 64) {  // passes are bounded by the tree depth
+        fprintf(stderr, "sort kernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
     sycl::range<1> k8_gws (blocks * FACTOR5 * THREADS5);
     sycl::range<1> k8_lws (THREADS5);
@@ -847,6 +858,14 @@ int main(int argc, char* argv[])
 
   printf("Total kernel execution time: %.4lf s\n", runtime);
 
+#ifdef DEBUG
+  if (timesteps > 0) {
+    printf("host-iterated launches per step: tree=%.1f summarization=%.1f sort=%.1f\n",
+           (double)treeLaunches / timesteps, (double)sumLaunches / timesteps,
+           (double)sortLaunches / timesteps);
+  }
+#endif
+
   // transfer final results back to a host
   q.memcpy(accVel, accVeld, nbodies * sizeof(sycl::float4));
   q.memcpy(vel, veld, nbodies * sizeof(sycl::float2));
@@ -880,6 +899,9 @@ int main(int argc, char* argv[])
   sycl::free(blkcntd, q);
   sycl::free(bottomd, q);
   sycl::free(radiusd, q);
+  sycl::free(insertedd, q);
+  sycl::free(sdoned, q);
+  sycl::free(repeatd, q);
 
   return 0;
 }
