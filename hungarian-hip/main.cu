@@ -15,8 +15,6 @@
 #define klog2(n) ((n<8)?2:((n<16)?3:((n<32)?4:((n<64)?5:((n<128)?6:((n<256)?7:((n<512)?8:\
                 ((n<1024)?9:((n<2048)?10:((n<4096)?11:((n<8192)?12:((n<16384)?13:0))))))))))))
 
-#define MANAGED __managed__ 
-
 #define kmin(x,y) ((x<y)?x:y)
 #define kmax(x,y) ((x>y)?x:y)
 
@@ -88,9 +86,11 @@ data h_cost[n][n] = { { 1, 2, 3, 4 }, { 2, 4, 6, 8 }, { 3, 6, 9, 12 }, { 4, 8, 1
 #endif
 int h_column_of_star_at_row[nrows];
 int h_zeros_vector_size;
+int h_zeros_size;
 int h_n_matches;
 bool h_found;
 bool h_goto_5;
+bool h_repeat_kernel;
 
 // Device Variables
 
@@ -110,10 +110,18 @@ __device__ data min_in_mat_col[ncols];        // Used in step 1 to stores the mi
 __device__ data d_min_in_mat_vect[n_blocks_reduction];  // Used in step 6 to stores the intermediate results from the first reduction kernel
 __device__ data d_min_in_mat;                 // Used in step 6 to store the minimum
 
-MANAGED __device__ int zeros_size;            // The number fo zeros
-MANAGED __device__ int n_matches;             // Used in step 3 to count the number of matches found
-MANAGED __device__ bool goto_5;               // After step 4, goto step 5?
-MANAGED __device__ bool repeat_kernel;        // Needs to repeat the step 2 and step 4 kernel?
+// These flags used to be __managed__ and were polled directly by the host.
+// They are now plain device globals accessed with explicit
+// hipMemcpyToSymbol/hipMemcpyFromSymbol around each kernel launch, which is
+// portable to platforms without coherent managed memory (chipStar/Intel).
+__device__ int zeros_size;            // The number fo zeros
+__device__ int n_matches;             // Used in step 3 to count the number of matches found
+__device__ bool goto_5;               // After step 4, goto step 5?
+__device__ bool repeat_kernel;        // Needs to repeat the step 2 and step 4 kernel?
+__device__ int step5_error;           // Fail-loudly backstop: set by step_5a if the
+                                      // augmenting-path chase exceeds n hops, which can
+                                      // only happen if step 4 produced a cyclic priming
+                                      // state. Host checks it after step_5a and aborts.
 
 __shared__ extern data sdata[];               // For access to shared memory
 
@@ -140,13 +148,20 @@ __global__ void init()
 // a) Subtracting the row by the minimum in each row
 const int n_rows_per_block = n / n_blocks_reduction;
 
+// PORTABILITY NOTE: this used to be a CUDA warp-synchronous reduction (no
+// barriers, guarded by `if (tid < 32)` at the call site), which requires
+// 32-wide lockstep execution. OpenCL/Level-Zero devices (chipStar/Intel) do
+// not guarantee that, and the broken reduction returned MAX_DATA, which fed
+// garbage into steps 1/6 (wrong costs and a step-4/6 livelock). It is now a
+// barrier-synchronized tail reduction executed by ALL threads of the block
+// so that no barrier sits in divergent control flow.
 __device__ void min_in_rows_warp_reduce(volatile data* sdata, int tid) {
-  if (n_threads_reduction >= 64 && n_rows_per_block < 64) sdata[tid] = min(sdata[tid], sdata[tid + 32]);
-  if (n_threads_reduction >= 32 && n_rows_per_block < 32) sdata[tid] = min(sdata[tid], sdata[tid + 16]);
-  if (n_threads_reduction >= 16 && n_rows_per_block < 16) sdata[tid] = min(sdata[tid], sdata[tid + 8]);
-  if (n_threads_reduction >= 8 && n_rows_per_block < 8) sdata[tid] = min(sdata[tid], sdata[tid + 4]);
-  if (n_threads_reduction >= 4 && n_rows_per_block < 4) sdata[tid] = min(sdata[tid], sdata[tid + 2]);
-  if (n_threads_reduction >= 2 && n_rows_per_block < 2) sdata[tid] = min(sdata[tid], sdata[tid + 1]);
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (n_threads_reduction >= 2*s && n_rows_per_block < 2*s && tid < s)
+      sdata[tid] = min(sdata[tid], sdata[tid + s]);
+    __syncthreads();
+  }
 }
 
 __global__ void calc_min_in_rows()
@@ -174,20 +189,22 @@ __global__ void calc_min_in_rows()
   if (n_threads_reduction >= 512 && n_rows_per_block < 512) { if (tid < 256) { sdata[tid] = min(sdata[tid], sdata[tid + 256]); } __syncthreads(); }
   if (n_threads_reduction >= 256 && n_rows_per_block < 256) { if (tid < 128) { sdata[tid] = min(sdata[tid], sdata[tid + 128]); } __syncthreads(); }
   if (n_threads_reduction >= 128 && n_rows_per_block < 128) { if (tid <  64) { sdata[tid] = min(sdata[tid], sdata[tid + 64]); } __syncthreads(); }
-  if (tid < 32) min_in_rows_warp_reduce(sdata, tid);
+  min_in_rows_warp_reduce(sdata, tid); // all threads: contains barriers
   if (tid < n_rows_per_block) min_in_rows[bid*n_rows_per_block + tid] = sdata[tid];
 }
 
 // a) Subtracting the column by the minimum in each column
 const int n_cols_per_block = n / n_blocks_reduction;
 
+// Barrier-synchronized for portability; executed by ALL threads (see
+// min_in_rows_warp_reduce).
 __device__ void min_in_cols_warp_reduce(volatile data* sdata, int tid) {
-  if (n_threads_reduction >= 64 && n_cols_per_block < 64) sdata[tid] = min(sdata[tid], sdata[tid + 32]);
-  if (n_threads_reduction >= 32 && n_cols_per_block < 32) sdata[tid] = min(sdata[tid], sdata[tid + 16]);
-  if (n_threads_reduction >= 16 && n_cols_per_block < 16) sdata[tid] = min(sdata[tid], sdata[tid + 8]);
-  if (n_threads_reduction >= 8 && n_cols_per_block < 8) sdata[tid] = min(sdata[tid], sdata[tid + 4]);
-  if (n_threads_reduction >= 4 && n_cols_per_block < 4) sdata[tid] = min(sdata[tid], sdata[tid + 2]);
-  if (n_threads_reduction >= 2 && n_cols_per_block < 2) sdata[tid] = min(sdata[tid], sdata[tid + 1]);
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (n_threads_reduction >= 2*s && n_cols_per_block < 2*s && tid < s)
+      sdata[tid] = min(sdata[tid], sdata[tid + s]);
+    __syncthreads();
+  }
 }
 
 __global__ void calc_min_in_cols()
@@ -219,7 +236,7 @@ __global__ void calc_min_in_cols()
     if (tid < 128) { sdata[tid] = min(sdata[tid], sdata[tid + 128]); } __syncthreads(); }
   if (n_threads_reduction >= 128 && n_cols_per_block < 128) {
     if (tid <  64) { sdata[tid] = min(sdata[tid], sdata[tid + 64]); } __syncthreads(); }
-  if (tid < 32) min_in_cols_warp_reduce(sdata, tid);
+  min_in_cols_warp_reduce(sdata, tid); // all threads: contains barriers
   if (tid < n_cols_per_block) min_in_cols[bid*n_cols_per_block + tid] = sdata[tid];
 }
 
@@ -258,47 +275,43 @@ __global__ void compress_matrix(){
 // column or row star the zero. Repeat for each zero.
 
 // The zeros are split through blocks of data so we run step 2 with several thread blocks and rerun the kernel if repeat was set to true.
+//
+// PORTABILITY NOTE: the original CUDA code additionally iterated inside the
+// kernel with `do { ... } while (repeat)`, where the __shared__ bool `repeat`
+// is written non-atomically by arbitrary threads between barriers.  On
+// chipStar/Intel GPUs that block-side convergence spin does not terminate
+// reliably (see PHASE7_KNOWN_FAIL.md), and it was only an intra-block
+// optimization: cross-block convergence already relied on the host relaunching
+// the kernel while `repeat_kernel` is set.  The in-kernel loop is therefore
+// hoisted to the host: each launch performs exactly one pass over the zeros
+// and raises the global `repeat_kernel` flag when another pass is needed.
 __global__ void step_2()
 {
   int i = threadIdx.x;
   int b = blockIdx.x;
-  __shared__ bool repeat;
-  __shared__ bool s_repeat_kernel;
 
-  if (i == 0) s_repeat_kernel = false;
+  for (int j = i; j < zeros_size_b[b]; j += blockDim.x)
+  {
+    int z = zeros[(b << log2_data_block_size) + j];
+    int l = z & row_mask;
+    int c = z >> log2_n;
 
-  do {
-    __syncthreads();
-    if (i == 0) repeat = false;
-    __syncthreads();
-
-    for (int j = i; j < zeros_size_b[b]; j += blockDim.x)
-    {
-      int z = zeros[(b << log2_data_block_size) + j];
-      int l = z & row_mask;
-      int c = z >> log2_n;
-
-      if (cover_row[l] == 0 && cover_column[c] == 0) {
-        // thread trys to get the line
-        if (!atomicExch((int *)&(cover_row[l]), 1)){
-          // only one thread gets the line
-          if (!atomicExch((int *)&(cover_column[c]), 1)){
-            // only one thread gets the column
-            row_of_star_at_column[c] = l;
-            column_of_star_at_row[l] = c;
-          }
-          else {
-            cover_row[l] = 0;
-            repeat = true;
-            s_repeat_kernel = true;
-          }
+    if (cover_row[l] == 0 && cover_column[c] == 0) {
+      // thread trys to get the line
+      if (!atomicExch((int *)&(cover_row[l]), 1)){
+        // only one thread gets the line
+        if (!atomicExch((int *)&(cover_column[c]), 1)){
+          // only one thread gets the column
+          row_of_star_at_column[c] = l;
+          column_of_star_at_row[l] = c;
+        }
+        else {
+          cover_row[l] = 0;
+          repeat_kernel = true; // benign race: every writer stores true
         }
       }
     }
-    __syncthreads();
-  } while (repeat);
-
-  if (s_repeat_kernel) repeat_kernel = true;
+  }
 }
 
 // STEP 3
@@ -338,56 +351,72 @@ __global__ void step_4_init()
   row_of_green_at_column[i] = -1;
 }
 
+// PORTABILITY NOTE: like step_2, the original CUDA kernel iterated in-kernel
+// with `do { ... } while (s_found && !s_goto_5)` over __shared__ bools written
+// non-atomically by arbitrary threads — the same divergent-termination spin
+// that hangs on chipStar/Intel GPUs.  `s_found` and `s_repeat_kernel` were
+// always set together, so one pass per launch with the host looping
+// `while (repeat_kernel && !goto_5)` (which it already did) is equivalent.
+//
+// RACE FIX (Arc B570 hang in step_5a): priming a starred row must be EXCLUSIVE.
+// The algorithm's acyclicity guarantee for the step-5a chase is a temporal
+// ordering: a starred column c only becomes uncovered after its star row r was
+// primed and covered, so every chase hop  c -> star_row(c)=r -> prime(r)
+// lands on a column that was uncovered strictly earlier — the chain must
+// terminate.  That argument requires `column_of_prime_at_row[l]` to be
+// immutable once `cover_row[l] == 1` is observable.  The original (upstream
+// CUDA) code enforced this only probabilistically: the non-atomic
+// check-then-act  `if (!cover_column[c] && !cover_row[l]) { prime; cover }`
+// lets two threads both pass the `!cover_row[l]` test, so a thread can
+// overwrite prime[l] AFTER row l's cover/uncover side effects were consumed by
+// other threads to build later primes — cross-linking primes into a cycle
+// (e.g. prime[r1]=c2, prime[r2]=c1 with stars c1@r1, c2@r2), which makes the
+// step_5a chase spin forever.  Narrow schedulers (iGPU, most CUDA runs) keep
+// the check-act window effectively closed; the B570's wide concurrent
+// execution exposes it.  Fix: the row cover is an atomicExch claim — exactly
+// one thread wins the 0->1 transition and only the winner primes the row.
+// Losers do nothing: their zero is now covered, and the winner already raised
+// repeat_kernel, so the host relaunch re-examines everything.
 __global__ void step_4() {
-  __shared__  bool s_found;
-  __shared__  bool s_goto_5;
-  __shared__  bool s_repeat_kernel;
   volatile int *v_cover_row = cover_row;
   volatile int *v_cover_column = cover_column;
 
   int i = threadIdx.x;
   int b = blockIdx.x;
 
-  if (i == 0) {
-    s_repeat_kernel = false;
-    s_goto_5 = false;
-  }
+  for (int j = i; j < zeros_size_b[b]; j += blockDim.x)
+  {
+    int z = zeros[(b << log2_data_block_size) + j];
+    int l = z & row_mask;
+    int c = z >> log2_n;
+    int c1 = column_of_star_at_row[l];
 
-  do {
-    __syncthreads();
-    if (i == 0) s_found = false;
-    __syncthreads();
+    for (int n = 0; n < 10; n++) {
 
-    for (int j = i; j < zeros_size_b[b]; j += blockDim.x)
-    {
-      int z = zeros[(b << log2_data_block_size) + j];
-      int l = z & row_mask;
-      int c = z >> log2_n;
-      int c1 = column_of_star_at_row[l];
-
-      for (int n = 0; n < 10; n++) {
-
-        if (!v_cover_column[c] && !v_cover_row[l]) {
-          s_found = true; s_repeat_kernel = true;
-          column_of_prime_at_row[l] = c;
-
-          if (c1 >= 0) {
-            v_cover_row[l] = 1;
-            __threadfence();
+      if (!v_cover_column[c] && !v_cover_row[l]) {
+        // Columns are never re-covered during step 4, so an observed
+        // uncovered column stays valid across the claim below.
+        if (c1 >= 0) {
+          if (atomicExch((int *)&cover_row[l], 1) == 0) {
+            // Exclusive winner for row l: prime it exactly once.
+            column_of_prime_at_row[l] = c;
+            repeat_kernel = true; // benign race: every writer stores true
+            __threadfence();      // prime visible before the uncover below
             v_cover_column[c1] = 0;
           }
-          else {
-            s_goto_5 = true;
-          }
+          // Losers: row l is covered now; nothing further to do for this zero.
         }
-      } // for(int n
+        else {
+          // Row without a star: never covered, so last-write-wins priming is
+          // fine — any currently-uncovered zero column is a valid chase entry.
+          column_of_prime_at_row[l] = c;
+          repeat_kernel = true; // benign race: every writer stores true
+          goto_5 = true;        // benign race: every writer stores true
+        }
+      }
+    } // for(int n
 
-    } // for(int j
-    __syncthreads();
-  } while (s_found && !s_goto_5);
-
-  if (i == 0 && s_repeat_kernel) repeat_kernel = true;
-  if (i == 0 && s_goto_5) goto_5 = true;
+  } // for(int j
 }
 
 /* STEP 5:
@@ -411,8 +440,24 @@ __global__ void step_5a()
   if (c_Z0 >= 0 && column_of_star_at_row[i] < 0) {
     row_of_green_at_column[c_Z0] = i;
 
+    // Fail-loudly backstop: an alternating path visits each row/column at most
+    // once, so it can never exceed n hops.  Exceeding the bound (or landing on
+    // a starred row with no prime) means step 4 produced a cyclic/corrupt
+    // priming state; abort instead of spinning forever.  With the atomic row
+    // claim in step_4 this must never trigger.
+    int hops = 0;
     while ((r_Z0 = row_of_star_at_column[c_Z0]) >= 0) {
+      if (++hops > nrows) {
+        printf("step_5a ERROR: augmenting path from row %d exceeds %d hops - cyclic priming state (step 4 race)\n", i, nrows);
+        step5_error = 1;
+        return;
+      }
       c_Z0 = column_of_prime_at_row[r_Z0];
+      if (c_Z0 < 0) {
+        printf("step_5a ERROR: starred row %d reached by chase from row %d has no prime - corrupt priming state\n", r_Z0, i);
+        step5_error = 1;
+        return;
+      }
       row_of_green_at_column[c_Z0] = r_Z0;
     }
   }
@@ -451,14 +496,16 @@ __global__ void step_5b()
 // row, and subtract it from every element of each uncovered column.
 // Return to Step 4 without altering any stars, primes, or covered lines.
 
+// Barrier-synchronized for portability; executed by ALL threads (see
+// min_in_rows_warp_reduce).
 template <unsigned int blockSize>
 __device__ void min_warp_reduce(volatile data* sdata, int tid) {
-  if (blockSize >= 64) sdata[tid] = min(sdata[tid], sdata[tid + 32]);
-  if (blockSize >= 32) sdata[tid] = min(sdata[tid], sdata[tid + 16]);
-  if (blockSize >= 16) sdata[tid] = min(sdata[tid], sdata[tid + 8]);
-  if (blockSize >= 8) sdata[tid] = min(sdata[tid], sdata[tid + 4]);
-  if (blockSize >= 4) sdata[tid] = min(sdata[tid], sdata[tid + 2]);
-  if (blockSize >= 2) sdata[tid] = min(sdata[tid], sdata[tid + 1]);
+  #pragma unroll
+  for (int s = 32; s >= 1; s >>= 1) {
+    if (blockSize >= (unsigned)(2*s) && tid < s)
+      sdata[tid] = min(sdata[tid], sdata[tid + s]);
+    __syncthreads();
+  }
 }
 
 template <unsigned int blockSize>  // blockSize is the size of a block of threads
@@ -491,7 +538,7 @@ __device__ void min_reduce1(volatile data *g_idata, volatile data *g_odata, unsi
   if (blockSize >= 512) { if (tid < 256) { sdata[tid] = min(sdata[tid], sdata[tid + 256]); } __syncthreads(); }
   if (blockSize >= 256) { if (tid < 128) { sdata[tid] = min(sdata[tid], sdata[tid + 128]); } __syncthreads(); }
   if (blockSize >= 128) { if (tid <  64) { sdata[tid] = min(sdata[tid], sdata[tid + 64]); } __syncthreads(); }
-  if (tid < 32) min_warp_reduce<blockSize>(sdata, tid);
+  min_warp_reduce<blockSize>(sdata, tid); // all threads: contains barriers
   if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
@@ -508,7 +555,7 @@ __device__ void min_reduce2(volatile data *g_idata, volatile data *g_odata, unsi
   if (blockSize >= 512) { if (tid < 256) { sdata[tid] = min(sdata[tid], sdata[tid + 256]); } __syncthreads(); }
   if (blockSize >= 256) { if (tid < 128) { sdata[tid] = min(sdata[tid], sdata[tid + 128]); } __syncthreads(); }
   if (blockSize >= 128) { if (tid <  64) { sdata[tid] = min(sdata[tid], sdata[tid + 64]); } __syncthreads(); }
-  if (tid < 32) min_warp_reduce<blockSize>(sdata, tid);
+  min_warp_reduce<blockSize>(sdata, tid); // all threads: contains barriers
   if (tid == 0) g_odata[blockIdx.x] = sdata[0];
 }
 
@@ -572,6 +619,9 @@ inline hipError_t check(hipError_t result)
 // Hungarian_Algorithm
 void Hungarian_Algorithm()
 {
+  int h_step5_error = 0;
+  check(hipMemcpyToSymbol(HIP_SYMBOL(step5_error), &h_step5_error, sizeof(int)));
+
   // Initialization
   call_kernel(init, n_blocks, n_threads);
 
@@ -583,21 +633,25 @@ void Hungarian_Algorithm()
 
   // compress_matrix
   call_kernel(compress_matrix, n_blocks_full, n_threads_full);
+  check(hipMemcpyFromSymbol(&h_zeros_size, HIP_SYMBOL(zeros_size), sizeof(int)));
 
   // Step 2 kernels
   do {
-    repeat_kernel = false;
-    call_kernel(step_2, n_blocks_step_4, (n_blocks_step_4 > 1 || zeros_size > max_threads_per_block) ? max_threads_per_block : zeros_size);
+    h_repeat_kernel = false;
+    check(hipMemcpyToSymbol(HIP_SYMBOL(repeat_kernel), &h_repeat_kernel, sizeof(bool)));
+    call_kernel(step_2, n_blocks_step_4, (n_blocks_step_4 > 1 || h_zeros_size > max_threads_per_block) ? max_threads_per_block : h_zeros_size);
     // If we have more than one block it means that we have 512 lines per block so 1024 threads should be adequate.
-  } while (repeat_kernel);
+    check(hipMemcpyFromSymbol(&h_repeat_kernel, HIP_SYMBOL(repeat_kernel), sizeof(bool)));
+  } while (h_repeat_kernel);
 
   while (1) {  // repeat steps 3 to 6
 
     // Step 3 kernels
     call_kernel(step_3ini, n_blocks, n_threads);
     call_kernel(step_3, n_blocks, n_threads);
+    check(hipMemcpyFromSymbol(&h_n_matches, HIP_SYMBOL(n_matches), sizeof(int)));
 
-    if (n_matches >= ncols) break;      // It's done
+    if (h_n_matches >= ncols) break;      // It's done
 
     //step 4_kernels
     call_kernel(step_4_init, n_blocks, n_threads);
@@ -605,14 +659,18 @@ void Hungarian_Algorithm()
     while (1) // repeat step 4 and 6
     {
       do {  // step 4 loop
-        goto_5 = false; repeat_kernel = false; 
+        h_goto_5 = false; h_repeat_kernel = false;
+        check(hipMemcpyToSymbol(HIP_SYMBOL(goto_5), &h_goto_5, sizeof(bool)));
+        check(hipMemcpyToSymbol(HIP_SYMBOL(repeat_kernel), &h_repeat_kernel, sizeof(bool)));
 
-        call_kernel(step_4, n_blocks_step_4, (n_blocks_step_4 > 1 || zeros_size > max_threads_per_block) ? max_threads_per_block : zeros_size);
+        call_kernel(step_4, n_blocks_step_4, (n_blocks_step_4 > 1 || h_zeros_size > max_threads_per_block) ? max_threads_per_block : h_zeros_size);
         // If we have more than one block it means that we have 512 lines per block so 1024 threads should be adequate.
 
-      } while (repeat_kernel && !goto_5);
+        check(hipMemcpyFromSymbol(&h_repeat_kernel, HIP_SYMBOL(repeat_kernel), sizeof(bool)));
+        check(hipMemcpyFromSymbol(&h_goto_5, HIP_SYMBOL(goto_5), sizeof(bool)));
+      } while (h_repeat_kernel && !h_goto_5);
 
-      if (goto_5) break;
+      if (h_goto_5) break;
 
       //step 6_kernel
       call_kernel_s(min_reduce_kernel1, n_blocks_reduction, n_threads_reduction, n_threads_reduction*sizeof(int));
@@ -621,10 +679,16 @@ void Hungarian_Algorithm()
 
       //compress_matrix
       call_kernel(compress_matrix, n_blocks_full, n_threads_full);
+      check(hipMemcpyFromSymbol(&h_zeros_size, HIP_SYMBOL(zeros_size), sizeof(int)));
 
     } // repeat step 4 and 6
 
     call_kernel(step_5a, n_blocks, n_threads);
+    check(hipMemcpyFromSymbol(&h_step5_error, HIP_SYMBOL(step5_error), sizeof(int)));
+    if (h_step5_error) {
+      fprintf(stderr, "FATAL: step_5a detected a cyclic/corrupt priming state (step 4 exclusivity violated)\n");
+      exit(2);
+    }
     call_kernel(step_5b, n_blocks, n_threads);
 
   }  // repeat steps 3 to 6
