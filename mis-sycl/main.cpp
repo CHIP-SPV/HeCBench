@@ -58,36 +58,44 @@ static const stattype out = 0;
 
 /* main computation kernel */
 
+// Portability restructure (mirrors mis-hip/main.cu): the original ECL-MIS
+// kernel iterated the convergence loop (do { ... } while (missing)) inside
+// the kernel, relying on CUDA volatile semantics to make cross-thread stores
+// visible within a single grid launch.  Intel GPUs (OpenCL/Level Zero)
+// provide no such guarantee, so the in-kernel spin is not portable.  The
+// kernel now performs ONE pass over the nodes and reports whether undecided
+// nodes remain via *missing_d; the host relaunches the kernel until
+// convergence.  Kernel-launch boundaries guarantee global memory visibility,
+// which is all the algorithm needs.
 void findmins(sycl::nd_item<1> &item,
     const int nodes,
     const int* const __restrict nidx,
     const int* const __restrict nlist,
-    volatile stattype* const __restrict nstat)
+    volatile stattype* const __restrict nstat,
+    int* const __restrict missing_d)
 {
   const int from = item.get_global_id(0);
   const int incr = item.get_group_range(0) * item.get_local_range(0);
 
-  int missing;
-  do {
-    missing = 0;
-    for (int v = from; v < nodes; v += incr) {
-      const stattype nv = nstat[v];
-      if (nv & 1) {
-        int i = nidx[v];
-        while ((i < nidx[v + 1]) && ((nv > nstat[nlist[i]]) || ((nv == nstat[nlist[i]]) && (v > nlist[i])))) {
-          i++;
+  int missing = 0;
+  for (int v = from; v < nodes; v += incr) {
+    const stattype nv = nstat[v];
+    if (nv & 1) {
+      int i = nidx[v];
+      while ((i < nidx[v + 1]) && ((nv > nstat[nlist[i]]) || ((nv == nstat[nlist[i]]) && (v > nlist[i])))) {
+        i++;
+      }
+      if (i < nidx[v + 1]) {
+        missing = 1;
+      } else {
+        for (int i = nidx[v]; i < nidx[v + 1]; i++) {
+          nstat[nlist[i]] = out;
         }
-        if (i < nidx[v + 1]) {
-          missing = 1;
-        } else {
-          for (int i = nidx[v]; i < nidx[v + 1]; i++) {
-            nstat[nlist[i]] = out;
-          }
-          nstat[v] = in;
-        }
+        nstat[v] = in;
       }
     }
-  } while (missing != 0);
+  }
+  if (missing) *missing_d = 1;
 }
 
 /* hash function to generate random values */
@@ -149,6 +157,8 @@ void computeMIS(
 
   stattype *nstat_d = sycl::malloc_device<stattype>(nodes+1, q);
 
+  int *missing_d = sycl::malloc_device<int>(1, q);
+
   const int blocks = 24;
   sycl::range<1> gws (blocks * ThreadsPerBlock);
   sycl::range<1> lws (ThreadsPerBlock);
@@ -165,12 +175,20 @@ void computeMIS(
       });
     });
 
-    q.submit([&] (sycl::handler &cgh) {
-      cgh.parallel_for<class k2>(
-        sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
-        findmins(item, nodes, nidx_d, nlist_d, nstat_d);
+    // host-side convergence loop: relaunch the single-pass kernel until no
+    // undecided nodes remain (replaces the original in-kernel spin loop)
+    int missing;
+    do {
+      q.memset(missing_d, 0, sizeof(int));
+      q.submit([&] (sycl::handler &cgh) {
+        cgh.parallel_for<class k2>(
+          sycl::nd_range<1>(gws, lws), [=] (sycl::nd_item<1> item) {
+          findmins(item, nodes, nidx_d, nlist_d, nstat_d, missing_d);
+        });
       });
-    });
+      missing = 0;
+      q.memcpy(&missing, missing_d, sizeof(int)).wait();
+    } while (missing != 0);
   }
 
   q.wait();
@@ -183,6 +201,7 @@ void computeMIS(
   printf("throughput: %.6f Medges/s\n", edges * 0.000001 / runtime);
 
   q.memcpy(nstat, nstat_d, nodes * sizeof(stattype)).wait();
+  sycl::free(missing_d, q);
   sycl::free(nstat_d, q);
   sycl::free(nlist_d, q);
   sycl::free(nidx_d, q);
@@ -202,7 +221,6 @@ int main(int argc, char* argv[])
   printf("configuration: %d nodes and %d edges (%s)\n", g.nodes, g.edges, argv[1]);
   printf("average degree: %.2f edges per node\n", 1.0 * g.edges / g.nodes);
 
-  bool err = false;
   stattype* nstatus = (stattype*)malloc(g.nodes * sizeof(nstatus[0]));
 
   if (nstatus == NULL) {
@@ -214,6 +232,7 @@ int main(int argc, char* argv[])
     computeMIS(repeat, g.nodes, g.edges, g.nindex, g.nlist, nstatus);
 
     /* result verification code */
+    bool err = false;
 
     for (int v = 0; v < g.nodes; v++) {
       if ((nstatus[v] != in) && (nstatus[v] != out)) {
@@ -243,6 +262,8 @@ int main(int argc, char* argv[])
         }
       }
     }
+
+    printf("%s\n", err ? "FAIL" : "PASS");
   }
 
   freeECLgraph(g);
