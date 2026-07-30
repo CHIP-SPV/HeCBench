@@ -221,6 +221,16 @@ void kernel_128(double &time, double &ktime) {
 
   int nInput = 16*16*128, nOutput = 16*16*128, nWeights = 36*128*128, nBias = 128,
       nTransInput = 16*6*6*128, nInnerProd = 16*6*6*128;
+  // kernel_128_winograd_BtdB tiles the 16x16x128 (row-major, stride_r=16*128=2048,
+  // stride_c=128) input with 6x6 winograd tiles on a stride-4 grid: block (bx,by)
+  // reads rows 4*bx..4*bx+5 and cols 4*by..4*by+5, so the edge blocks (bx,by=3)
+  // reach row/col 17 on a 16-row image.  Max linear index read =
+  // 17*2048 + 17*128 + 127 = 37119, so the device buffer must hold 37120 floats,
+  // not nInput = 32768.  Rows/cols 16-17 are a halo: every transformed output that
+  // depends on them is discarded by kernel_128_winograd_AtIA's edge clamps
+  // (Tilex==3 -> Inx>1 returns; Tiley==3 -> Iny 2,3 break), so zero-filling the
+  // halo (extending the image's zero padding) leaves results unchanged.
+  int nInputHalo = 17*2048 + 17*128 + 128; // = 37120 floats (max index 37119 + 1)
 
   float result[nOutput];
 
@@ -229,12 +239,13 @@ void kernel_128(double &time, double &ktime) {
 
   auto start = std::chrono::steady_clock::now();
 
-  hipMalloc((void **) &input, nInput<<2);
+  hipMalloc((void **) &input, nInputHalo<<2);
   hipMalloc((void **) &output, nOutput<<2);
   hipMalloc((void **) &l_weights, nWeights<<2);
   hipMalloc((void **) &t_input, nTransInput<<2);
   hipMalloc((void **) &ip, nInnerProd<<2);
 
+  hipMemset((void *) (input + nInput), 0, (nInputHalo - nInput)<<2); // zero the halo tail
   hipMemset((void *) output, 0, nOutput<<2);
   hipMemset((void *) t_input, 0, nTransInput<<2);
   hipMemset((void *) ip, 0, nInnerProd<<2);

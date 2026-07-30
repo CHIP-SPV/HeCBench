@@ -228,6 +228,17 @@ void kernel_256(double &time, double &ktime) {
   float *kernel = get_parameter(weight_winograd_Name256, 36*256*256), *t_input, *ip;
   int nInput = 16*16*256, nOutput = 16*16*256, nWeights = 36*256*256, nBias = 256,
       nTransInput = 16*6*6*256, nInnerProd = 16*6*6*256;
+  // kernel_256_winograd_BtdB tiles the 16x16x256 (row-major, stride_r=16*256=4096,
+  // stride_c=256) input with 6x6 winograd tiles on a stride-4 grid: block (bx,by)
+  // reads rows 4*bx..4*bx+5 and cols 4*by..4*by+5, so the edge blocks (bx,by=3)
+  // reach row/col 17 on a 16-row image.  Max linear index read =
+  // 17*4096 + 17*256 + 127 + 128 = 74239 (Inz max 127 plus Part=1 offset of 128),
+  // so the device buffer must hold 74240 floats, not nInput = 65536.  Rows/cols
+  // 16-17 are a halo: every transformed output that depends on them is discarded
+  // by kernel_256_winograd_AtIA's edge clamps (Tilex==3 -> Inx>1 returns;
+  // Tiley==3 -> Iny 2,3 break), so zero-filling the halo (extending the image's
+  // zero padding) leaves results unchanged.
+  int nInputHalo = 17*4096 + 17*256 + 256; // = 74240 floats (max index 74239 + 1)
   float *l_bnBias, *l_bnScale, *bnBias, *bnScale;
 
   float result[nOutput];
@@ -236,7 +247,7 @@ void kernel_256(double &time, double &ktime) {
 
   auto start = std::chrono::steady_clock::now();
 
-  hipMalloc((void **) &input, nInput<<2);
+  hipMalloc((void **) &input, nInputHalo<<2);
   hipMalloc((void **) &output, nOutput<<2);
   hipMalloc((void **) &l_weights, nWeights<<2);
   hipMalloc((void **) &t_input, nTransInput<<2);
@@ -244,6 +255,7 @@ void kernel_256(double &time, double &ktime) {
   hipMalloc((void **) &l_bnBias, nBias<<2);
   hipMalloc((void **) &l_bnScale, nBias<<2);
 
+  hipMemset((void *) (input + nInput), 0, (nInputHalo - nInput)<<2); // zero the halo tail
   hipMemset((void *) output, 0, nOutput<<2);
   hipMemset((void *) t_input, 0, nTransInput<<2);
   hipMemset((void *) ip, 0, nInnerProd<<2);
