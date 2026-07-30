@@ -1,32 +1,23 @@
-# merkle-hip — CHIPSTAR_UMUL64HI_HANG
+# merkle-hip — FIXED (umul64hi devicelib fix, upstream since 2026-06-25)
 
-`make smoke` hangs immediately on both OCL and L0 backends, even with the
-smallest DEBUG build (256 leaves, 1 round).
+`make smoke` passes on both backends with the current installed suite.
 
-## Symptom
+## Was (hang)
 
-```
-./main           # debug binary (256 leaves)
-Merklize ( approach 1 ) using Rescue Prime on F(2**64 - 2**32 + 1) elements
-      leaves             total
-(hangs here indefinitely)
-rc=124
-```
+`__chip_umul64hi/__chip_mul64hi` in the device library computed the high 64
+bits via UB (`(64-bit x*y) >> 64`), which LLVM folded to a plain low-bits
+multiply — the rescue-prime finite-field arithmetic then never converged and
+the kernel hung (and the pre-fix binary reliably wedged the GPU with ccs/bcs
+engine resets). Fixed upstream (devicelib now uses OpenCL `mul_hi`, plus a
+known-answer regression test), merged 2026-06-25 and present in installs
+>= 2026.07.20.
 
-## Root cause
+## Sweep false-negative caveat
 
-The `rescue_prime.cu` kernels perform finite-field arithmetic over
-`F(2^64 - 2^32 + 1)` using `__umul64hi` for 64-bit multiply-high operations:
-
-```c
-inline __device__ ulong4 mul_hi(const ulong4 &a, const ulong4 &b) {
-  return { __umul64hi(a.x, b.x), ... };
-}
-```
-
-`__umul64hi` may not be available or correctly lowered in chipStar's
-SPIR-V translation on Intel GPU. If the intrinsic is emulated incorrectly
-or causes a compilation path that hangs the kernel, all computation stalls.
-
-This hang occurs at the first kernel invocation (`benchmark_merklize_approach_1`)
-before any output is printed to stdout.
+The 2026-07-30 sweep still marked merkle TIMEOUT on 2026.07.20: cold-cache IGC
+JIT of the rescue-prime kernels takes 55–120+ s (main thread inside libigc),
+and the benchmark's own timer includes it — any smoke timeout <= 120 s then
+mimics the old hang. Warm-cache the run completes in ~34 ms with bit-identical
+hashes across OCL and L0. Give merkle a >= 300 s timeout on a cold module
+cache (or pre-warm), and never re-run pre-2026-06-25 builds on shared machines
+(GPU wedge risk).
