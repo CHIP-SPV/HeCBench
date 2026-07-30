@@ -198,6 +198,16 @@ void ClearKernel1(const int nnodesd, const int nbodiesd, int* const __restrict__
 }
 
 
+// The original ECL-BH kernel retried locked/contended child slots in-kernel
+// (spinning without advancing i until the lock owner releases).  On lockstep
+// SIMT devices the lock loser and lock owner can share a subgroup, so the
+// retry loop livelocks; the divergent __syncthreads() in the loop is also a
+// hang on such devices.  The retry loop is hoisted to the host: each launch
+// makes ONE bounded insertion attempt per still-pending body.  A thread that
+// wins the lock always finishes its subdivision and releases the lock within
+// the same launch (the new subtree is private until the release store), so no
+// lock survives a launch boundary and every launch inserts at least one body.
+// The host relaunches until *repeatd stays 0.
 __global__
 void TreeBuildingKernel(
     const int nnodesd,
@@ -205,10 +215,12 @@ void TreeBuildingKernel(
     volatile int* const __restrict__ childd,
     const float4* const __restrict__ posMassd,
     const float* const __restrict radiusd,
-            int* const __restrict bottomd
+            int* const __restrict bottomd,
+            int* const __restrict__ insertedd,
+            int* const __restrict__ repeatd
 )
 {
-  int i, j, depth, skip, inc;
+  int i, j, inc;
   float x, y, z, r;
   float dx, dy, dz;
   int ch, n, cell, locked, patch;
@@ -218,29 +230,26 @@ void TreeBuildingKernel(
   radius = *radiusd * 0.5f;
   const float4 root = posMassd[nnodesd];
 
-  skip = 1;
   inc = blockDim.x * gridDim.x;
   i = threadIdx.x + blockIdx.x * blockDim.x;
 
   // iterate over all bodies assigned to thread
-  while (i < nbodiesd) {
+  for (i = threadIdx.x + blockIdx.x * blockDim.x; i < nbodiesd; i += inc) {
+    if (insertedd[i]) continue;  // placed in an earlier launch
     const float4 p = posMassd[i];
-    if (skip != 0) {
-      // new body, so start traversing at root
-      skip = 0;
-      n = nnodesd;
-      depth = 1;
-      r = radius;
-      dx = dy = dz = -r;
-      j = 0;
-      // determine which child to follow
-      if (root.x < p.x) {j = 1; dx = r;}
-      if (root.y < p.y) {j |= 2; dy = r;}
-      if (root.z < p.z) {j |= 4; dz = r;}
-      x = root.x + dx;
-      y = root.y + dy;
-      z = root.z + dz;
-    }
+
+    // start traversing at root
+    n = nnodesd;
+    r = radius;
+    dx = dy = dz = -r;
+    j = 0;
+    // determine which child to follow
+    if (root.x < p.x) {j = 1; dx = r;}
+    if (root.y < p.y) {j |= 2; dy = r;}
+    if (root.z < p.z) {j |= 4; dz = r;}
+    x = root.x + dx;
+    y = root.y + dy;
+    z = root.z + dz;
 
     // follow path to leaf cell
     ch = childd[n*8+j];
@@ -260,12 +269,12 @@ void TreeBuildingKernel(
       ch = childd[n*8+j];
     }
 
-    if (ch != -2) {  // skip if child pointer is locked and try again later
+    int done = 0;
+    if (ch != -2) {  // if child pointer is locked, leave body for next launch
       locked = n*8+j;
       if (ch == -1) {
         if (-1 == atomicCAS((int*)&childd[locked], -1, i)) {  // if null, just insert the new body
-          i += inc;  // move on to next body
-          skip = 1;
+          done = 1;
         }
       } else {  // there already is a body at this position
         if (ch == atomicCAS((int*)&childd[locked], ch, -2)) {  // try to lock
@@ -303,15 +312,16 @@ void TreeBuildingKernel(
           } while (ch >= 0);
           childd[n*8+j] = i;
 
-          i += inc;  // move on to next body
-          skip = 2;
+          __threadfence();  // make the new subtree visible before releasing the lock
+          childd[locked] = patch;
+          done = 1;
         }
       }
     }
-    __syncthreads();  // optional barrier for performance
-
-    if (skip == 2) {
-      childd[locked] = patch;
+    if (done) {
+      insertedd[i] = 1;
+    } else {
+      *repeatd = 1;  // contention: retry this body in the next launch
     }
   }
 }
@@ -344,107 +354,45 @@ void ClearKernel2(
 // compute center of mass
 //
 
+// The original ECL-BH kernel ran three wait-free pre-passes and then spun
+// in-kernel until the masses of all children became ready (a cross-workgroup
+// spin that requires all workgroups to be co-resident and can hang on
+// lockstep SIMT devices).  The convergence loop is hoisted to the host: each
+// launch performs ONE wait-free pass (the original pre-pass body, verbatim);
+// cells whose children are not all ready set *repeatd and are retried in the
+// next launch.  Bottom-up progress is guaranteed: the deepest unready cell
+// always has all of its children ready.
 __global__
 void SummarizationKernel(
-    const int nnodesd, 
+    const int nnodesd,
     const int nbodiesd,
     volatile int* const __restrict__ countd,
     const int* const __restrict__ childd,
     volatile float4* const __restrict__ posMassd,
-    int* const __restrict bottomd)
+    int* const __restrict bottomd,
+    int* const __restrict__ repeatd)
 {
   __shared__ int child[THREADS3 * 8];
   __shared__ float mass[THREADS3 * 8];
 
-  int i, j, ch, cnt;
+  int i, ch, cnt;
   float cm, px, py, pz, m;
   int bottom = *bottomd;
   int inc = blockDim.x * gridDim.x;
   int k = (bottom & (-WARPSIZE)) + threadIdx.x + blockIdx.x * blockDim.x;  // align to warp size
   if (k < bottom) k += inc;
 
-  int restart = k;
-  for (j = 0; j < 3; j++) {  // wait-free pre-passes
-    // iterate over all cells assigned to thread
-    while (k <= nnodesd) {
-      if (posMassd[k].w < 0.0f) {
-        for (i = 0; i < 8; i++) {
-          ch = childd[k*8+i];
-          child[i*THREADS3+threadIdx.x] = ch;  // cache children
-          if ((ch >= nbodiesd) && ((mass[i*THREADS3+threadIdx.x] = posMassd[ch].w) < 0.0f)) {
-            break;
-          }
-        }
-        if (i == 8) {
-          // all children are ready
-          cm = 0.0f;
-          px = 0.0f;
-          py = 0.0f;
-          pz = 0.0f;
-          cnt = 0;
-          for (i = 0; i < 8; i++) {
-            ch = child[i*THREADS3+threadIdx.x];
-            if (ch >= 0) {
-              // four reads due to missing copy constructor for "volatile float4"
-              const float chx = posMassd[ch].x;
-              const float chy = posMassd[ch].y;
-              const float chz = posMassd[ch].z;
-              const float chw = posMassd[ch].w;
-              if (ch >= nbodiesd) {  // count bodies (needed later)
-                m = mass[i*THREADS3+threadIdx.x];
-                cnt += countd[ch];
-              } else {
-                m = chw;
-                cnt++;
-              }
-              // add child's contribution
-              cm += m;
-              px += chx * m;
-              py += chy * m;
-              pz += chz * m;
-            }
-          }
-          countd[k] = cnt;
-          m = 1.0f / cm;
-          // four writes due to missing copy constructor for "volatile float4"
-          posMassd[k].x = px * m;
-          posMassd[k].y = py * m;
-          posMassd[k].z = pz * m;
-          __threadfence();
-          posMassd[k].w = cm;
-        }
-      }
-      k += inc;  // move on to next cell
-    }
-    k = restart;
-  }
-
-  j = 0;
-  // iterate over all cells assigned to thread
+  // iterate over all cells assigned to thread (one wait-free pass)
   while (k <= nnodesd) {
-    if (posMassd[k].w >= 0.0f) {
-      k += inc;
-    } else {
-      if (j == 0) {
-        j = 8;
-        for (i = 0; i < 8; i++) {
-          ch = childd[k*8+i];
-          child[i*THREADS3+threadIdx.x] = ch;  // cache children
-          if ((ch < nbodiesd) || ((mass[i*THREADS3+threadIdx.x] = posMassd[ch].w) >= 0.0f)) {
-            j--;
-          }
-        }
-      } else {
-        j = 8;
-        for (i = 0; i < 8; i++) {
-          ch = child[i*THREADS3+threadIdx.x];
-          if ((ch < nbodiesd) || (mass[i*THREADS3+threadIdx.x] >= 0.0f) || ((mass[i*THREADS3+threadIdx.x] = posMassd[ch].w) >= 0.0f)) {
-            j--;
-          }
+    if (posMassd[k].w < 0.0f) {
+      for (i = 0; i < 8; i++) {
+        ch = childd[k*8+i];
+        child[i*THREADS3+threadIdx.x] = ch;  // cache children
+        if ((ch >= nbodiesd) && ((mass[i*THREADS3+threadIdx.x] = posMassd[ch].w) < 0.0f)) {
+          break;
         }
       }
-
-      if (j == 0) {
+      if (i == 8) {
         // all children are ready
         cm = 0.0f;
         px = 0.0f;
@@ -481,9 +429,11 @@ void SummarizationKernel(
         posMassd[k].z = pz * m;
         __threadfence();
         posMassd[k].w = cm;
-        k += inc;
+      } else {
+        *repeatd = 1;  // children not ready yet: retry this cell in the next launch
       }
     }
+    k += inc;  // move on to next cell
   }
 }
 
@@ -491,49 +441,63 @@ void SummarizationKernel(
 //
 // sort bodies
 //
+// The original ECL-BH kernel spun in-kernel until the parent published the
+// cell's start index (startd[k] >= 0), with a __syncthreads() in the spin
+// loop that threads exit at different times — both hang on lockstep SIMT
+// devices.  The convergence loop is hoisted to the host: each launch performs
+// ONE top-down pass; cells whose start index is not ready yet set *repeatd
+// and are retried in the next launch.  sdoned marks cells already processed
+// so they are not reprocessed by later launches.
 __global__
 void SortKernel(
     const int nnodesd,
-    const int nbodiesd, 
+    const int nbodiesd,
     int* const __restrict__ sortd,
     const int* const __restrict__ countd,
     volatile int* const __restrict__ startd,
     int* const __restrict__ childd,
-    int* const __restrict__ bottomd)
+    int* const __restrict__ bottomd,
+    int* const __restrict__ sdoned,
+    int* const __restrict__ repeatd)
 {
   int i, j;
   int bottom = *bottomd;
   int dec = blockDim.x * gridDim.x;
   int k = nnodesd + 1 - dec + threadIdx.x + blockIdx.x * blockDim.x;
 
-  // iterate over all cells assigned to thread
+  // iterate over all cells assigned to thread (one top-down pass)
   while (k >= bottom) {
-    int start = startd[k];
-    if (start >= 0) {
-      j = 0;
-      for (i = 0; i < 8; i++) {
-        int ch = childd[k*8+i];
-        if (ch >= 0) {
-          if (i != j) {
-            // move children to front (needed later for speed)
-            childd[k*8+i] = -1;
-            childd[k*8+j] = ch;
-          }
-          j++;
-          if (ch >= nbodiesd) {
-            // child is a cell
-            startd[ch] = start;  // set start ID of child
-            start += countd[ch];  // add #bodies in subtree
-          } else {
-            // child is a body
-            sortd[start] = ch;  // record body in 'sorted' array
-            start++;
+    if (!sdoned[k]) {
+      int start = startd[k];
+      if (start >= 0) {
+        j = 0;
+        for (i = 0; i < 8; i++) {
+          int ch = childd[k*8+i];
+          if (ch >= 0) {
+            if (i != j) {
+              // move children to front (needed later for speed)
+              childd[k*8+i] = -1;
+              childd[k*8+j] = ch;
+            }
+            j++;
+            if (ch >= nbodiesd) {
+              // child is a cell
+              startd[ch] = start;  // set start ID of child
+              start += countd[ch];  // add #bodies in subtree
+            } else {
+              // child is a body
+              sortd[start] = ch;  // record body in 'sorted' array
+              start++;
+            }
           }
         }
+        sdoned[k] = 1;
+      } else {
+        *repeatd = 1;  // start index not ready yet: retry this cell in the next launch
       }
       k -= dec;  // move on to next cell
     }
-    __syncthreads();  // optional barrier for performance
+    k -= dec;  // move on to next cell
   }
 }
 
@@ -718,7 +682,9 @@ static int randx = 7;
 static double drnd()
 {
   const int lastrand = randx;
-  randx = (1103515245 * randx + 12345) & 0x7FFFFFFF;
+  // 64-bit product as in the SYCL variant: the 32-bit multiply overflows
+  // (UB) and clang -O3 exploits it, producing negative draws -> NaN bodies
+  randx = (1103515245L * randx + 12345) & 0x7FFFFFFF;
   return (double)lastrand / 2147483648.0;
 }
 
@@ -762,6 +728,7 @@ int main(int argc, char* argv[])
   float2 *vel;
   int *d_sort, *d_child, *d_count, *d_start;
   int *d_step, *d_bottom;
+  int *d_inserted, *d_sdone, *d_repeat;
   unsigned int *d_blkcnt;
   float *d_radius;
   float4 *d_accVel;
@@ -877,6 +844,16 @@ int main(int argc, char* argv[])
   if (hipSuccess != hipMalloc((void **)&d_radius, sizeof(float)))
     fprintf(stderr, "could not allocate d_radius\n");
 
+  // host-iterated relaunch state (see TreeBuilding/Summarization/Sort kernels)
+  if (hipSuccess != hipMalloc((void **)&d_inserted, sizeof(int) * nbodies))
+    fprintf(stderr, "could not allocate d_inserted\n");
+
+  if (hipSuccess != hipMalloc((void **)&d_sdone, sizeof(int) * (nnodes+1)))
+    fprintf(stderr, "could not allocate d_sdone\n");
+
+  if (hipSuccess != hipMalloc((void **)&d_repeat, sizeof(int)))
+    fprintf(stderr, "could not allocate d_repeat\n");
+
 
   if (hipSuccess != hipMemcpy(d_accVel, accVel, sizeof(float4) * nbodies, hipMemcpyHostToDevice))
     fprintf(stderr, "copying of vel to device failed\n");
@@ -892,32 +869,81 @@ int main(int argc, char* argv[])
   struct timeval starttime, endtime;
   gettimeofday(&starttime, NULL);
 
+  // host-side relaunch bookkeeping for the three iterative phases
+  int repeat;
+  long guard;
+  long treeLaunches = 0, sumLaunches = 0, sortLaunches = 0;
+
   // run timesteps (launch kernels on a device)
   hipLaunchKernelGGL(InitializationKernel, dim3(1), dim3(1), 0, 0, d_step, d_blkcnt);
 
   for (step = 0; step < timesteps; step++) {
-    hipLaunchKernelGGL(BoundingBoxKernel, dim3(blocks * FACTOR1), dim3(THREADS1), 0, 0, 
-        nnodes, nbodies, d_start, d_child, d_posMass, d_max, d_min, 
+    hipLaunchKernelGGL(BoundingBoxKernel, dim3(blocks * FACTOR1), dim3(THREADS1), 0, 0,
+        nnodes, nbodies, d_start, d_child, d_posMass, d_max, d_min,
         d_radius, d_bottom, d_step, d_blkcnt );
 
     hipLaunchKernelGGL(ClearKernel1, dim3(blocks * 1), dim3(256), 0, 0, nnodes, nbodies, d_child);
 
-    hipLaunchKernelGGL(TreeBuildingKernel, dim3(blocks * FACTOR2), dim3(THREADS2), 0, 0, 
-        nnodes, nbodies, d_child, d_posMass, d_radius, d_bottom);
+    // tree building: relaunch until every body has been inserted
+    hipMemsetAsync(d_inserted, 0, sizeof(int) * nbodies, 0);
+    guard = 0;
+    do {
+      hipMemsetAsync(d_repeat, 0, sizeof(int), 0);
+      hipLaunchKernelGGL(TreeBuildingKernel, dim3(blocks * FACTOR2), dim3(THREADS2), 0, 0,
+          nnodes, nbodies, d_child, d_posMass, d_radius, d_bottom, d_inserted, d_repeat);
+      if (hipSuccess != hipMemcpy(&repeat, d_repeat, sizeof(int), hipMemcpyDeviceToHost)) {
+        fprintf(stderr, "copying of repeat flag from device failed\n");
+        exit(-1);
+      }
+      treeLaunches++;
+      if (++guard > (long)nbodies + 64) {  // each launch inserts at least one body
+        fprintf(stderr, "TreeBuildingKernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
     hipLaunchKernelGGL(ClearKernel2, dim3(blocks * 1), dim3(256), 0, 0, nnodes, d_start, d_posMass, d_bottom);
 
-    hipLaunchKernelGGL(SummarizationKernel, dim3(blocks * FACTOR3), dim3(THREADS3), 0, 0, 
-        nnodes, nbodies, d_count, d_child, d_posMass, d_bottom);
+    // summarization: relaunch wait-free passes until all cells are computed
+    guard = 0;
+    do {
+      hipMemsetAsync(d_repeat, 0, sizeof(int), 0);
+      hipLaunchKernelGGL(SummarizationKernel, dim3(blocks * FACTOR3), dim3(THREADS3), 0, 0,
+          nnodes, nbodies, d_count, d_child, d_posMass, d_bottom, d_repeat);
+      if (hipSuccess != hipMemcpy(&repeat, d_repeat, sizeof(int), hipMemcpyDeviceToHost)) {
+        fprintf(stderr, "copying of repeat flag from device failed\n");
+        exit(-1);
+      }
+      sumLaunches++;
+      if (++guard > (long)nnodes + 64) {  // passes are bounded by the tree depth
+        fprintf(stderr, "SummarizationKernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
-    hipLaunchKernelGGL(SortKernel, dim3(blocks * FACTOR4), dim3(THREADS4), 0, 0, 
-        nnodes, nbodies, d_sort, d_count, d_start, d_child, d_bottom);
+    // sort: relaunch top-down passes until every cell has been processed
+    hipMemsetAsync(d_sdone, 0, sizeof(int) * (nnodes+1), 0);
+    guard = 0;
+    do {
+      hipMemsetAsync(d_repeat, 0, sizeof(int), 0);
+      hipLaunchKernelGGL(SortKernel, dim3(blocks * FACTOR4), dim3(THREADS4), 0, 0,
+          nnodes, nbodies, d_sort, d_count, d_start, d_child, d_bottom, d_sdone, d_repeat);
+      if (hipSuccess != hipMemcpy(&repeat, d_repeat, sizeof(int), hipMemcpyDeviceToHost)) {
+        fprintf(stderr, "copying of repeat flag from device failed\n");
+        exit(-1);
+      }
+      sortLaunches++;
+      if (++guard > (long)nnodes + 64) {  // passes are bounded by the tree depth
+        fprintf(stderr, "SortKernel failed to converge\n");
+        exit(-1);
+      }
+    } while (repeat != 0);
 
-    hipLaunchKernelGGL(ForceCalculationKernel, dim3(blocks * FACTOR5), dim3(THREADS5), 0, 0, 
-        nnodes, nbodies, dthf, itolsq, epssq, d_sort, d_child, d_posMass, 
+    hipLaunchKernelGGL(ForceCalculationKernel, dim3(blocks * FACTOR5), dim3(THREADS5), 0, 0,
+        nnodes, nbodies, dthf, itolsq, epssq, d_sort, d_child, d_posMass,
         d_vel, d_accVel, d_radius, d_step);
 
-    hipLaunchKernelGGL(IntegrationKernel, dim3(blocks * FACTOR6), dim3(THREADS6), 0, 0, 
+    hipLaunchKernelGGL(IntegrationKernel, dim3(blocks * FACTOR6), dim3(THREADS6), 0, 0,
         nbodies, dtime, dthf, d_posMass, d_vel, d_accVel);
   }
   hipDeviceSynchronize();
@@ -927,6 +953,14 @@ int main(int argc, char* argv[])
              starttime.tv_sec - starttime.tv_usec/1000000.0);
 
   printf("Total kernel execution time: %.4lf s\n", runtime);
+
+#ifdef DEBUG
+  if (timesteps > 0) {
+    printf("host-iterated launches per step: tree=%.1f summarization=%.1f sort=%.1f\n",
+           (double)treeLaunches / timesteps, (double)sumLaunches / timesteps,
+           (double)sortLaunches / timesteps);
+  }
+#endif
 
   // transfer final results back to a host
   if (hipSuccess != hipMemcpy(accVel, d_accVel, sizeof(float4) * nbodies, hipMemcpyDeviceToHost))
@@ -964,6 +998,9 @@ int main(int argc, char* argv[])
   hipFree(d_blkcnt);
   hipFree(d_bottom);
   hipFree(d_radius);
+  hipFree(d_inserted);
+  hipFree(d_sdone);
+  hipFree(d_repeat);
 
   return 0;
 }
