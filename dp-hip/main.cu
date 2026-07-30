@@ -21,12 +21,14 @@
 #include <chrono>
 #include <cmath>
 #include <numeric>
-#include <execution>
+#include <type_traits>
 #include <hip/hip_runtime.h>
 #include <hipcub/hipcub.hpp>
-#define HIPBLAS_V2
 #include <hipblas/hipblas.h>
 #include "shrUtils.h"
+// In-repo stand-in for the single std::execution::par_unseq algorithm used
+// below; see stdpar_shim.h for why clang's --hipstdpar cannot be used here.
+#include "stdpar_shim.h"
 
 template <typename T>
 __global__
@@ -115,9 +117,9 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average kernel execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
-  bool ok = (dst == T(0));
-  printf("%s\n\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
+  bool ok_kernel = (dst == T(0));
+  printf("%s\n\n", ok_kernel ? "PASS" : "FAIL");
+  if (!ok_kernel) exit(1);
 
   hipblasHandle_t h;
   hipblasCreate(&h);
@@ -126,15 +128,19 @@ void dot (const size_t iNumElements, const int iNumIterations)
   start = std::chrono::steady_clock::now();
 
   for (i = 0; i < (size_t)iNumIterations; i++) {
-    hipDataType xType, yType, rType, eType;
+    // H4I-HipBLAS, the hipBLAS implementation chipStar ships, exports no
+    // *DotEx symbol, so the extended-precision entry point used upstream does
+    // not link. T is only ever float or double here, and for both the upstream
+    // call asked for xType == yType == rType == eType == the element type, so
+    // the exported typed dot products are exact equivalents of that request,
+    // not a reduced-precision substitute.
     if constexpr (std::is_same<T, double>::value) {
-      xType = yType = rType = eType = HIPBLAS_R_64F;
+      hipblasDdot(h, (int)iNumElements, (const double*)d_srcA, 1,
+                  (const double*)d_srcB, 1, (double*)d_dst);
     } else if constexpr (std::is_same<T, float>::value) {
-      xType = yType = rType = eType = HIPBLAS_R_32F;
+      hipblasSdot(h, (int)iNumElements, (const float*)d_srcA, 1,
+                  (const float*)d_srcB, 1, (float*)d_dst);
     }
-
-    hipblasDotEx(h, iNumElements, d_srcA, xType, 1, d_srcB,
-                yType, 1, d_dst, rType, eType);
   }
 
   hipDeviceSynchronize();
@@ -143,21 +149,27 @@ void dot (const size_t iNumElements, const int iNumIterations)
   printf("Average hipblasDot execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
 
   hipMemcpy(&dst, d_dst, sizeof(T), hipMemcpyDeviceToHost);
-  bool ok = (dst == T(0));
-  printf("%s\n\n", ok ? "PASS" : "FAIL");
-  if (!ok) exit(1);
+  bool ok_blas = (dst == T(0));
+  printf("%s\n\n", ok_blas ? "PASS" : "FAIL");
+  if (!ok_blas) exit(1);
 
   start = std::chrono::steady_clock::now();
 
   for (int i = 0; i < iNumIterations; i++) {
-    dst = std::transform_reduce(std::execution::par_unseq,
-                                d_srcA, d_srcA + iNumElements, d_srcB, .0);
+    // Was std::transform_reduce(std::execution::par_unseq, ...) over device
+    // pointers, which only compiles under clang --hipstdpar (unavailable on
+    // chipStar). stdpar_shim:: is the in-repo equivalent backed by rocThrust;
+    // only the qualification of the call changes.
+    dst = stdpar_shim::transform_reduce(stdpar_shim::par_unseq,
+                                        d_srcA, d_srcA + iNumElements, d_srcB, .0);
   }
 
   end = std::chrono::steady_clock::now();
   time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-  printf("Average std::transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
-  printf("%s\n\n", dst == T(0) ? "PASS" : "FAIL");
+  printf("Average transform_reduce execution time %f (ms)\n", (time * 1e-6f) / iNumIterations);
+  bool ok_tr = (dst == T(0));
+  printf("%s\n\n", ok_tr ? "PASS" : "FAIL");
+  if (!ok_tr) exit(1);
 
   hipFree(d_dst);
   hipFree(d_srcA);
