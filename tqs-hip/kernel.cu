@@ -56,7 +56,7 @@ void TaskQueue_gpu(const task_t *__restrict__ queue,
     // Guard against reading past the queue_size-sized queue buffer: when *next
     // reaches gpuQueueSize the while-loop below exits and t is never used, but
     // the out-of-bounds read is undefined behavior and wedges the device on
-    // chipStar/Intel (harmless on NVIDIA). Only fetch a valid task.
+    // some HIP runtimes/devices (harmless on NVIDIA). Only fetch a valid task.
     if(*next < gpuQueueSize) {
       t->id = queue[*next].id;
       t->op = queue[*next].op;

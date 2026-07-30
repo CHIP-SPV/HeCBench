@@ -22,8 +22,11 @@ obj = $(source:.cu=.o)
 # Sets Flags
 #===============================================================================
 
-HIPBLAS_PATH = /space/pvelesko/install/HIP/chipStar/H4I-HipBLAS/2026.04.16
-MKLSHIM_PATH = /space/pvelesko/install/HIP/chipStar/H4I-MKLShim/2026.04.16
+# hipBLAS/MKLShim live in the HIP SDK prefix (derived from hipcc on PATH);
+# override for a split installation.
+SDK_PREFIX := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+HIPBLAS_PATH ?= $(SDK_PREFIX)
+MKLSHIM_PATH ?= $(SDK_PREFIX)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(HIPBLAS_PATH)/include

@@ -215,16 +215,6 @@ void runLarge(const int nodes,
               if ((neimincol <= wmincol) && (neimaxcol >= wmincol)) wshortcut = false; //consolidated below
             }
           }
-          wshortcut = __all(wshortcut);
-          wdone = __all(wdone);
-          wpcol &= __shfl_xor(wpcol, 1);
-          wpcol &= __shfl_xor(wpcol, 2);
-          wpcol &= __shfl_xor(wpcol, 4);
-          wpcol &= __shfl_xor(wpcol, 8);
-          wpcol &= __shfl_xor(wpcol, 16);
-          if (who == lane) pcol = wpcol;
-          if (who == lane) done = wdone;
-          if (who == lane) shortcut = wshortcut;
         }
         wshortcut = __all(wshortcut);
         wdone = __all(wdone);
@@ -310,10 +300,6 @@ void runSmall(const int nodes,
           pcol = best;
           keep = 0;
         }
-        again |= keep;
-        if (keep == 0) keep = __clz(pcol);
-        color[v] = keep;
-        posscol[v] = pcol;
       }
       if (keep != 0) *again = 1;
       if (keep == 0) keep = __clz(pcol);

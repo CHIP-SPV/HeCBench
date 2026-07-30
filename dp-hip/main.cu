@@ -128,7 +128,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
   start = std::chrono::steady_clock::now();
 
   for (i = 0; i < (size_t)iNumIterations; i++) {
-    // H4I-HipBLAS, the hipBLAS implementation chipStar ships, exports no
+    // Some hipBLAS implementations (e.g. H4I-HipBLAS) export no
     // *DotEx symbol, so the extended-precision entry point used upstream does
     // not link. T is only ever float or double here, and for both the upstream
     // call asked for xType == yType == rType == eType == the element type, so
@@ -158,7 +158,7 @@ void dot (const size_t iNumElements, const int iNumIterations)
   for (int i = 0; i < iNumIterations; i++) {
     // Was std::transform_reduce(std::execution::par_unseq, ...) over device
     // pointers, which only compiles under clang --hipstdpar (unavailable on
-    // chipStar). stdpar_shim:: is the in-repo equivalent backed by rocThrust;
+    // every HIP SDK). stdpar_shim:: is the equivalent backed by rocThrust;
     // only the qualification of the call changes.
     dst = stdpar_shim::transform_reduce(stdpar_shim::par_unseq,
                                         d_srcA, d_srcA + iNumElements, d_srcB, .0);

@@ -113,7 +113,7 @@ __device__ data d_min_in_mat;                 // Used in step 6 to store the min
 // These flags used to be __managed__ and were polled directly by the host.
 // They are now plain device globals accessed with explicit
 // hipMemcpyToSymbol/hipMemcpyFromSymbol around each kernel launch, which is
-// portable to platforms without coherent managed memory (chipStar/Intel).
+// portable to platforms without coherent managed memory.
 __device__ int zeros_size;            // The number fo zeros
 __device__ int n_matches;             // Used in step 3 to count the number of matches found
 __device__ bool goto_5;               // After step 4, goto step 5?
@@ -150,7 +150,7 @@ const int n_rows_per_block = n / n_blocks_reduction;
 
 // PORTABILITY NOTE: this used to be a CUDA warp-synchronous reduction (no
 // barriers, guarded by `if (tid < 32)` at the call site), which requires
-// 32-wide lockstep execution. OpenCL/Level-Zero devices (chipStar/Intel) do
+// 32-wide lockstep execution. OpenCL/Level-Zero devices do
 // not guarantee that, and the broken reduction returned MAX_DATA, which fed
 // garbage into steps 1/6 (wrong costs and a step-4/6 livelock). It is now a
 // barrier-synchronized tail reduction executed by ALL threads of the block
@@ -278,8 +278,8 @@ __global__ void compress_matrix(){
 //
 // PORTABILITY NOTE: the original CUDA code additionally iterated inside the
 // kernel with `do { ... } while (repeat)`, where the __shared__ bool `repeat`
-// is written non-atomically by arbitrary threads between barriers.  On
-// chipStar/Intel GPUs that block-side convergence spin does not terminate
+// is written non-atomically by arbitrary threads between barriers.  On some
+// OpenCL/Level-Zero devices that block-side convergence spin does not terminate
 // reliably (see PHASE7_KNOWN_FAIL.md), and it was only an intra-block
 // optimization: cross-block convergence already relied on the host relaunching
 // the kernel while `repeat_kernel` is set.  The in-kernel loop is therefore
@@ -354,7 +354,7 @@ __global__ void step_4_init()
 // PORTABILITY NOTE: like step_2, the original CUDA kernel iterated in-kernel
 // with `do { ... } while (s_found && !s_goto_5)` over __shared__ bools written
 // non-atomically by arbitrary threads — the same divergent-termination spin
-// that hangs on chipStar/Intel GPUs.  `s_found` and `s_repeat_kernel` were
+// that hangs on such devices.  `s_found` and `s_repeat_kernel` were
 // always set together, so one pass per launch with the host looping
 // `while (repeat_kernel && !goto_5)` (which it already did) is equivalent.
 //

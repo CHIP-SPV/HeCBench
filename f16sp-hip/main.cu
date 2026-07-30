@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
   hipblasCreate(&h);
   hipblasSetPointerMode(h, HIPBLAS_POINTER_MODE_DEVICE);
 
-  // H4I-HipBLAS (chipStar) does not provide the extended-precision dot API
+  // Some hipBLAS implementations (e.g. H4I-HipBLAS) do not provide the extended-precision dot API
   // (hipblasDotEx_v2). Here x, y and result are all HIP_R_16F, so the typed
   // half dot product hipblasHdot() is the available equivalent. The only
   // functional difference is the accumulation type: hipblasHdot accumulates

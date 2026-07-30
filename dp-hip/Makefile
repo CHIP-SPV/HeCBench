@@ -27,7 +27,7 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 
 # Upstream built this with clang's --hipstdpar so that the std::execution
 # parallel algorithms over device pointers were rewritten onto ROCm's HIP
-# Standard Parallelism Acceleration library. chipStar ships no such library
+# Standard Parallelism Acceleration library. the HIP SDK ships no such library
 # ("error: cannot find HIP Standard Parallelism Acceleration library"), so
 # --hipstdpar/--hipstdpar-path and the AMD-only --offload-arch=gfx90a and
 # -munsafe-fp-atomics are dropped. The one algorithm that needed it is served
@@ -36,12 +36,12 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 CHIPSTDPAR_DIR    = chipStdPar
 CHIPSTDPAR_COMMIT = fd1b1e1a32294f1e8d251220404ef02c02db8225
 #
-# chipStar ships rocThrust with a working HIP device backend (-> rocPRIM). Pin
-# chipStar's copy ahead of any system /usr/include/thrust (upstream NVIDIA
+# The HIP SDK ships rocThrust with a working HIP device backend (-> rocPRIM). Pin
+# the SDK's copy ahead of any system /usr/include/thrust (upstream NVIDIA
 # thrust, whose CUDA backend needs an unavailable CUB) which the host compile
 # pass would otherwise pick up via -idirafter/CPATH.
-CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
-CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
+HIP_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(HIP_ROOT)/include
 CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
 CFLAGS += -I$(CHIPSTDPAR_DIR)/include
 

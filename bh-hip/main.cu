@@ -231,7 +231,6 @@ void TreeBuildingKernel(
   const float4 root = posMassd[nnodesd];
 
   inc = blockDim.x * gridDim.x;
-  i = threadIdx.x + blockIdx.x * blockDim.x;
 
   // iterate over all bodies assigned to thread
   for (i = threadIdx.x + blockIdx.x * blockDim.x; i < nbodiesd; i += inc) {
@@ -255,7 +254,6 @@ void TreeBuildingKernel(
     ch = childd[n*8+j];
     while (ch >= nbodiesd) {
       n = ch;
-      depth++;
       r *= 0.5f;
       dx = dy = dz = -r;
       j = 0;
@@ -282,7 +280,6 @@ void TreeBuildingKernel(
           const float4 chp = posMassd[ch];
           // create new cell(s) and insert the old and new bodies
           do {
-            depth++;
             cell = atomicSub(bottomd, 1) - 1;
 
             if (patch != -1) {
@@ -495,7 +492,6 @@ void SortKernel(
       } else {
         *repeatd = 1;  // start index not ready yet: retry this cell in the next launch
       }
-      k -= dec;  // move on to next cell
     }
     k -= dec;  // move on to next cell
   }

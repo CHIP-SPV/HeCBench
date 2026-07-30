@@ -364,7 +364,7 @@ int main(int argc, char **argv)
     exit(EXIT_FAILURE);
   }
 
-  // kernel descriptor (no function pointer — chipStar's clang marks __global__
+  // kernel descriptor (no function pointer — some HIP compilers mark __global__
   // with the device_kernel calling convention so &copy is not assignable to
   // void (*)(...). Dispatch on the loop index k instead.)
   const char *kernelName;

@@ -3,8 +3,11 @@
 #===============================================================================
 MPI_ROOT=/usr/lib/x86_64-linux-gnu/openmpi
 MPI_BIN=/usr/bin
-HIPBLAS_ROOT=/space/pvelesko/install/HIP/chipStar/hecbench-individual-fixes
-HIPRT_ROOT=/space/pvelesko/install/HIP/chipStar/hecbench-individual-fixes
+# hipBLAS and the HIP runtime live in the SDK prefix (derived from hipcc on
+# PATH); override for a split installation.
+SDK_PREFIX := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+HIPBLAS_ROOT ?= $(SDK_PREFIX)
+HIPRT_ROOT ?= $(SDK_PREFIX)
 
 # Compiler can be set below, or via environment variable
 CC        = hipcc

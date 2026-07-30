@@ -1,4 +1,4 @@
-# Top-level smoke wrapper for the CMake-based si-hip benchmark (chipStar).
+# Top-level smoke wrapper for the CMake-based si-hip benchmark.
 #
 # Upstream is a CMake project that FetchContent-clones cxxopts / fmt / zipf /
 # progressbar. This Makefile configures and builds the GPU 'main' target, then
@@ -12,7 +12,7 @@ HIPCC     ?= hipcc
 BUILD_DIR ?= build
 LAUNCHER  ?=
 
-# chipStar install prefix, derived from hipcc location (…/bin/hipcc -> …).
+# HIP SDK install prefix, derived from hipcc location (…/bin/hipcc -> …).
 CHIP_PREFIX ?= $(shell dirname $(dir $(shell command -v $(HIPCC))))
 
 SMOKE_DATA := smoke_dataset.bin

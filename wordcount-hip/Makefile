@@ -24,13 +24,13 @@ obj = main.o wc.o
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
-# chipStar 2026.07.20 ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
+# The HIP SDK ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
 # thrust::inner_product runs on the GPU (matches the SYCL variant). The old forced CPP backend
-# (THRUST_DEVICE_SYSTEM=4) no longer compiles against chipStar's bundled thrust host headers.
-# Pin chipStar's rocThrust ahead of the apt /usr/include/thrust (upstream NVIDIA thrust,
+# (THRUST_DEVICE_SYSTEM=4) no longer compiles against the HIP SDK's bundled thrust host headers.
+# Pin the SDK's rocThrust ahead of the apt /usr/include/thrust (upstream NVIDIA thrust,
 # CUDA backend needs CUB which is unavailable) which the host compile pass otherwise picks up.
-CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
-CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
+HIP_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(HIP_ROOT)/include
 CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
 
 # Linker Flags

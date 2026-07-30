@@ -1,4 +1,4 @@
-# Use hipcc from PATH (chipStar or ROCm) instead of a hardcoded ROCm path
+# Use hipcc from PATH instead of a hardcoded ROCm path
 HIPCC_BIN := $(patsubst %/hipcc,%,$(shell command -v hipcc))
 
 # the path may be adjusted for each platform

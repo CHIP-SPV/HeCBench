@@ -72,8 +72,8 @@ class points2image : public kernel {
 
 // image storage
 // expected image size 800x600 pixels with 4 components per pixel
-// NOTE: originally a module-scope "__device__ __managed__" array. chipStar
-// does not implement __hipRegisterManagedVar (silent no-op stub in release
+// NOTE: originally a module-scope "__device__ __managed__" array. Some HIP
+// runtimes do not implement __hipRegisterManagedVar (silent no-op stub in release
 // builds), so the host shadow and the device global end up as two unrelated
 // allocations and passing the host address to the kernel faults/hangs the
 // GPU. Allocate the buffer with hipMallocManaged in init() instead, which

@@ -22,17 +22,20 @@ obj = $(source:.cu=.o)
 # Sets Flags
 #===============================================================================
 
-HIPSOLVER_PATH = /space/pvelesko/install/HIP/chipStar/H4I-HipSOLVER/2026.04.16
-MKLSHIM_PATH  = /space/pvelesko/install/HIP/chipStar/H4I-MKLShim/2026.04.16
+# hipSOLVER/MKLShim live in the HIP SDK prefix (derived from hipcc on PATH);
+# override HIPSOLVER_PATH/MKLSHIM_PATH for a split installation.
+SDK_PREFIX := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+HIPSOLVER_PATH ?= $(SDK_PREFIX)
+MKLSHIM_PATH  ?= $(SDK_PREFIX)
 
 # Standard Flags
 CFLAGS := $(EXTRA_CFLAGS) -std=c++14 -Wall -I$(HIPSOLVER_PATH)/include
-# chipStar 2026.07.20 ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
-# the op runs on the GPU (matches the SYCL variant's make_device_policy). Pin chipStar's rocThrust
+# The HIP SDK ships rocThrust with a real HIP device backend (-> rocPRIM); use it so
+# the op runs on the GPU (matches the SYCL variant's make_device_policy). Pin the SDK's rocThrust
 # ahead of the apt /usr/include/thrust (upstream NVIDIA thrust, no HIP backend) which the host
 # compile pass otherwise picks up via -idirafter/CPATH.
-CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
-CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
+HIP_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
+CFLAGS += -isystem $(HIP_ROOT)/include
 CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
 # H4I-HipSOLVER only exports non-Dn potrf; redirect Dn variants to non-Dn equivalents.
 CFLAGS += -DhipsolverDnSpotrf_bufferSize=hipsolverSpotrf_bufferSize
