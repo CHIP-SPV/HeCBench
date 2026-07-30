@@ -96,5 +96,18 @@ clean:
 	rm -rf $(program) $(obj)
 
 # TODO: when p > 1, results mismatch
-run: $(program)
+# points2image reference data from the upstream daphne-benchmark repo,
+# fetched (gzipped) on first use. kernel.cpp hardcodes these paths.
+P2I_URL = https://github.com/esa-tu-darmstadt/daphne-benchmark/raw/master/data
+$(SHARED_DATA_PATH)/p2i_input.dat:
+	wget -q -O $@.gz $(P2I_URL)/p2i_input.dat.gz && gunzip -kf $@.gz
+$(SHARED_DATA_PATH)/p2i_output.dat:
+	wget -q -O $@.gz $(P2I_URL)/p2i_output.dat.gz && gunzip -kf $@.gz
+
+run: $(program) $(SHARED_DATA_PATH)/p2i_input.dat $(SHARED_DATA_PATH)/p2i_output.dat
+	$(LAUNCHER) ./$(program) -p 1
+
+# Fast smoke test: the testcase count is read from the (small) reference
+# dataset, so there is no runtime size knob; -p 1 is the minimal invocation.
+smoke: $(program) $(SHARED_DATA_PATH)/p2i_input.dat $(SHARED_DATA_PATH)/p2i_output.dat
 	$(LAUNCHER) ./$(program) -p 1

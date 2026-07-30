@@ -322,61 +322,73 @@ void compute_point_from_pointcloud(
   // determine index in cloud memory
   int y = item.get_group(2);
   int x = item.get_group(1) * THREADS + item.get_local_id(2);
-  if (x >= width) return;
+  // NOTE: no early "return" before the barrier: a barrier not reached by
+  // all threads of the workgroup is undefined behavior on SPIR-V targets
+  // and can hang Intel GPUs. Inactive threads are masked with "valid"
+  // instead.
+  bool valid = (x < width);
 
-  const float* fp = (float *)((uintptr_t)cp + (x + y*width) * point_step);
+  float intensity = 0.0f;
+  float cm_point = 0.0f;
+  int px = -1, py = -1, pid = 0;
 
-  float intensity = fp[4];
-  // first step of the transformation
-  Mat13 point, point2;
-  point2.data[0] = double(fp[0]);
-  point2.data[1] = double(fp[1]);
-  point2.data[2] = double(fp[2]);
+  if (valid) {
+    const float* fp = (float *)((uintptr_t)cp + (x + y*width) * point_step);
 
-  for (int row = 0; row < 3; row++) {
-    point.data[row] = invT.data[row];
-    for (int col = 0; col < 3; col++) 
-      point.data[row] += point2.data[col] * invR.data[row][col];
-  }
+    intensity = fp[4];
+    // first step of the transformation
+    Mat13 point, point2;
+    point2.data[0] = double(fp[0]);
+    point2.data[1] = double(fp[1]);
+    point2.data[2] = double(fp[2]);
 
-  // discard points of low depth
-  if (point.data[2] <= 2.5) return;
+    for (int row = 0; row < 3; row++) {
+      point.data[row] = invT.data[row];
+      for (int col = 0; col < 3; col++)
+        point.data[row] += point2.data[col] * invR.data[row][col];
+    }
 
-  // second transformation step
-  double tmpx = point.data[0] / point.data[2];
-  double tmpy = point.data[1] / point.data[2];
-  double r2 = tmpx * tmpx + tmpy * tmpy;
-  double tmpdist = 1.0 + distCoeff.data[0] * r2 + distCoeff.data[1] * r2 * r2
-                   + distCoeff.data[4] * r2 * r2 * r2;
+    // discard points of low depth
+    if (point.data[2] <= 2.5)
+      valid = false;
 
-  Point2d imagepoint;
-  imagepoint.x = tmpx * tmpdist + 2.0 * distCoeff.data[2] * tmpx * tmpy
-                 + distCoeff.data[3] * (r2 + 2.0 * tmpx * tmpx);
-  imagepoint.y = tmpy * tmpdist + distCoeff.data[2] * (r2 + 2.0 * tmpy * tmpy)
-                 + 2.0 * distCoeff.data[3] * tmpx * tmpy;
+    if (valid) {
+      // second transformation step
+      double tmpx = point.data[0] / point.data[2];
+      double tmpy = point.data[1] / point.data[2];
+      double r2 = tmpx * tmpx + tmpy * tmpy;
+      double tmpdist = 1.0 + distCoeff.data[0] * r2 + distCoeff.data[1] * r2 * r2
+                       + distCoeff.data[4] * r2 * r2 * r2;
 
-  // apply camera intrinsics to yield a point on the image
-  imagepoint.x = cameraMat.data[0][0] * imagepoint.x + cameraMat.data[0][2];
-  imagepoint.y = cameraMat.data[1][1] * imagepoint.y + cameraMat.data[1][2];
-  int px = int(imagepoint.x + 0.5);
-  int py = int(imagepoint.y + 0.5);
+      Point2d imagepoint;
+      imagepoint.x = tmpx * tmpdist + 2.0 * distCoeff.data[2] * tmpx * tmpy
+                     + distCoeff.data[3] * (r2 + 2.0 * tmpx * tmpx);
+      imagepoint.y = tmpy * tmpdist + distCoeff.data[2] * (r2 + 2.0 * tmpy * tmpy)
+                     + 2.0 * distCoeff.data[3] * tmpx * tmpy;
 
-  float cm_point;
-  int pid;
-  // safe point characteristics in the image
-  if (0 <= px && px < w && 0 <= py && py < h)
-  {
-    pid = py * w + px;
-    cm_point = point.data[2] * 100.0;  // double precision multiply
-    atomicCAS((int*)&msg_distance[pid], 0, sycl::bit_cast<int>(cm_point));
+      // apply camera intrinsics to yield a point on the image
+      imagepoint.x = cameraMat.data[0][0] * imagepoint.x + cameraMat.data[0][2];
+      imagepoint.y = cameraMat.data[1][1] * imagepoint.y + cameraMat.data[1][2];
+      px = int(imagepoint.x + 0.5);
+      py = int(imagepoint.y + 0.5);
 
-    //atomicFloatMin(&msg_distance[pid], cm_point);
-    atomicMin(msg_distance[pid], cm_point);
+      // safe point characteristics in the image
+      if (0 <= px && px < w && 0 <= py && py < h)
+      {
+        pid = py * w + px;
+        cm_point = point.data[2] * 100.0;  // double precision multiply
+        atomicCAS((int*)&msg_distance[pid], 0, sycl::bit_cast<int>(cm_point));
+
+        //atomicFloatMin(&msg_distance[pid], cm_point);
+        atomicMin(msg_distance[pid], cm_point);
+      }
+    }
   }
   // synchronize required for deterministic intensity in the image
+  // (reached by ALL threads of the workgroup)
   item.barrier(sycl::access::fence_space::local_space);
 
-  if (0 <= px && px < w && 0 <= py && py < h)
+  if (valid && 0 <= px && px < w && 0 <= py && py < h)
   {
     float newvalue = msg_distance[pid];
 
