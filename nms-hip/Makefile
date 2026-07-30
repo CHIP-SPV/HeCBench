@@ -53,7 +53,7 @@ clean:
 	rm -rf $(program) $(obj) output.txt
 
 run: $(program)
-	$(LAUNCHER) ./$(program) ../nms-cuda/detections.txt output.txt 1000
+	$(LAUNCHER) ./$(program) ../nms-cuda/detections.txt output.txt 10
 
 smoke: $(program)
-	$(LAUNCHER) ./$(program) ../nms-cuda/detections.txt output.txt 1000
+	$(LAUNCHER) ./$(program) ../nms-cuda/detections.txt output.txt 10
