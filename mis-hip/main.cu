@@ -58,36 +58,43 @@ static const stattype out = 0;
 
 /* main computation kernel */
 
-__global__ 
-void findmins(const int nodes, 
+// Portability restructure: the original ECL-MIS kernel iterated the
+// convergence loop (do { ... } while (missing)) inside the kernel, relying on
+// CUDA volatile semantics to make cross-thread stores visible within a single
+// grid launch.  Intel GPUs (OpenCL/Level Zero) provide no such guarantee, so
+// the in-kernel spin never converges.  The kernel now performs ONE pass over
+// the nodes and reports whether undecided nodes remain via *missing_d; the
+// host relaunches the kernel until convergence.  Kernel-launch boundaries
+// guarantee global memory visibility, which is all the algorithm needs.
+__global__
+void findmins(const int nodes,
     const int* const __restrict nidx,
     const int* const __restrict nlist,
-    volatile stattype* const __restrict nstat)
+    volatile stattype* const __restrict nstat,
+    int* const __restrict missing_d)
 {
   const int from = threadIdx.x + blockIdx.x * ThreadsPerBlock;
   const int incr = gridDim.x * ThreadsPerBlock;
 
-  int missing;
-  do {
-    missing = 0;
-    for (int v = from; v < nodes; v += incr) {
-      const stattype nv = nstat[v];
-      if (nv & 1) {
-        int i = nidx[v];
-        while ((i < nidx[v + 1]) && ((nv > nstat[nlist[i]]) || ((nv == nstat[nlist[i]]) && (v > nlist[i])))) {
-          i++;
+  int missing = 0;
+  for (int v = from; v < nodes; v += incr) {
+    const stattype nv = nstat[v];
+    if (nv & 1) {
+      int i = nidx[v];
+      while ((i < nidx[v + 1]) && ((nv > nstat[nlist[i]]) || ((nv == nstat[nlist[i]]) && (v > nlist[i])))) {
+        i++;
+      }
+      if (i < nidx[v + 1]) {
+        missing = 1;
+      } else {
+        for (int i = nidx[v]; i < nidx[v + 1]; i++) {
+          nstat[nlist[i]] = out;
         }
-        if (i < nidx[v + 1]) {
-          missing = 1;
-        } else {
-          for (int i = nidx[v]; i < nidx[v + 1]; i++) {
-            nstat[nlist[i]] = out;
-          }
-          nstat[v] = in;
-        }
+        nstat[v] = in;
       }
     }
-  } while (missing != 0);
+  }
+  if (missing) *missing_d = 1;
 }
 
 /* hash function to generate random values */
@@ -138,9 +145,13 @@ void computeMIS(
   int* nidx_d;
   int* nlist_d;
   stattype* nstat_d;
+  int* missing_d;
 
   if (hipSuccess != hipMalloc((void **)&nidx_d, (nodes + 1) * sizeof(int))) {
     fprintf(stderr, "ERROR: could not allocate nidx_d\n\n");
+  }
+  if (hipSuccess != hipMalloc((void **)&missing_d, sizeof(int))) {
+    fprintf(stderr, "ERROR: could not allocate missing_d\n\n");
   }
   if (hipSuccess != hipMalloc((void **)&nlist_d, edges * sizeof(int))) {
     fprintf(stderr, "ERROR: could not allocate nlist_d\n\n");
@@ -164,7 +175,20 @@ void computeMIS(
   for (int n = 0; n < repeat; n++) {
     init<<<blocks, ThreadsPerBlock>>>(nodes, edges, nidx_d, nstat_d);
 
-    findmins<<<blocks, ThreadsPerBlock>>>(nodes, nidx_d, nlist_d, nstat_d);
+    // host-side convergence loop: relaunch the single-pass kernel until no
+    // undecided nodes remain (replaces the original in-kernel spin loop)
+    int missing;
+    do {
+      if (hipSuccess != hipMemset(missing_d, 0, sizeof(int))) {
+        fprintf(stderr, "ERROR: clearing missing_d failed\n\n");
+      }
+      findmins<<<blocks, ThreadsPerBlock>>>(nodes, nidx_d, nlist_d, nstat_d, missing_d);
+      missing = 0;
+      if (hipSuccess != hipMemcpy(&missing, missing_d, sizeof(int), hipMemcpyDeviceToHost)) {
+        fprintf(stderr, "ERROR: copying missing_d from device failed\n\n");
+        break;
+      }
+    } while (missing != 0);
   }
 
   hipDeviceSynchronize();
@@ -180,6 +204,7 @@ void computeMIS(
     fprintf(stderr, "ERROR: copying from device failed\n\n");
   }
 
+  hipFree(missing_d);
   hipFree(nstat_d);
   hipFree(nlist_d);
   hipFree(nidx_d);
@@ -240,6 +265,8 @@ int main(int argc, char* argv[])
         }
       }
     }
+
+    printf("%s\n", err ? "FAIL" : "PASS");
   }
 
   freeECLgraph(g);

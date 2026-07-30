@@ -1,8 +1,10 @@
-# mis-hip — BENCH_SIDE_CUDA_MEMMODEL
+# mis-hip — FIXED (was BENCH_SIDE_CUDA_MEMMODEL)
 
-`make smoke` hangs indefinitely (kernel never completes) on both OCL and L0 backends.
+Previously `make smoke` hung indefinitely (kernel never completed) on both OCL
+and L0 backends. Fixed 2026-07-22 by restructuring the convergence loop to the
+host; see "Fix" below.
 
-## Symptom
+## Original symptom
 
 ```
 ./main ../mis-cuda/internet.egr 1
@@ -12,8 +14,8 @@ rc=124
 
 ## Root cause
 
-The `findmins` kernel implements maximum independent set via a convergence loop
-inside the GPU kernel:
+The `findmins` kernel implemented maximal independent set via a convergence
+loop inside the GPU kernel:
 
 ```c
 int missing;
@@ -35,8 +37,29 @@ guarantee: without an explicit `atomic_work_item_fence` or
 `__threadfence_system`, a thread's stores may never become visible to other
 threads' volatile reads, causing an infinite convergence loop.
 
-This is an inherent CUDA memory model assumption; fixing it requires replacing
-the volatile-based convergence with `__threadfence` + atomics, which would
-change the algorithm non-trivially.
+The SYCL variant (`mis-sycl`) kept the identical in-kernel spin and fails
+identically on Intel hardware.
 
-The SYCL variant (`mis-sycl`) fails identically on Intel hardware.
+## Fix
+
+Hoisted the convergence loop to the host: `findmins` now performs a single
+grid-strided pass per launch and raises a device-side `missing` flag if any
+undecided node remains; the host clears the flag (`hipMemset`), launches the
+kernel, copies the flag back (`hipMemcpy`, which synchronizes), and relaunches
+until the flag stays 0. Kernel-launch boundaries guarantee global-memory
+visibility, which is all the ECL-MIS priority-selection algorithm needs — the
+per-pass selection logic and the bench's verification are unchanged.
+
+On `internet.egr` (124651 nodes, 387240 edges) convergence takes 4 host-loop
+passes. `make smoke` (repeat=100):
+
+```
+compute time: 0.000417 s
+throughput: 299.030220 Mnodes/s
+throughput: 928.965370 Medges/s
+PASS
+```
+
+rc=0, no verification errors. (A `PASS`/`FAIL` summary print was added after
+the pre-existing verification loop, which previously computed `err` but never
+reported it.)
