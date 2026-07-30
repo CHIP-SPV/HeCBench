@@ -28,7 +28,7 @@
 #include "shrUtils.h"
 // In-repo stand-in for the single std::execution::par_unseq algorithm used
 // below; see stdpar_shim.h for why clang's --hipstdpar cannot be used here.
-#include "stdpar_shim.h"
+#include <stdpar_shim.h>
 
 template <typename T>
 __global__

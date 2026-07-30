@@ -31,7 +31,10 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 # ("error: cannot find HIP Standard Parallelism Acceleration library"), so
 # --hipstdpar/--hipstdpar-path and the AMD-only --offload-arch=gfx90a and
 # -munsafe-fp-atomics are dropped. The one algorithm that needed it is served
-# by stdpar_shim.h, which forwards to rocThrust instead.
+# by chipStdPar (github.com/CHIP-SPV/chipStdPar), which forwards to rocThrust
+# instead; cloned on first use at the pinned commit below.
+CHIPSTDPAR_DIR    = chipStdPar
+CHIPSTDPAR_COMMIT = fd1b1e1a32294f1e8d251220404ef02c02db8225
 #
 # chipStar ships rocThrust with a working HIP device backend (-> rocPRIM). Pin
 # chipStar's copy ahead of any system /usr/include/thrust (upstream NVIDIA
@@ -40,6 +43,7 @@ CFLAGS := $(EXTRA_CFLAGS) -std=c++17 -Wall
 CHIPSTAR_ROOT := $(patsubst %/bin/hipcc,%,$(shell command -v $(CC)))
 CFLAGS += -isystem $(CHIPSTAR_ROOT)/include
 CFLAGS += -DTHRUST_DEVICE_SYSTEM=THRUST_DEVICE_SYSTEM_HIP
+CFLAGS += -I$(CHIPSTDPAR_DIR)/include
 
 # Linker Flags
 LDFLAGS = -lhipblas
@@ -62,7 +66,13 @@ endif
 $(program): $(obj) Makefile
 	$(CC) $(CFLAGS) $(obj) -o $@ $(LDFLAGS)
 
-%.o: %.cu shrUtils.h stdpar_shim.h Makefile
+$(obj): | $(CHIPSTDPAR_DIR)/include/stdpar_shim.h
+
+$(CHIPSTDPAR_DIR)/include/stdpar_shim.h:
+	test -d $(CHIPSTDPAR_DIR) || git clone https://github.com/CHIP-SPV/chipStdPar $(CHIPSTDPAR_DIR)
+	cd $(CHIPSTDPAR_DIR) && git checkout -q $(CHIPSTDPAR_COMMIT)
+
+%.o: %.cu shrUtils.h Makefile
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
